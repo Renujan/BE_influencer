@@ -1,0 +1,586 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ampli.io Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  
+  <script>
+    // Configure Tailwind to support custom colors that match ampli.io's brand palette (Orange & Blue)
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              orange: '#ff7a45',
+              blue: '#2f54eb',
+              dark: '#0a0e1a',
+              card: '#161d2e',
+              border: '#1f2d40'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    /* Scope dashboard styles specifically to avoid leaking into Wagtail main sidebar */
+    .dashboard-container {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .stats-card-gradient-1 {
+      background: linear-gradient(135deg, #2f54eb 0%, #1a39b7 100%);
+    }
+    .stats-card-gradient-2 {
+      background: linear-gradient(135deg, #ff7a45 0%, #d4380d 100%);
+    }
+    
+    /* Scrollbar customizations */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+  <div class="dashboard-container p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-6">
+    
+    <!-- Top Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-300">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Real-time Campaign Collaboration & Influencer Escrow Hub</p>
+      </div>
+      <div class="flex items-center gap-4 shrink-0">
+        <div class="hidden md:flex flex-col text-right">
+          <span class="text-xs sm:text-sm font-semibold text-slate-700">Administrator: {{ user.username }}</span>
+        </div>
+        
+        <!-- Notifications Bell -->
+        <div class="relative z-20">
+          <button id="notifButton" class="relative inline-flex items-center justify-center h-10 w-10 rounded-xl hover:bg-slate-100 border border-slate-200/80 text-slate-600 focus:outline-none transition-all duration-200" aria-haspopup="true" aria-expanded="false">
+            <img src="{% static 'img/notification_bell.png' %}" alt="Notifications" class="w-5 h-5 object-contain">
+            {% if unread_notifications_count > 0 %}
+            <span id="notifBadge" class="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-500 rounded-full border-2 border-white shadow-sm">
+              {{ unread_notifications_count }}
+            </span>
+            {% endif %}
+          </button>
+
+          <!-- Dropdown panel -->
+          <div id="notifPanel" class="hidden absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+            <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-slate-800 text-sm">Notifications</span>
+                <span class="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">Recent</span>
+              </div>
+              <button id="clearNotificationsBtn" class="text-xs text-brand-blue hover:text-blue-700 hover:underline font-bold focus:outline-none" title="Clear all notifications">
+                Clear All
+              </button>
+            </div>
+
+            <!-- Notifications content -->
+            <div id="notificationsContent" class="max-h-80 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
+              {% for notification in recent_notifications %}
+                <div class="flex items-start gap-3 p-4 hover:bg-slate-50 transition-all duration-150 {% if not notification.is_read %}bg-slate-50/50{% endif %}">
+                  <div class="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 {% if notification.category == 'signup' %}bg-indigo-50 text-indigo-600{% elif notification.category == 'campaign' %}bg-blue-50 text-brand-blue{% elif notification.category == 'compliance' %}bg-rose-50 text-rose-500{% else %}bg-amber-50 text-amber-500{% endif %}">
+                    <i class="{{ notification.icon|default:'fas fa-bell' }} text-xs"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-xs font-bold text-slate-800 truncate">{{ notification.title }}</span>
+                      <span class="text-[9px] text-slate-400 font-medium whitespace-nowrap">{{ notification.created_at|date:"g:i A" }}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5 break-words">{{ notification.message }}</p>
+                    <div class="flex items-center justify-between mt-2">
+                      <span class="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">
+                        {% if notification.category == 'signup' %}Registration{% elif notification.category == 'campaign' %}Campaign{% elif notification.category == 'compliance' %}Compliance{% else %}Escrow & Payment{% endif %}
+                      </span>
+                      <span class="text-[9px] text-slate-400 font-semibold">{{ notification.created_at|date:"M d" }}</span>
+                    </div>
+                  </div>
+                </div>
+              {% empty %}
+                <div class="p-8 text-center text-slate-400 text-xs italic">
+                  <i class="fas fa-bell-slash text-3xl mb-2 block"></i> No notifications yet.
+                </div>
+              {% endfor %}
+            </div>
+
+            <!-- Empty State (hidden by default) -->
+            <div id="emptyNotificationsState" class="hidden p-8 text-center">
+              <i class="fas fa-bell-slash text-slate-300 text-4xl mb-3 block"></i>
+              <p class="text-sm text-slate-500 font-bold">No notifications</p>
+              <p class="text-xs text-slate-400 mt-1">All notifications have been cleared.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="h-10 w-10 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue font-bold text-sm shadow-inner shrink-0">
+          {{ user.username|make_list|first|upper }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Statistics Metrics Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
+      <!-- Total Campaigns -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-slate-100 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+          <i class="fas fa-layer-group"></i>
+        </div>
+        <div class="relative z-10 flex flex-col justify-between h-full">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Campaigns</span>
+            <span class="h-8 w-8 rounded-xl bg-indigo-50 text-brand-blue flex items-center justify-center text-sm shadow-sm"><i class="fas fa-tasks"></i></span>
+          </div>
+          <div class="mt-4">
+            <span class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_campaigns }}</span>
+            <span class="text-xs font-semibold text-brand-blue bg-indigo-50 px-2 py-0.5 rounded-full ml-2">Workspaces</span>
+          </div>
+          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
+            <span>Live: <b class="text-emerald-500 font-semibold">{{ live_campaigns }}</b></span>
+            <span>Completed: <b class="text-slate-600 font-semibold">{{ completed_campaigns }}</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enrolled Brands (Businesses) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-slate-100 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+          <i class="fas fa-building"></i>
+        </div>
+        <div class="relative z-10 flex flex-col justify-between h-full">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enrolled Brands</span>
+            <span class="h-8 w-8 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center text-sm shadow-sm"><i class="fas fa-store"></i></span>
+          </div>
+          <div class="mt-4">
+            <span class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_brands }}</span>
+            <span class="text-xs font-semibold text-brand-blue bg-blue-50 px-2 py-0.5 rounded-full ml-2">Businesses</span>
+          </div>
+          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
+            <span>Role: <b class="text-brand-blue font-semibold">Business Client</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enrolled Creators (Influencers) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-slate-100 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+          <i class="fas fa-video"></i>
+        </div>
+        <div class="relative z-10 flex flex-col justify-between h-full">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enrolled Creators</span>
+            <span class="h-8 w-8 rounded-xl bg-orange-50 text-brand-orange flex items-center justify-center text-sm shadow-sm"><i class="fas fa-user-circle"></i></span>
+          </div>
+          <div class="mt-4">
+            <span class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_influencers }}</span>
+            <span class="text-xs font-semibold text-brand-orange bg-orange-50 px-2 py-0.5 rounded-full ml-2">Influencers</span>
+          </div>
+          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
+            <span>Role: <b class="text-brand-orange font-semibold">Creator Talent</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Escrow Balance Protection -->
+      <div class="stats-card-gradient-1 p-5 rounded-2xl text-white shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-white/10 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+        <div class="relative z-10 flex flex-col justify-between h-full">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white/80 uppercase tracking-wider">Escrow Protection</span>
+            <span class="h-8 w-8 rounded-xl bg-white/20 text-white flex items-center justify-center text-sm shadow-sm"><i class="fas fa-lock"></i></span>
+          </div>
+          <div class="mt-4">
+            <span class="text-3xl font-extrabold tracking-tight">${{ total_escrow_balance|floatformat:2 }}</span>
+            <span class="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full ml-2">Protected</span>
+          </div>
+          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-white/15 text-[11px] text-white/80 font-medium">
+            <span>Released: <b class="text-emerald-300 font-semibold">${{ released_payments|floatformat:0 }}</b></span>
+            <span>In Escrow: <b class="text-white font-semibold">${{ escrow_payments|floatformat:0 }}</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compliance Audits -->
+      <div class="stats-card-gradient-2 p-5 rounded-2xl text-white shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-white/10 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="relative z-10 flex flex-col justify-between h-full">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white/80 uppercase tracking-wider">Compliance Review</span>
+            <span class="h-8 w-8 rounded-xl bg-white/20 text-white flex items-center justify-center text-sm shadow-sm"><i class="fas fa-gavel"></i></span>
+          </div>
+          <div class="mt-4">
+            <span class="text-3xl font-extrabold tracking-tight">{{ pending_tickets }} / {{ total_tickets }}</span>
+            <span class="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full ml-2">Pending disputes</span>
+          </div>
+          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-white/15 text-[11px] text-white/80 font-medium">
+            <span>Resolved: <b class="text-white font-semibold">{{ resolved_tickets }}</b></span>
+            <span>Approved: <b class="text-white font-semibold">{{ approved_tickets }}</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Left Main Column (Campaigns & Charts) - 8 Cols -->
+      <div class="lg:col-span-8 space-y-6">
+        
+        <!-- Weekly Budget Breakdown Chart -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-brand-blue animate-pulse"></span>
+                Active Campaigns Budget Allocation
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Top performing campaign budgets in USD</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-emerald-500 font-semibold bg-emerald-50 px-2 py-1 rounded-md">Real Data</span>
+            </div>
+          </div>
+          <div class="h-[280px]">
+            <canvas id="budgetChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Active Campaigns Table -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-folder-open text-brand-blue"></i>
+                Campaign Workspaces
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Active collaboration workflows and budgets</p>
+            </div>
+            <a href="/admin/platform_api/campaign/" class="text-xs text-brand-blue hover:text-blue-700 font-bold transition-all flex items-center gap-1">
+              Manage Workspaces <i class="fas fa-arrow-right text-[10px]"></i>
+            </a>
+          </div>
+          
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse min-w-[600px]">
+              <thead>
+                <tr class="bg-slate-50 text-[10px] text-slate-400 font-bold uppercase border-b border-slate-100">
+                  <th class="p-3 pl-4">Campaign Name</th>
+                  <th class="p-3">Brand (Client)</th>
+                  <th class="p-3">Creator (Talent)</th>
+                  <th class="p-3">Budget</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3 pr-4 text-center">Progress</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {% for camp in top_campaigns %}
+                <tr class="text-xs hover:bg-slate-50/80 transition-all duration-150">
+                  <td class="p-3 pl-4 font-bold text-slate-700">{{ camp.name }}</td>
+                  <td class="p-3 text-slate-500">
+                    {% if camp.brand.profile.company_name %}
+                      {{ camp.brand.profile.company_name }}
+                    {% else %}
+                      {{ camp.brand.username }}
+                    {% endif %}
+                  </td>
+                  <td class="p-3">
+                    {% if camp.creator %}
+                      <div class="flex items-center gap-2">
+                        <div class="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-brand-orange border border-slate-200">
+                          {{ camp.creator.username|make_list|first|upper }}
+                        </div>
+                        <span class="text-slate-600 font-medium">@{{ camp.creator.username }}</span>
+                      </div>
+                    {% else %}
+                      <span class="text-slate-400 italic">Unassigned</span>
+                    {% endif %}
+                  </td>
+                  <td class="p-3 font-semibold text-slate-800">${{ camp.budget|floatformat:2 }}</td>
+                  <td class="p-3">
+                    {% if camp.status == 'Live' %}
+                      <span class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-bold">Live</span>
+                    {% elif camp.status == 'Completed' %}
+                      <span class="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full text-[10px] font-bold">Completed</span>
+                    {% else %}
+                      <span class="bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-bold">Pending</span>
+                    {% endif %}
+                  </td>
+                  <td class="p-3 pr-4">
+                    <div class="flex items-center gap-2 justify-center">
+                      <div class="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-brand-blue h-1.5 rounded-full" style="width: {{ camp.progress }}%"></div>
+                      </div>
+                      <span class="font-mono text-[10px] font-bold text-slate-500">{{ camp.progress }}%</span>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="p-8 text-center text-slate-400 text-xs italic">
+                    <i class="fas fa-folder-open text-3xl mb-2 block"></i> No campaigns found in database.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column (Socials & Tickets) - 4 Cols -->
+      <div class="lg:col-span-4 space-y-6">
+        
+        <!-- Social Channels & Engagement Breakdown -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-bullhorn text-brand-orange"></i>
+                Creator Channels
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Top connected social metrics</p>
+            </div>
+            <a href="/admin/platform_api/creatorsocialaccount/" class="text-xs text-brand-orange hover:text-orange-700 font-bold transition-all flex items-center gap-1">
+              Channels <i class="fas fa-external-link-alt text-[9px]"></i>
+            </a>
+          </div>
+
+          <div class="space-y-3">
+            {% for account in top_creators %}
+            <div class="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-xl transition-all duration-200">
+              <div class="flex items-center gap-3">
+                <div class="h-8 w-8 rounded-lg flex items-center justify-center text-white text-sm shadow-sm
+                  {% if account.platform == 'instagram' %}bg-gradient-to-tr from-amber-500 via-red-500 to-purple-600
+                  {% elif account.platform == 'youtube' %}bg-red-600
+                  {% elif account.platform == 'tiktok' %}bg-black
+                  {% else %}bg-blue-600{% endif %}">
+                  {% if account.platform == 'instagram' %}<i class="fab fa-instagram"></i>
+                  {% elif account.platform == 'youtube' %}<i class="fab fa-youtube"></i>
+                  {% elif account.platform == 'tiktok' %}<i class="fab fa-tiktok"></i>
+                  {% else %}<i class="fab fa-facebook"></i>{% endif %}
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-700">@{{ account.username }}</h4>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{{ account.get_platform_display }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-xs font-extrabold text-slate-800 block">{{ account.followers_count }}</span>
+                <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded-md">{{ account.engagement_rate }}% ER</span>
+              </div>
+            </div>
+            {% empty %}
+            <div class="p-6 text-center text-slate-400 text-xs italic">
+              <i class="fas fa-share-alt text-2xl mb-2 block"></i> No connected social channels.
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Compliance disputed tickets watchlist -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-shield-alt text-rose-500"></i>
+                Compliance Tickets
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Safety audits & milestone disputes</p>
+            </div>
+            <a href="/admin/platform_api/admincomplianceticket/" class="text-xs text-rose-500 hover:text-rose-700 font-bold transition-all flex items-center gap-1">
+              All Tickets <i class="fas fa-arrow-right text-[10px]"></i>
+            </a>
+          </div>
+
+          <div class="space-y-3">
+            {% for ticket in recent_tickets %}
+            <div class="p-3 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-xl transition-all duration-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ ticket.category }}</span>
+                {% if ticket.status == 'Approved' %}
+                  <span class="bg-emerald-50 text-emerald-600 text-[9px] font-bold px-1.5 py-0.5 rounded">Approved</span>
+                {% elif ticket.status == 'Resolved' %}
+                  <span class="bg-brand-blue/10 text-brand-blue text-[9px] font-bold px-1.5 py-0.5 rounded">Resolved</span>
+                {% else %}
+                  <span class="bg-rose-50 text-rose-600 text-[9px] font-bold px-1.5 py-0.5 rounded animate-pulse">Pending Review</span>
+                {% endif %}
+              </div>
+              <h4 class="text-xs font-semibold text-slate-700 line-clamp-2">"{{ ticket.message }}"</h4>
+              <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium pt-1 border-t border-slate-100/60">
+                <span>Campaign: <b class="text-slate-600">{{ ticket.campaign.name|slice:":20" }}...</b></span>
+                <span>{{ ticket.date }}</span>
+              </div>
+            </div>
+            {% empty %}
+            <div class="p-6 text-center text-slate-400 text-xs italic">
+              <i class="fas fa-clipboard-check text-2xl mb-2 block"></i> Clear dashboard! No tickets.
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {{ chart_budgets|json_script:"chart-budgets-data" }}
+  {{ chart_names|json_script:"chart-names-data" }}
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const budgetCtx = document.getElementById('budgetChart');
+      if (budgetCtx) {
+        const budgetsData = JSON.parse(document.getElementById('chart-budgets-data').textContent);
+        const namesData = JSON.parse(document.getElementById('chart-names-data').textContent);
+        
+        // Render beautiful bar chart representing dynamic budgets of active campaigns
+        new Chart(budgetCtx, {
+          type: 'bar',
+          data: {
+            labels: namesData.length > 0 ? namesData : ['Summer Reel', 'Unboxing Bag', 'Outfit Style', 'Activewear Shoot', 'Sample Story'],
+            datasets: [{
+              label: 'Campaign Budget ($)',
+              data: budgetsData.length > 0 ? budgetsData : [4500, 3200, 2500, 1800, 1200],
+              backgroundColor: 'rgba(47, 84, 235, 0.85)',
+              borderColor: 'rgb(47, 84, 235)',
+              borderWidth: 1,
+              borderRadius: 8,
+              hoverBackgroundColor: 'rgba(255, 122, 69, 0.9)',
+              hoverBorderColor: 'rgb(255, 122, 69)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(241, 245, 249, 1)'
+                },
+                ticks: {
+                  font: {
+                    family: 'Inter',
+                    size: 10
+                  }
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                },
+                ticks: {
+                  font: {
+                    family: 'Inter',
+                    size: 10
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Notifications dropdown toggle & AJAX mark all read
+      (function() {
+        const btn = document.getElementById('notifButton');
+        const panel = document.getElementById('notifPanel');
+        const clearBtn = document.getElementById('clearNotificationsBtn');
+        const notificationsContent = document.getElementById('notificationsContent');
+        const emptyState = document.getElementById('emptyNotificationsState');
+        const badge = document.getElementById('notifBadge');
+
+        if (!btn || !panel) return;
+
+        function closePanel(e) {
+          if (!panel.classList.contains('hidden')) {
+            if (e && (panel.contains(e.target) || btn.contains(e.target))) return;
+            panel.classList.add('hidden');
+            document.removeEventListener('click', closePanel);
+          }
+        }
+
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          panel.classList.toggle('hidden');
+          if (!panel.classList.contains('hidden')) {
+            setTimeout(() => document.addEventListener('click', closePanel), 0);
+          } else {
+            document.removeEventListener('click', closePanel);
+          }
+        });
+
+        if (clearBtn && notificationsContent && emptyState) {
+          clearBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+
+            // Fire AJAX request to mark all read / clear notifications
+            fetch('/admin/notifications/mark-all-read/', {
+              method: 'POST',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+              }
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success') {
+                notificationsContent.innerHTML = '';
+                notificationsContent.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                if (badge) {
+                  badge.style.display = 'none';
+                }
+              }
+            })
+            .catch(err => {
+              console.error('Failed to clear notifications:', err);
+              // Fallback UI clear anyway
+              notificationsContent.innerHTML = '';
+              notificationsContent.classList.add('hidden');
+              emptyState.classList.remove('hidden');
+              if (badge) {
+                badge.style.display = 'none';
+              }
+            });
+          });
+        }
+      })();
+    });
+  </script>
+</body>
+</html>
+{% endblock %}

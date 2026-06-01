@@ -36,6 +36,20 @@ class UserProfile(models.Model):
     otp_code = models.CharField(max_length=6, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
 
+    def get_details(self):
+        if self.role == "business":
+            parts = []
+            if self.company_name:
+                parts.append(self.company_name)
+            if self.business_type:
+                parts.append(self.business_type)
+            return " | ".join(parts) or "Business Client"
+        else:
+            niches_list = [n.name for n in self.niches.all()]
+            return f"Niches: {', '.join(niches_list)}" if niches_list else "Creator Talent"
+    
+    get_details.short_description = "Profile Details"
+
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()})"
 

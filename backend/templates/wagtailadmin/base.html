@@ -1,0 +1,53 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+{{ block.super }}
+<!-- Inter Font from Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    /* Global Inter Font Family Override */
+    * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif !important;
+    }
+    body, h1, h2, h3, h4, h5, h6, input, textarea, select, button, table, th, td {
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    /* Elegant styling for Ampli logo in Wagtail sidebar */
+    .sidebar-custom-branding, 
+    .w-sidebar__header a, 
+    .sidebar__logo,
+    .branding-logo {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 16px 12px !important;
+        background: transparent !important;
+    }
+    
+    .sidebar-custom-branding img, 
+    .branding-logo img, 
+    .w-sidebar__header img,
+    .w-sidebar__header svg {
+        max-height: 48px !important;
+        max-width: 140px !important;
+        width: auto !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 auto !important;
+        object-fit: contain !important;
+    }
+
+    /* Prevent default Wagtail sidebar padding overflow */
+    .w-sidebar__header {
+        padding: 8px !important;
+    }
+</style>
+{% endblock %}
+
+{% block branding_logo %}
+<img src="{% static 'img/logo.png' %}" alt="ampli.io" />
+{% endblock %}
