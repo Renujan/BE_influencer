@@ -1,0 +1,379 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ampli.io - User Profiles Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              orange: '#ff7a45',
+              blue: '#2f54eb',
+              dark: '#0a0e1a',
+              card: '#161d2e',
+              border: '#1f2d40'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .dashboard-container {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .stats-card-gradient-blue {
+      background: linear-gradient(135deg, #2f54eb 0%, #1a39b7 100%);
+    }
+    
+    .stats-card-gradient-orange {
+      background: linear-gradient(135deg, #ff7a45 0%, #d4380d 100%);
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+  <div class="dashboard-container p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-6">
+    
+    <!-- Top Header & Navigation -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-widest">
+          <a href="{% url 'wagtailadmin_home' %}" class="hover:text-brand-blue transition-colors">Admin</a>
+          <span>/</span>
+          <span class="text-brand-blue">User Profiles</span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-1">User Profiles Manager</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Comprehensive audit and status dashboard for brands and creators</p>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <a href="{% url 'wagtailadmin_home' %}" class="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-xl transition-all duration-200">
+          <i class="fas fa-home"></i> Home Dashboard
+        </a>
+      </div>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
+      <!-- Total Profiles -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-slate-100 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="relative z-10 flex flex-col justify-between h-full">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total User Accounts</span>
+            <span class="h-8 w-8 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center text-sm shadow-sm"><i class="fas fa-user-friends"></i></span>
+          </div>
+          <div class="mt-4">
+            <span class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_profiles }}</span>
+            <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full ml-2">Enrolled</span>
+          </div>
+          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
+            <span>Verified: <b class="text-emerald-500 font-semibold">{{ otp_verified_rate }}%</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Creator Talents -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-slate-100 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+          <i class="fas fa-video"></i>
+        </div>
+        <div class="relative z-10 flex flex-col justify-between h-full">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Creator Talents</span>
+            <span class="h-8 w-8 rounded-xl bg-orange-50 text-brand-orange flex items-center justify-center text-sm shadow-sm"><i class="fas fa-microphone"></i></span>
+          </div>
+          <div class="mt-4">
+            <span class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_creators }}</span>
+            <span class="text-xs font-semibold text-brand-orange bg-orange-50 px-2 py-0.5 rounded-full ml-2">Influencers</span>
+          </div>
+          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
+            <span>Role: <b class="text-brand-orange font-semibold">Creator Talent</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Business Clients -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-slate-100 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+          <i class="fas fa-building"></i>
+        </div>
+        <div class="relative z-10 flex flex-col justify-between h-full">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Business Clients</span>
+            <span class="h-8 w-8 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center text-sm shadow-sm"><i class="fas fa-store"></i></span>
+          </div>
+          <div class="mt-4">
+            <span class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_brands }}</span>
+            <span class="text-xs font-semibold text-brand-blue bg-blue-50 px-2 py-0.5 rounded-full ml-2">Brands</span>
+          </div>
+          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
+            <span>Role: <b class="text-brand-blue font-semibold">Business Client</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- OTP Verified Rate -->
+      <div class="stats-card-gradient-orange p-5 rounded-2xl text-white shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-white/10 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+        <div class="relative z-10 flex flex-col justify-between h-full">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white/80 uppercase tracking-wider">Identity Verification</span>
+            <span class="h-8 w-8 rounded-xl bg-white/20 text-white flex items-center justify-center text-sm shadow-sm"><i class="fas fa-check-double"></i></span>
+          </div>
+          <div class="mt-4">
+            <span class="text-3xl font-extrabold tracking-tight">{{ otp_verified_rate }}%</span>
+            <span class="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full ml-2">OTP Verified</span>
+          </div>
+          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-white/15 text-[11px] text-white/80 font-medium">
+            <span>Security Flow: <b class="text-white font-semibold">Simulated OTP SMS</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Platform Assets -->
+      <div class="stats-card-gradient-blue p-5 rounded-2xl text-white shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-white/10 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+          <i class="fas fa-wallet"></i>
+        </div>
+        <div class="relative z-10 flex flex-col justify-between h-full">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white/80 uppercase tracking-wider">Protected Assets</span>
+            <span class="h-8 w-8 rounded-xl bg-white/20 text-white flex items-center justify-center text-sm shadow-sm"><i class="fas fa-lock"></i></span>
+          </div>
+          <div class="mt-4">
+            <span class="text-3xl font-extrabold tracking-tight">${{ total_balance|floatformat:2 }}</span>
+            <span class="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full ml-2">Total Wallet</span>
+          </div>
+          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-white/15 text-[11px] text-white/80 font-medium">
+            <span>Average Account: <b class="text-white font-semibold">${{ avg_balance|floatformat:2 }}</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search & Filter Board -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <!-- Role Filters Tabs -->
+      <div class="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-full md:w-auto overflow-x-auto">
+        <a href="{% url 'userprofile:index' %}" class="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 shrink-0
+          {% if not request.GET.role and not request.GET.otp_verified %} bg-white text-slate-800 shadow-sm {% else %} text-slate-500 hover:text-slate-800 {% endif %}">
+          All Profiles
+        </a>
+        <a href="{% url 'userprofile:index' %}?role=influencer" class="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 shrink-0
+          {% if request.GET.role == 'influencer' %} bg-white text-brand-orange shadow-sm {% else %} text-slate-500 hover:text-slate-800 {% endif %}">
+          Creators
+        </a>
+        <a href="{% url 'userprofile:index' %}?role=business" class="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 shrink-0
+          {% if request.GET.role == 'business' %} bg-white text-brand-blue shadow-sm {% else %} text-slate-500 hover:text-slate-800 {% endif %}">
+          Brands
+        </a>
+        <a href="{% url 'userprofile:index' %}?otp_verified=1" class="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 shrink-0
+          {% if request.GET.otp_verified %} bg-white text-emerald-600 shadow-sm {% else %} text-slate-500 hover:text-slate-800 {% endif %}">
+          OTP Verified
+        </a>
+      </div>
+
+      <!-- Custom Search Bar -->
+      <form method="GET" action="{% url 'userprofile:index' %}" class="flex items-center gap-2 w-full md:w-80">
+        {% if request.GET.role %}
+          <input type="hidden" name="role" value="{{ request.GET.role }}">
+        {% endif %}
+        {% if request.GET.otp_verified %}
+          <input type="hidden" name="otp_verified" value="{{ request.GET.otp_verified }}">
+        {% endif %}
+        <div class="relative w-full">
+          <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search username, company, phone..." 
+            class="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all duration-200">
+          <div class="absolute left-3.5 top-2.5 text-slate-400 text-xs">
+            <i class="fas fa-search"></i>
+          </div>
+        </div>
+        <button type="submit" class="bg-brand-blue hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all duration-200">
+          Search
+        </button>
+      </form>
+    </div>
+
+    <!-- Listing Table Section -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+            <i class="fas fa-user-circle text-brand-blue"></i>
+            User Profiles Inventory
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Showing registered users and verification details</p>
+        </div>
+        <div class="flex items-center gap-2">
+          {% if request.GET.q or request.GET.role or request.GET.otp_verified %}
+            <a href="{% url 'userprofile:index' %}" class="text-xs text-red-500 hover:text-red-700 font-bold transition-all flex items-center gap-1">
+              <i class="fas fa-times-circle"></i> Clear Filters
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left border-collapse min-w-[900px]">
+          <thead>
+            <tr class="bg-slate-50 text-[10px] text-slate-400 font-bold uppercase border-b border-slate-100">
+              <th class="p-3 pl-4 w-12">User</th>
+              <th class="p-3">Role</th>
+              <th class="p-3">Verification</th>
+              <th class="p-3">Profile Info</th>
+              <th class="p-3">Phone</th>
+              <th class="p-3">Wallet Balance</th>
+              <th class="p-3 pr-4 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for profile in object_list %}
+            <tr class="text-xs hover:bg-slate-50/80 transition-all duration-150">
+              <!-- User Info column -->
+              <td class="p-3 pl-4">
+                <div class="flex items-center gap-3">
+                  <div class="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold shadow-inner border border-slate-200 shrink-0
+                    {% if profile.role == 'business' %} bg-blue-50 text-brand-blue {% else %} bg-orange-50 text-brand-orange {% endif %}">
+                    {{ profile.user.username|make_list|first|upper }}
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-slate-700">@{{ profile.user.username }}</h4>
+                    <span class="text-[10px] text-slate-400 block mt-0.5">{{ profile.user.email }}</span>
+                  </div>
+                </div>
+              </td>
+              
+              <!-- Role Badge column -->
+              <td class="p-3">
+                {% if profile.role == 'business' %}
+                  <span class="bg-blue-50 text-brand-blue border border-blue-200 px-2 py-0.5 rounded-full text-[10px] font-bold">Business Client</span>
+                {% else %}
+                  <span class="bg-orange-50 text-brand-orange border border-orange-200 px-2 py-0.5 rounded-full text-[10px] font-bold">Creator Talent</span>
+                {% endif %}
+              </td>
+              
+              <!-- OTP verification badge column -->
+              <td class="p-3">
+                {% if profile.otp_verified %}
+                  <div class="flex items-center gap-1 text-emerald-600 font-bold">
+                    <span class="h-5 w-5 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[10px]"><i class="fas fa-check"></i></span>
+                    <span class="text-[10px]">Verified</span>
+                  </div>
+                {% else %}
+                  <div class="flex items-center gap-1 text-amber-500 font-bold">
+                    <span class="h-5 w-5 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-[10px]"><i class="fas fa-exclamation"></i></span>
+                    <span class="text-[10px]">Pending</span>
+                  </div>
+                {% endif %}
+              </td>
+              
+              <!-- Role Custom Profile Details column -->
+              <td class="p-3">
+                {% if profile.role == 'business' %}
+                  <div>
+                    <span class="font-bold text-slate-700">{{ profile.company_name|default:"Unconfigured Brand" }}</span>
+                    {% if profile.website %}
+                      <a href="{{ profile.website }}" target="_blank" class="text-[10px] text-brand-blue hover:underline block mt-0.5"><i class="fas fa-link text-[8px] mr-1"></i>{{ profile.website }}</a>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <div class="flex flex-wrap gap-1 max-w-[280px]">
+                    {% for niche in profile.niches.all %}
+                      <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[9px] font-medium">{{ niche.name }}</span>
+                    {% empty %}
+                      <span class="text-slate-400 italic text-[10px]">No niches selected</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </td>
+              
+              <!-- Phone number column -->
+              <td class="p-3 text-slate-500 font-medium">{{ profile.phone|default:"-" }}</td>
+              
+              <!-- Wallet balance column -->
+              <td class="p-3">
+                <span class="font-extrabold text-slate-800 block">${{ profile.wallet_balance|floatformat:2 }}</span>
+                <span class="text-[9px] text-slate-400 block mt-0.5">Payout: {{ profile.next_payout_date|default:"N/A" }}</span>
+              </td>
+              
+              <!-- Action column -->
+              <td class="p-3 pr-4">
+                <div class="flex items-center justify-center gap-2">
+                  <a href="{% url 'userprofile:inspect' profile.pk %}" class="h-7 w-7 rounded-lg hover:bg-slate-100 border border-slate-200/80 text-slate-600 hover:text-brand-blue flex items-center justify-center text-xs transition-all duration-150" title="Inspect/View Details">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  <a href="{% url 'userprofile:edit' profile.pk %}" class="h-7 w-7 rounded-lg hover:bg-slate-100 border border-slate-200/80 text-slate-600 hover:text-brand-orange flex items-center justify-center text-xs transition-all duration-150" title="Edit Profile Settings">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="p-8 text-center text-slate-400 text-xs italic">
+                <i class="fas fa-users-slash text-3xl mb-2 block"></i> No profiles match the search criteria.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination Row -->
+      {% if is_paginated %}
+      <div class="flex items-center justify-between border-t border-slate-100 pt-4 mt-4">
+        <span class="text-xs text-slate-400">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+        <div class="flex items-center gap-1">
+          {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.role %}&role={{ request.GET.role }}{% endif %}{% if request.GET.otp_verified %}&otp_verified={{ request.GET.otp_verified }}{% endif %}" 
+               class="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg transition-all duration-150">
+              <i class="fas fa-chevron-left mr-1"></i> Previous
+            </a>
+          {% endif %}
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.role %}&role={{ request.GET.role }}{% endif %}{% if request.GET.otp_verified %}&otp_verified={{ request.GET.otp_verified }}{% endif %}" 
+               class="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg transition-all duration-150">
+              Next <i class="fas fa-chevron-right ml-1"></i>
+            </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</body>
+</html>
+{% endblock %}
