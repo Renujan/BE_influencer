@@ -210,6 +210,8 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
         location = self.request.query_params.get("location")
         er_min = self.request.query_params.get("er_min")
         followers_min = self.request.query_params.get("followers_min")
+        rate_max = self.request.query_params.get("rate_max")
+        approved_only = self.request.query_params.get("approved_only")
 
         if niche and niche.lower() != "all":
             qs = qs.filter(niches__name__iexact=niche)
@@ -220,7 +222,12 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
         if er_min:
             qs = qs.filter(user__social_accounts__engagement_rate__gte=float(er_min))
 
-        # We keep this as simple matching or parsing followers string in serializer
+        if rate_max:
+            qs = qs.filter(average_rate__lte=float(rate_max))
+
+        if approved_only and approved_only.lower() == "true":
+            qs = qs.filter(is_approved=True)
+
         return qs.distinct()
 
 class CampaignViewSet(viewsets.ModelViewSet):
