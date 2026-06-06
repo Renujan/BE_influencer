@@ -230,6 +230,18 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
 
         return qs.distinct()
 
+    @action(detail=True, methods=["post"])
+    def moderate(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({"error": "Only staff members can moderate profiles"}, status=status.HTTP_403_FORBIDDEN)
+        profile = self.get_object()
+        is_approved = request.data.get("is_approved")
+        if is_approved is None:
+            return Response({"error": "is_approved field is required"}, status=status.HTTP_400_BAD_REQUEST)
+        profile.is_approved = bool(is_approved)
+        profile.save()
+        return Response(UserProfileSerializer(profile).data)
+
 class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
     serializer_class = CampaignSerializer
