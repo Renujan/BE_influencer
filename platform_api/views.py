@@ -446,3 +446,15 @@ class RequestViewSet(viewsets.ModelViewSet):
         campaign = self.get_object()
         campaign.delete()
         return Response({"message": "Request successfully declined"})
+
+
+class TransactionHistoryViewSet(viewsets.ModelViewSet):
+    queryset = TransactionHistory.objects.all()
+    serializer_class = TransactionHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser:
+            return TransactionHistory.objects.all()
+        return TransactionHistory.objects.filter(user=user)
