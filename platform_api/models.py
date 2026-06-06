@@ -35,6 +35,7 @@ class UserProfile(models.Model):
     # Email OTP storage (simulated OTP flow)
     otp_code = models.CharField(max_length=6, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
+    is_approved = models.BooleanField(default=False)
 
     def get_details(self):
         if self.role == "business":
