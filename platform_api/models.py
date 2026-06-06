@@ -77,8 +77,10 @@ class CreatorSocialAccount(models.Model):
 class Campaign(models.Model):
     STATUS_CHOICES = (
         ("Pending", "Pending"),
+        ("Awaiting Moderation", "Awaiting Moderation"),
         ("Live", "Live"),
         ("Completed", "Completed"),
+        ("Flagged", "Flagged"),
     )
     name = models.CharField(max_length=255)
     brand = models.ForeignKey(User, on_delete=models.CASCADE, related_name="brand_campaigns")
