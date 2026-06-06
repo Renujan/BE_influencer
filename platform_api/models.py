@@ -36,6 +36,7 @@ class UserProfile(models.Model):
     otp_code = models.CharField(max_length=6, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
     is_approved = models.BooleanField(default=False)
+    average_rate = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
 
     def get_details(self):
         if self.role == "business":
