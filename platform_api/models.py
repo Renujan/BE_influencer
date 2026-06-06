@@ -202,3 +202,28 @@ class CreatorPortfolioItem(models.Model):
 
     def __str__(self):
         return f"{self.user_profile.user.username} - {self.title or 'Portfolio Item'}"
+
+@register_snippet
+class TransactionHistory(models.Model):
+    TRANSACTION_TYPE_CHOICES = (
+        ("escrow", "Escrow"),
+        ("released", "Released"),
+        ("refund", "Refunded"),
+        ("deposit", "Deposit"),
+    )
+    STATUS_CHOICES = (
+        ("Pending", "Pending"),
+        ("Released", "Released"),
+        ("In Escrow", "In Escrow"),
+        ("Refunded", "Refunded"),
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="transactions")
+    campaign = models.ForeignKey(Campaign, on_delete=models.SET_NULL, null=True, blank=True, related_name="transactions")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    transaction_type = models.CharField(max_length=30, choices=TRANSACTION_TYPE_CHOICES)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES)
+    date = models.CharField(max_length=100) # e.g. "May 10"
+    receipt_url = models.CharField(max_length=255, blank=True, default="")
+
+    def __str__(self):
+        return f"{self.transaction_type.capitalize()} - ${self.amount} ({self.status})"
