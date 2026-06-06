@@ -3,8 +3,13 @@ from django.contrib.auth.models import User
 from .models import (
     Niche, UserProfile, CreatorSocialAccount, Campaign, CampaignTask,
     CampaignMilestone, Deliverable, PaymentInstallment, WorkspaceFile,
-    WorkspaceMessage, AdminComplianceTicket
+    WorkspaceMessage, AdminComplianceTicket, CreatorPortfolioItem
 )
+
+class CreatorPortfolioItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CreatorPortfolioItem
+        fields = ["id", "image_url", "title"]
 
 class NicheSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,13 +30,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     niches = NicheSerializer(many=True, read_only=True)
     social_accounts = CreatorSocialAccountSerializer(source="user.social_accounts", many=True, read_only=True)
+    portfolio_items = CreatorPortfolioItemSerializer(many=True, read_only=True)
 
     class Meta:
         model = UserProfile
         fields = [
             "id", "user", "role", "phone", "avatar_url", "bio", "location",
             "wallet_balance", "next_payout_date", "niches", "social_accounts",
-            "company_name", "business_type", "website", "is_approved", "average_rate"
+            "company_name", "business_type", "website", "is_approved", "average_rate",
+            "portfolio_items"
         ]
 
 class CampaignTaskSerializer(serializers.ModelSerializer):
