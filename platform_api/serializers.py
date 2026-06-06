@@ -3,8 +3,13 @@ from django.contrib.auth.models import User
 from .models import (
     Niche, UserProfile, CreatorSocialAccount, Campaign, CampaignTask,
     CampaignMilestone, Deliverable, PaymentInstallment, WorkspaceFile,
-    WorkspaceMessage, AdminComplianceTicket, CreatorPortfolioItem
+    WorkspaceMessage, AdminComplianceTicket, CreatorPortfolioItem, TransactionHistory
 )
+
+class TransactionHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TransactionHistory
+        fields = ["id", "user", "campaign", "amount", "transaction_type", "status", "date", "receipt_url"]
 
 class CreatorPortfolioItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -90,11 +95,12 @@ class CampaignSerializer(serializers.ModelSerializer):
     files = WorkspaceFileSerializer(many=True, read_only=True)
     messages = WorkspaceMessageSerializer(many=True, read_only=True)
     tickets = AdminComplianceTicketSerializer(many=True, read_only=True)
+    transactions = TransactionHistorySerializer(many=True, read_only=True)
 
     class Meta:
         model = Campaign
         fields = [
             "id", "name", "brand", "brand_name", "creator", "creator_name",
             "status", "budget", "start_date", "progress", "brief",
-            "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets"
+            "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "transactions"
         ]

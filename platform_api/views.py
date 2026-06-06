@@ -11,13 +11,13 @@ from django.shortcuts import get_object_or_404
 from .models import (
     Niche, UserProfile, CreatorSocialAccount, Campaign, CampaignTask,
     CampaignMilestone, Deliverable, PaymentInstallment, WorkspaceFile,
-    WorkspaceMessage, AdminComplianceTicket, CreatorPortfolioItem
+    WorkspaceMessage, AdminComplianceTicket, CreatorPortfolioItem, TransactionHistory
 )
 from .serializers import (
     NicheSerializer, UserProfileSerializer, CampaignSerializer,
     WorkspaceMessageSerializer, WorkspaceFileSerializer, DeliverableSerializer,
     AdminComplianceTicketSerializer, PaymentInstallmentSerializer,
-    CreatorPortfolioItemSerializer
+    CreatorPortfolioItemSerializer, TransactionHistorySerializer
 )
 
 class SendOTPView(APIView):
