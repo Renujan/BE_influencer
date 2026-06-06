@@ -31,7 +31,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id", "user", "role", "phone", "avatar_url", "bio", "location",
             "wallet_balance", "next_payout_date", "niches", "social_accounts",
-            "company_name", "business_type", "website"
+            "company_name", "business_type", "website", "is_approved", "average_rate"
         ]
 
 class CampaignTaskSerializer(serializers.ModelSerializer):
