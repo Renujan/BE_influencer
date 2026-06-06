@@ -2,9 +2,9 @@ from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet
 from wagtail.admin.menu import MenuItem
 from wagtail.admin.views.generic import IndexView, InspectView
-from django.urls import reverse
+from django.urls import reverse 
 from django.db.models import Sum, Avg
-from .models import UserProfile, Campaign, AdminComplianceTicket
+from .models import UserProfile, Campaign, AdminComplianceTicket, CreatorPortfolioItem, TransactionHistory
 from complaint.models import Complaint
 
 # 1. Custom Django Admin Views & Viewsets
@@ -185,6 +185,17 @@ class ComplaintViewSet(ModelViewSet):
         
         return NoAddComplaintPermissionPolicy(self.model)
 
+class TransactionHistoryViewSet(ModelViewSet):
+    model = TransactionHistory
+    menu_label = "Ledger & Escrow"
+    menu_icon = "lock"
+    menu_item_name = "transactions_ledger"
+    add_to_admin_menu = True
+    exclude_form_fields = []
+    list_display = ("user", "campaign", "amount", "transaction_type", "status", "date")
+    list_filter = ("transaction_type", "status")
+    search_fields = ("user__username", "campaign__name")
+
 # 2. Register Viewsets
 @hooks.register("register_admin_viewset")
 def register_user_profile_viewset():
@@ -201,6 +212,10 @@ def register_compliance_ticket_viewset():
 @hooks.register("register_admin_viewset")
 def register_complaint_viewset():
     return ComplaintViewSet()
+
+@hooks.register("register_admin_viewset")
+def register_transaction_history_viewset():
+    return TransactionHistoryViewSet()
 
 @hooks.register('register_admin_menu_item')
 def register_main_admin_menu_item():

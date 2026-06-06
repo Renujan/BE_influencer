@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from platform_api.models import (
     Niche, UserProfile, CreatorSocialAccount, Campaign, CampaignTask,
     CampaignMilestone, Deliverable, PaymentInstallment, WorkspaceFile,
-    WorkspaceMessage, AdminComplianceTicket
+    WorkspaceMessage, AdminComplianceTicket, CreatorPortfolioItem, TransactionHistory
 )
 from rest_framework.authtoken.models import Token
 
@@ -33,10 +33,17 @@ class Command(BaseCommand):
                 "wallet_balance": 8420.50,
                 "next_payout_date": "May 15",
                 "niches": ["Lifestyle", "Travel", "Fashion"],
+                "is_approved": True,
+                "average_rate": 3200.00,
                 "socials": [
                     {"platform": "instagram", "username": "@mayachen", "followers": "1.2M", "er": 8.20, "is_connected": True},
                     {"platform": "youtube", "username": "Maya Chen", "followers": "320K", "er": 6.10, "is_connected": True},
                     {"platform": "tiktok", "username": "@mayachen", "followers": "—", "er": 0.00, "is_connected": False},
+                ],
+                "portfolio": [
+                    {"image_url": "https://images.unsplash.com/photo-1501854140801-50d01698950b", "title": "Summer Outfits Style Vibe"},
+                    {"image_url": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800", "title": "Travel Diary: Tokyo Nights"},
+                    {"image_url": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1", "title": "Beauty Audit: Organic Skincare"},
                 ]
             },
             {
@@ -48,9 +55,15 @@ class Command(BaseCommand):
                 "bio": "Exploring tech solutions, coding, gadgets, and reviews.",
                 "wallet_balance": 1500.00,
                 "niches": ["Tech", "Gaming"],
+                "is_approved": True,
+                "average_rate": 2500.00,
                 "socials": [
                     {"platform": "instagram", "username": "@james_ok", "followers": "880K", "er": 7.40, "is_connected": True},
                     {"platform": "youtube", "username": "James Tech", "followers": "440K", "er": 6.80, "is_connected": True},
+                ],
+                "portfolio": [
+                    {"image_url": "https://images.unsplash.com/photo-1498050108023-c5249f4df085", "title": "Desk Setup & Workspace Essentials"},
+                    {"image_url": "https://images.unsplash.com/photo-1538481199705-c710c4e965fc", "title": "Gaming Setup & Console Review"},
                 ]
             },
             {
@@ -62,6 +75,8 @@ class Command(BaseCommand):
                 "bio": "Beauty tips, skincare routines, and cosmetics audits.",
                 "wallet_balance": 0.00,
                 "niches": ["Beauty", "Lifestyle"],
+                "is_approved": False,
+                "average_rate": 1200.00,
                 "socials": [
                     {"platform": "instagram", "username": "@priya_nair", "followers": "640K", "er": 6.90, "is_connected": True},
                 ]
@@ -75,6 +90,8 @@ class Command(BaseCommand):
                 "bio": "Solo wanderlust and travel tips in South Korea and Asia.",
                 "wallet_balance": 6500.00,
                 "niches": ["Travel", "Food"],
+                "is_approved": True,
+                "average_rate": 1800.00,
                 "socials": [
                     {"platform": "instagram", "username": "@lia_travels", "followers": "420K", "er": 6.10, "is_connected": True},
                 ]
@@ -88,6 +105,8 @@ class Command(BaseCommand):
                 "bio": "High street fashion and classic Italian design blogs.",
                 "wallet_balance": 0.00,
                 "niches": ["Fashion"],
+                "is_approved": True,
+                "average_rate": 4000.00,
                 "socials": [
                     {"platform": "instagram", "username": "@marco_vinci", "followers": "1.8M", "er": 5.80, "is_connected": True},
                 ]
@@ -113,7 +132,18 @@ class Command(BaseCommand):
             profile.bio = c["bio"]
             profile.wallet_balance = c["wallet_balance"]
             profile.next_payout_date = c.get("next_payout_date", "")
+            profile.is_approved = c.get("is_approved", False)
+            profile.average_rate = c.get("average_rate", 0.00)
             profile.save()
+
+            # Portfolio Items
+            CreatorPortfolioItem.objects.filter(user_profile=profile).delete()
+            for p_item in c.get("portfolio", []):
+                CreatorPortfolioItem.objects.create(
+                    user_profile=profile,
+                    image_url=p_item["image_url"],
+                    title=p_item["title"]
+                )
 
             # Niches
             profile.niches.clear()
@@ -201,6 +231,7 @@ class Command(BaseCommand):
             profile.company_name = b["company_name"]
             profile.business_type = b["business_type"]
             profile.website = b["website"]
+            profile.is_approved = True
             profile.save()
             
             users[b["username"]] = user
@@ -333,4 +364,46 @@ class Command(BaseCommand):
         )
 
         self.stdout.write("Campaigns and safety workflows seeded.")
+
+        # Clear existing transactions to avoid duplicates
+        TransactionHistory.objects.all().delete()
+
+        # Seed transaction histories
+        # 1. Transactions for c1 ("Summer Drop 2026")
+        TransactionHistory.objects.create(
+            user=users["alex"], campaign=c1, amount=1000.00, transaction_type="escrow",
+            status="Released", date="May 02", receipt_url="https://kollab-receipts.s3.amazonaws.com/rec_c1_1.pdf"
+        )
+        TransactionHistory.objects.create(
+            user=users["alex"], campaign=c1, amount=1500.00, transaction_type="released",
+            status="Released", date="May 10", receipt_url="https://kollab-receipts.s3.amazonaws.com/rec_c1_2.pdf"
+        )
+        TransactionHistory.objects.create(
+            user=users["alex"], campaign=c1, amount=1700.00, transaction_type="escrow",
+            status="In Escrow", date="May 12", receipt_url="https://kollab-receipts.s3.amazonaws.com/rec_c1_3.pdf"
+        )
+
+        # 2. Transactions for Completed/Live campaigns
+        # Sneaker Launch released transaction (campaign c3)
+        TransactionHistory.objects.create(
+            user=users["vertex"], campaign=c3, amount=8900.00, transaction_type="released",
+            status="Released", date="May 09", receipt_url="https://kollab-receipts.s3.amazonaws.com/rec_c3_1.pdf"
+        )
+        # Festival Series (completed campaign c2)
+        TransactionHistory.objects.create(
+            user=users["forma"], campaign=c2, amount=6500.00, transaction_type="released",
+            status="Released", date="Apr 28", receipt_url="https://kollab-receipts.s3.amazonaws.com/rec_c2_1.pdf"
+        )
+        # Skincare Edit deposit pending (campaign c4)
+        TransactionHistory.objects.create(
+            user=users["lumen"], campaign=c4, amount=2400.00, transaction_type="deposit",
+            status="Pending", date="May 05", receipt_url="https://kollab-receipts.s3.amazonaws.com/rec_c4_1.pdf"
+        )
+        # Holiday Teaser escrow (campaign c5)
+        TransactionHistory.objects.create(
+            user=users["alex"], campaign=c5, amount=3800.00, transaction_type="escrow",
+            status="In Escrow", date="Apr 21", receipt_url="https://kollab-receipts.s3.amazonaws.com/rec_c5_1.pdf"
+        )
+
+        self.stdout.write("Campaigns, transactions, and portfolios seeded.")
         self.stdout.write(self.style.SUCCESS("Database seeding completed successfully."))
