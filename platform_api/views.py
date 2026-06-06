@@ -378,6 +378,45 @@ class CampaignViewSet(viewsets.ModelViewSet):
         )
         return Response(AdminComplianceTicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=["post"])
+    def upload_receipt(self, request, pk=None):
+        campaign = self.get_object()
+        amount = request.data.get("amount")
+        receipt_url = request.data.get("receipt_url", "https://kollab-receipts.s3.amazonaws.com/rec_9821.pdf")
+        transaction_type = request.data.get("transaction_type", "deposit")
+        
+        if not amount:
+            return Response({"error": "Amount is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        import datetime
+        now = datetime.datetime.now()
+        date_str = now.strftime("%b %d")
+        
+        transaction = TransactionHistory.objects.create(
+            user=request.user,
+            campaign=campaign,
+            amount=float(amount),
+            transaction_type=transaction_type,
+            status="In Escrow" if transaction_type == "escrow" else "Released",
+            date=date_str,
+            receipt_url=receipt_url
+        )
+        return Response(TransactionHistorySerializer(transaction).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def moderate(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({"error": "Only staff members can moderate campaigns"}, status=status.HTTP_403_FORBIDDEN)
+        
+        campaign = self.get_object()
+        new_status = request.data.get("status")
+        if new_status not in ["Pending", "Awaiting Moderation", "Live", "Completed", "Flagged"]:
+            return Response({"error": "Invalid status value"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        campaign.status = new_status
+        campaign.save()
+        return Response(CampaignSerializer(campaign).data)
+
 class RequestViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.filter(status="Pending")
     serializer_class = CampaignSerializer
