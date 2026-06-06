@@ -193,3 +193,12 @@ class AdminComplianceTicket(models.Model):
 
     def __str__(self):
         return f"{self.campaign.name} - {self.category} ({self.status})"
+
+@register_snippet
+class CreatorPortfolioItem(models.Model):
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="portfolio_items")
+    image_url = models.CharField(max_length=255)
+    title = models.CharField(max_length=150, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user_profile.user.username} - {self.title or 'Portfolio Item'}"
