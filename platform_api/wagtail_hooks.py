@@ -98,9 +98,9 @@ class UserProfileViewSet(ModelViewSet):
     exclude_form_fields = []
     create_view_enabled = False  # Disable manual creation, hide add button
     list_display_add_buttons = None  # Hide the add button from list display header
-    list_display = ("user", "role", "phone", "otp_verified", "get_details", "wallet_balance")
-    list_export = ("id", "user__username", "user__email", "role", "phone", "location", "wallet_balance", "otp_verified", "company_name", "business_type", "website")
-    list_filter = ("role", "otp_verified")
+    list_display = ("user", "role", "phone", "otp_verified", "is_approved", "average_rate", "get_details", "wallet_balance")
+    list_export = ("id", "user__username", "user__email", "role", "phone", "location", "wallet_balance", "otp_verified", "is_approved", "average_rate", "company_name", "business_type", "website")
+    list_filter = ("role", "otp_verified", "is_approved")
     search_fields = ("user__username", "user__email", "company_name", "phone")
 
     # Custom views and template overrides
