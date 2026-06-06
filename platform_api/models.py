@@ -35,8 +35,6 @@ class UserProfile(models.Model):
     # Email OTP storage (simulated OTP flow)
     otp_code = models.CharField(max_length=6, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
-    is_approved = models.BooleanField(default=False)
-    average_rate = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
 
     def get_details(self):
         if self.role == "business":
@@ -77,10 +75,9 @@ class CreatorSocialAccount(models.Model):
 class Campaign(models.Model):
     STATUS_CHOICES = (
         ("Pending", "Pending"),
-        ("Awaiting Moderation", "Awaiting Moderation"),
         ("Live", "Live"),
         ("Completed", "Completed"),
-        ("Flagged", "Flagged"),
+        ("Rejected", "Rejected"),
     )
     name = models.CharField(max_length=255)
     brand = models.ForeignKey(User, on_delete=models.CASCADE, related_name="brand_campaigns")
@@ -90,9 +87,44 @@ class Campaign(models.Model):
     start_date = models.CharField(max_length=100, blank=True, null=True) # e.g. "May 12"
     progress = models.IntegerField(default=0)
     brief = models.TextField(blank=True, null=True)
+    category = models.CharField(max_length=100, blank=True, null=True)
+    delivery_language = models.CharField(max_length=100, blank=True, null=True)
+    voice_brief = models.CharField(max_length=255, blank=True, null=True)
+    screenshare_brief = models.CharField(max_length=255, blank=True, null=True)
+    video_brief = models.CharField(max_length=255, blank=True, null=True)
+    admin_review = models.TextField(blank=True, null=True, help_text="Provide review/rejection comments to the business if rejected.")
 
     def __str__(self):
         return f"{self.name} ({self.status})"
+
+    def get_business_name(self):
+        return self.brand.username if self.brand else "-"
+    get_business_name.short_description = "Business Name"
+
+    def get_creator_name(self):
+        return self.creator.username if self.creator else "-"
+    get_creator_name.short_description = "Creator Name"
+
+    def get_last_chat_time(self):
+        last_msg = self.chat_messages.all().order_by("-id").first()
+        if last_msg:
+            return last_msg.time
+        return "-"
+    get_last_chat_time.short_description = "Last Chat Date & Time"
+
+    def get_view_chat_btn(self):
+        from django.urls import reverse
+        from django.utils.html import format_html
+        url = reverse("chat_monitor_view_chat", args=[self.id])
+        return format_html('<a class="button button-small button-secondary" href="{}">View Chat</a>', url)
+    get_view_chat_btn.short_description = "View Chat"
+
+    def get_review_btn(self):
+        from django.urls import reverse
+        from django.utils.html import format_html
+        url = reverse("chat_monitor_review", args=[self.id])
+        return format_html('<a class="button button-small button-secondary" href="{}">Review</a>', url)
+    get_review_btn.short_description = "Review"
 
 @register_snippet
 class CampaignTask(models.Model):
@@ -193,37 +225,3 @@ class AdminComplianceTicket(models.Model):
 
     def __str__(self):
         return f"{self.campaign.name} - {self.category} ({self.status})"
-
-@register_snippet
-class CreatorPortfolioItem(models.Model):
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="portfolio_items")
-    image_url = models.CharField(max_length=255)
-    title = models.CharField(max_length=150, blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.user_profile.user.username} - {self.title or 'Portfolio Item'}"
-
-@register_snippet
-class TransactionHistory(models.Model):
-    TRANSACTION_TYPE_CHOICES = (
-        ("escrow", "Escrow"),
-        ("released", "Released"),
-        ("refund", "Refunded"),
-        ("deposit", "Deposit"),
-    )
-    STATUS_CHOICES = (
-        ("Pending", "Pending"),
-        ("Released", "Released"),
-        ("In Escrow", "In Escrow"),
-        ("Refunded", "Refunded"),
-    )
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="transactions")
-    campaign = models.ForeignKey(Campaign, on_delete=models.SET_NULL, null=True, blank=True, related_name="transactions")
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-    transaction_type = models.CharField(max_length=30, choices=TRANSACTION_TYPE_CHOICES)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES)
-    date = models.CharField(max_length=100) # e.g. "May 10"
-    receipt_url = models.CharField(max_length=255, blank=True, default="")
-
-    def __str__(self):
-        return f"{self.transaction_type.capitalize()} - ${self.amount} ({self.status})"

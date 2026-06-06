@@ -11,13 +11,12 @@ from django.shortcuts import get_object_or_404
 from .models import (
     Niche, UserProfile, CreatorSocialAccount, Campaign, CampaignTask,
     CampaignMilestone, Deliverable, PaymentInstallment, WorkspaceFile,
-    WorkspaceMessage, AdminComplianceTicket, CreatorPortfolioItem, TransactionHistory
+    WorkspaceMessage, AdminComplianceTicket
 )
 from .serializers import (
     NicheSerializer, UserProfileSerializer, CampaignSerializer,
     WorkspaceMessageSerializer, WorkspaceFileSerializer, DeliverableSerializer,
-    AdminComplianceTicketSerializer, PaymentInstallmentSerializer,
-    CreatorPortfolioItemSerializer, TransactionHistorySerializer
+    AdminComplianceTicketSerializer, PaymentInstallmentSerializer
 )
 
 class SendOTPView(APIView):
@@ -211,8 +210,6 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
         location = self.request.query_params.get("location")
         er_min = self.request.query_params.get("er_min")
         followers_min = self.request.query_params.get("followers_min")
-        rate_max = self.request.query_params.get("rate_max")
-        approved_only = self.request.query_params.get("approved_only")
 
         if niche and niche.lower() != "all":
             qs = qs.filter(niches__name__iexact=niche)
@@ -223,25 +220,8 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
         if er_min:
             qs = qs.filter(user__social_accounts__engagement_rate__gte=float(er_min))
 
-        if rate_max:
-            qs = qs.filter(average_rate__lte=float(rate_max))
-
-        if approved_only and approved_only.lower() == "true":
-            qs = qs.filter(is_approved=True)
-
+        # We keep this as simple matching or parsing followers string in serializer
         return qs.distinct()
-
-    @action(detail=True, methods=["post"])
-    def moderate(self, request, pk=None):
-        if not request.user.is_staff:
-            return Response({"error": "Only staff members can moderate profiles"}, status=status.HTTP_403_FORBIDDEN)
-        profile = self.get_object()
-        is_approved = request.data.get("is_approved")
-        if is_approved is None:
-            return Response({"error": "is_approved field is required"}, status=status.HTTP_400_BAD_REQUEST)
-        profile.is_approved = bool(is_approved)
-        profile.save()
-        return Response(UserProfileSerializer(profile).data)
 
 class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
@@ -378,45 +358,6 @@ class CampaignViewSet(viewsets.ModelViewSet):
         )
         return Response(AdminComplianceTicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=["post"])
-    def upload_receipt(self, request, pk=None):
-        campaign = self.get_object()
-        amount = request.data.get("amount")
-        receipt_url = request.data.get("receipt_url", "https://kollab-receipts.s3.amazonaws.com/rec_9821.pdf")
-        transaction_type = request.data.get("transaction_type", "deposit")
-        
-        if not amount:
-            return Response({"error": "Amount is required"}, status=status.HTTP_400_BAD_REQUEST)
-            
-        import datetime
-        now = datetime.datetime.now()
-        date_str = now.strftime("%b %d")
-        
-        transaction = TransactionHistory.objects.create(
-            user=request.user,
-            campaign=campaign,
-            amount=float(amount),
-            transaction_type=transaction_type,
-            status="In Escrow" if transaction_type == "escrow" else "Released",
-            date=date_str,
-            receipt_url=receipt_url
-        )
-        return Response(TransactionHistorySerializer(transaction).data, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=["post"])
-    def moderate(self, request, pk=None):
-        if not request.user.is_staff:
-            return Response({"error": "Only staff members can moderate campaigns"}, status=status.HTTP_403_FORBIDDEN)
-        
-        campaign = self.get_object()
-        new_status = request.data.get("status")
-        if new_status not in ["Pending", "Awaiting Moderation", "Live", "Completed", "Flagged"]:
-            return Response({"error": "Invalid status value"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        campaign.status = new_status
-        campaign.save()
-        return Response(CampaignSerializer(campaign).data)
-
 class RequestViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.filter(status="Pending")
     serializer_class = CampaignSerializer
@@ -446,15 +387,3 @@ class RequestViewSet(viewsets.ModelViewSet):
         campaign = self.get_object()
         campaign.delete()
         return Response({"message": "Request successfully declined"})
-
-
-class TransactionHistoryViewSet(viewsets.ModelViewSet):
-    queryset = TransactionHistory.objects.all()
-    serializer_class = TransactionHistorySerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_superuser:
-            return TransactionHistory.objects.all()
-        return TransactionHistory.objects.filter(user=user)

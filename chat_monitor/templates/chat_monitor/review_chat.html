@@ -1,0 +1,226 @@
+{% extends "wagtailadmin/base.html" %}
+
+{% block titletag %}Review Workspace - {{ campaign.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .review-container {
+        padding: 30px;
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        margin: 20px;
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 20px;
+        margin-bottom: 24px;
+    }
+
+    .review-header h2 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin: 0 0 6px 0;
+        color: #111827;
+    }
+
+    .form-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 30px;
+    }
+
+    .form-title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0 0 6px 0;
+        color: #0f172a;
+    }
+
+    .form-desc {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-bottom: 20px;
+    }
+
+    .form-group-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .form-field label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #475569;
+        margin-bottom: 6px;
+        letter-spacing: 0.05em;
+    }
+
+    .form-select, .form-textarea {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .form-select:focus, .form-textarea:focus {
+        border-color: #4f46e5;
+    }
+
+    .form-textarea {
+        height: 100px;
+        resize: none;
+    }
+
+    .submit-btn {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.85rem;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 24px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+    }
+
+    .submit-btn:hover {
+        box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3);
+    }
+
+    .directive-item {
+        border-left: 4px solid #f59e0b;
+        background: #fffbeb;
+        padding: 14px 18px;
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 12px;
+        font-size: 0.85rem;
+    }
+
+    .directive-item.approved {
+        border-left-color: #10b981;
+        background: #ecfdf5;
+    }
+
+    .directive-header {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 6px;
+    }
+
+    .directive-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .directive-content {
+        color: #334155;
+        line-height: 1.4;
+    }
+
+    .empty-list {
+        text-align: center;
+        padding: 30px;
+        color: #9ca3af;
+        border: 1px dashed #e2e8f0;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="review-container">
+    <div class="review-header">
+        <div>
+            <h2>Send Review Directive: {{ campaign.name }}</h2>
+            <p style="margin: 0; font-size: 0.85rem; color: #64748b;">
+                Submit official directives or compliance feedback directly visible inside the users' workspaces.
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'wagtailadmin_chat_monitor_campaigns:index' %}" class="button button-secondary">Back to Chat Monitor</a>
+        </div>
+    </div>
+
+    <!-- Review Submission Form -->
+    <div class="form-card">
+        <h3 class="form-title">Create Review / Directive</h3>
+        <p class="form-desc">Fill in the form to post a directive. You can target Business, Creator, or Both.</p>
+        <form method="POST" action="">
+            {% csrf_token %}
+            <div class="form-group-grid">
+                <div class="form-field">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" class="form-select">
+                        <option value="Safety / Guidelines">Safety / Guidelines</option>
+                        <option value="Escrow Protection">Escrow Protection</option>
+                        <option value="Contract Scope Dispute">Contract Scope Dispute</option>
+                        <option value="Deliverable Audit">Deliverable Audit</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="target_audience">Target Audience (Who receives review?)</label>
+                    <select id="target_audience" name="target_audience" class="form-select">
+                        <option value="both">Both (Business & Creator)</option>
+                        <option value="business">Business Only</option>
+                        <option value="creator">Creator Only</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-field" style="margin-bottom: 20px;">
+                <label for="review_text">Review Directive Message</label>
+                <textarea id="review_text" name="review_text" class="form-textarea" placeholder="Write compliance instructions or review decision here..." required></textarea>
+            </div>
+            <div style="text-align: right;">
+                <button type="submit" class="submit-btn">Send Review Directive</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Previous Review Directives -->
+    <div>
+        <h3 style="font-weight: 700; font-size: 1rem; color: #0f172a; margin-bottom: 16px;">Previous Review Directives ({{ reviews|length }})</h3>
+        {% for review in reviews %}
+            <div class="directive-item approved">
+                <div class="directive-header">
+                    <span>Directive: {{ review.category }}</span>
+                    <span style="font-weight: 500; font-size: 0.75rem;">{{ review.created_at|date:"M d, Y · H:i" }}</span>
+                </div>
+                <div style="margin-bottom: 8px;">
+                    <span class="directive-badge">Target: {{ review.get_target_audience_display }}</span>
+                </div>
+                <div class="directive-content">
+                    {{ review.review_text }}
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-list">
+                <p>No previous review directives submitted for this campaign.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

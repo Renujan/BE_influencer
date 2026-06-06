@@ -3,18 +3,8 @@ from django.contrib.auth.models import User
 from .models import (
     Niche, UserProfile, CreatorSocialAccount, Campaign, CampaignTask,
     CampaignMilestone, Deliverable, PaymentInstallment, WorkspaceFile,
-    WorkspaceMessage, AdminComplianceTicket, CreatorPortfolioItem, TransactionHistory
+    WorkspaceMessage, AdminComplianceTicket
 )
-
-class TransactionHistorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TransactionHistory
-        fields = ["id", "user", "campaign", "amount", "transaction_type", "status", "date", "receipt_url"]
-
-class CreatorPortfolioItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CreatorPortfolioItem
-        fields = ["id", "image_url", "title"]
 
 class NicheSerializer(serializers.ModelSerializer):
     class Meta:
@@ -35,15 +25,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     niches = NicheSerializer(many=True, read_only=True)
     social_accounts = CreatorSocialAccountSerializer(source="user.social_accounts", many=True, read_only=True)
-    portfolio_items = CreatorPortfolioItemSerializer(many=True, read_only=True)
 
     class Meta:
         model = UserProfile
         fields = [
             "id", "user", "role", "phone", "avatar_url", "bio", "location",
             "wallet_balance", "next_payout_date", "niches", "social_accounts",
-            "company_name", "business_type", "website", "is_approved", "average_rate",
-            "portfolio_items"
+            "company_name", "business_type", "website"
         ]
 
 class CampaignTaskSerializer(serializers.ModelSerializer):
@@ -95,12 +83,12 @@ class CampaignSerializer(serializers.ModelSerializer):
     files = WorkspaceFileSerializer(many=True, read_only=True)
     messages = WorkspaceMessageSerializer(many=True, read_only=True)
     tickets = AdminComplianceTicketSerializer(many=True, read_only=True)
-    transactions = TransactionHistorySerializer(many=True, read_only=True)
 
     class Meta:
         model = Campaign
         fields = [
             "id", "name", "brand", "brand_name", "creator", "creator_name",
-            "status", "budget", "start_date", "progress", "brief",
-            "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "transactions"
+            "status", "budget", "start_date", "progress", "brief", "admin_review",
+            "category", "delivery_language", "voice_brief", "screenshare_brief", "video_brief",
+            "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets"
         ]

@@ -2,8 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     SendOTPView, VerifyOTPView, RegisterView, LoginView, MeView,
-    NicheViewSet, CreatorViewSet, CampaignViewSet, RequestViewSet,
-    TransactionHistoryViewSet
+    NicheViewSet, CreatorViewSet, CampaignViewSet, RequestViewSet
 )
 
 router = DefaultRouter()
@@ -11,7 +10,6 @@ router.register(r"niches", NicheViewSet, basename="niche")
 router.register(r"creators", CreatorViewSet, basename="creator")
 router.register(r"campaigns", CampaignViewSet, basename="campaign")
 router.register(r"requests", RequestViewSet, basename="request")
-router.register(r"transactions", TransactionHistoryViewSet, basename="transaction")
 
 urlpatterns = [
     # Auth endpoints

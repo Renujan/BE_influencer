@@ -52,6 +52,9 @@ INSTALLED_APPS = [
     "platform_api",
     "notifications",
     "complaint",
+    "terms",
+    "FAQ",
+    "chat_monitor",
 ]
 
 MIDDLEWARE = [

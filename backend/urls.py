@@ -16,6 +16,9 @@ urlpatterns = [
     path("api/", include("platform_api.urls")),
     path("admin/notifications/", include("notifications.urls")),
     path("api/complaints/", include("complaint.urls")),
+    path("api/terms/", include("terms.urls")),
+    path("api/faq/", include("FAQ.urls")),
+    path("api/chat_monitor/", include("chat_monitor.urls")),
 ]
 
 
