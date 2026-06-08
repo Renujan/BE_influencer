@@ -1,14 +1,71 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block body_class %}template-homepage{% endblock %}
+{% block body_class %}template-homepage min-h-screen flex flex-col overflow-x-hidden selection:bg-brand/30 selection:text-white{% endblock %}
 
 {% block extra_css %}
-
-{% comment %}
-Delete the line below if you're just getting started and want to remove the welcome screen!
-{% endcomment %}
-<link rel="stylesheet" href="{% static 'css/welcome_page.css' %}">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                DEFAULT: '#6366f1', // Indigo
+                dark: '#4f46e5',
+                light: '#a5b4fc',
+              },
+              coral: {
+                DEFAULT: '#f43f5e', // Rose/Coral
+                light: '#fda4af',
+              },
+              teal: {
+                DEFAULT: '#0d9488', // Teal
+                light: '#2dd4bf',
+              },
+              darkBg: '#0b0c10',
+              darkCard: '#131622',
+              darkBorder: '#1e2338',
+            },
+            fontFamily: {
+              sans: ['Outfit', 'sans-serif'],
+              display: ['Outfit', 'sans-serif'],
+            },
+            boxShadow: {
+              glow: '0 0 20px rgba(99, 102, 241, 0.15)',
+              glowTeal: '0 0 20px rgba(13, 148, 136, 0.15)',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Outfit', sans-serif;
+        background-color: #0b0c10;
+        color: #f3f4f6;
+      }
+      .gradient-text {
+        background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #f43f5e 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .gradient-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      }
+      .gradient-coral {
+        background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      }
+      .gradient-teal {
+        background: linear-gradient(135deg, #0d9488 0%, #115e59 100%);
+      }
+    </style>
 {% endblock extra_css %}
 
 {% block content %}
@@ -19,3 +76,4 @@ Delete the line below if you're just getting started and want to remove the welc
 {% include 'home/welcome_page.html' %}
 
 {% endblock content %}
+
