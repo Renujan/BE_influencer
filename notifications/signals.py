@@ -1,7 +1,8 @@
 from django.db.models.signals import post_save
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
-from platform_api.models import UserProfile, Campaign, AdminComplianceTicket, PaymentInstallment
+from platform_api.models import UserProfile
+from campegin.models import Campaign, AdminComplianceTicket, PaymentInstallment
 from notifications.models import Notification
 
 @receiver(user_logged_in)

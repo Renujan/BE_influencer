@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
-from platform_api.models import Campaign
+from campegin.models import Campaign
 from complaint.models import Complaint
 
 def get_user_from_request(request):

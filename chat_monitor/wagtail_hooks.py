@@ -2,7 +2,7 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet
-from platform_api.models import Campaign
+from campegin.models import Campaign
 from .views import chat_monitor_view_chat_view, chat_monitor_review_view
 
 class ChatMonitorCampaignViewSet(ModelViewSet):

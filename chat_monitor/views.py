@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from platform_api.models import Campaign
+from campegin.models import Campaign
 from .models import ChatMessage, ChatReview
 from .serializers import CampaignChatSerializer, WorkspaceMessageSerializer, ChatReviewSerializer
 import datetime

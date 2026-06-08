@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from platform_api.models import Campaign
+from campegin.models import Campaign
 from wagtail.snippets.models import register_snippet
 
 @register_snippet

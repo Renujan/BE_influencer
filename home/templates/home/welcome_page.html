@@ -1,52 +1,443 @@
-{% load i18n wagtailcore_tags %}
+{% load static i18n wagtailcore_tags %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ampli · Influencer Campaign Workspaces</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                DEFAULT: '#6366f1', // Indigo
+                dark: '#4f46e5',
+                light: '#a5b4fc',
+              },
+              coral: {
+                DEFAULT: '#f43f5e', // Rose/Coral
+                light: '#fda4af',
+              },
+              teal: {
+                DEFAULT: '#0d9488', // Teal
+                light: '#2dd4bf',
+              },
+              darkBg: '#0b0c10',
+              darkCard: '#131622',
+              darkBorder: '#1e2338',
+            },
+            fontFamily: {
+              sans: ['Outfit', 'sans-serif'],
+              display: ['Outfit', 'sans-serif'],
+            },
+            boxShadow: {
+              glow: '0 0 20px rgba(99, 102, 241, 0.15)',
+              glowTeal: '0 0 20px rgba(13, 148, 136, 0.15)',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Outfit', sans-serif;
+        background-color: #0b0c10;
+        color: #f3f4f6;
+      }
+      .gradient-text {
+        background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #f43f5e 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .gradient-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      }
+      .gradient-coral {
+        background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      }
+      .gradient-teal {
+        background: linear-gradient(135deg, #0d9488 0%, #115e59 100%);
+      }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col overflow-x-hidden selection:bg-brand/30 selection:text-white">
 
-<header class="header">
-    <div class="logo">
-        <a href="https://wagtail.org/">
-            <svg class="figure-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 342.5 126.2"><title>{% trans "Visit the Wagtail website" %}</title><path fill="#FFF" d="M84 1.9v5.7s-10.2-3.8-16.8 3.1c-4.8 5-5.2 10.6-3 18.1 21.6 0 25 12.1 25 12.1L87 27l6.8-8.3c0-9.8-8.1-16.3-9.8-16.8z"/><circle cx="85.9" cy="15.9" r="2.6"/><path d="M89.2 40.9s-3.3-16.6-24.9-12.1c-2.2-7.5-1.8-13 3-18.1C73.8 3.8 84 7.6 84 7.6V1.9C80.4.3 77 0 73.2 0 59.3 0 51.6 10.4 48.3 17.4L9.2 89.3l11-2.1-20.2 39 14.1-2.5L24.9 93c30.6 0 69.8-11 64.3-52.1z"/><path d="M102.4 27l-8.6-8.3L87 27z"/><path fill="#FFF" d="M30 84.1s1-.2 2.8-.6c1.8-.4 4.3-1 7.3-1.8 1.5-.4 3.1-.9 4.8-1.5 1.7-.6 3.5-1.2 5.2-2 1.8-.7 3.6-1.6 5.4-2.6 1.8-1 3.5-2.1 5.1-3.4.4-.3.8-.6 1.2-1l1.2-1c.7-.7 1.5-1.4 2.2-2.2.7-.7 1.3-1.5 1.9-2.3l.9-1.2.4-.6.4-.6c.2-.4.5-.8.7-1.2.2-.4.4-.8.7-1.2l.3-.6.3-.6c.2-.4.4-.8.5-1.2l.9-2.4c.2-.8.5-1.6.7-2.3.2-.7.3-1.5.5-2.1.1-.7.2-1.3.3-2 .1-.6.2-1.2.2-1.7.1-.5.1-1 .2-1.5.1-1.8.1-2.8.1-2.8l1.6.1s-.1 1.1-.2 2.9c-.1.5-.1 1-.2 1.5-.1.6-.1 1.2-.3 1.8-.1.6-.3 1.3-.4 2-.2.7-.4 1.4-.6 2.2-.2.8-.5 1.5-.8 2.4-.3.8-.6 1.6-1 2.5l-.6 1.2-.3.6-.3.6c-.2.4-.5.8-.7 1.3-.3.4-.5.8-.8 1.2-.1.2-.3.4-.4.6l-.4.6-.9 1.2c-.7.8-1.3 1.6-2.1 2.3-.7.8-1.5 1.4-2.3 2.2l-1.2 1c-.4.3-.8.6-1.3.9-1.7 1.2-3.5 2.3-5.3 3.3-1.8.9-3.7 1.8-5.5 2.5-1.8.7-3.6 1.3-5.3 1.8-1.7.5-3.3 1-4.9 1.3-3 .7-5.6 1.3-7.4 1.6-1.6.6-2.6.8-2.6.8z"/><g fill="#231F20"><path d="M127 83.9h-8.8l-12.6-36.4h7.9l9 27.5 9-27.5h7.9l9 27.5 9-27.5h7.9L153 83.9h-8.8L135.6 59 127 83.9zM200.1 83.9h-7V79c-3 3.6-7 5.4-12.1 5.4-3.8 0-6.9-1.1-9.4-3.2s-3.7-5-3.7-8.6c0-3.6 1.3-6.3 4-8 2.6-1.8 6.2-2.7 10.7-2.7h9.9v-1.4c0-4.8-2.7-7.3-8.1-7.3-3.4 0-6.9 1.2-10.5 3.7l-3.4-4.8c4.4-3.5 9.4-5.3 15.1-5.3 4.3 0 7.8 1.1 10.5 3.2 2.7 2.2 4.1 5.6 4.1 10.2v23.7zm-7.7-13.6v-3.1h-8.6c-5.5 0-8.3 1.7-8.3 5.2 0 1.8.7 3.1 2.1 4.1 1.4.9 3.3 1.4 5.7 1.4 2.4 0 4.6-.7 6.4-2.1 1.8-1.3 2.7-3.1 2.7-5.5zM241.7 47.5v31.7c0 6.4-1.7 11.3-5.2 14.5-3.5 3.2-8 4.8-13.4 4.8-5.5 0-10.4-1.7-14.8-5.1l3.6-5.8c3.6 2.7 7.1 4 10.8 4 3.6 0 6.5-.9 8.6-2.8 2.1-1.9 3.2-4.9 3.2-9v-4.7c-1.1 2.1-2.8 3.9-4.9 5.1-2.1 1.3-4.5 1.9-7.1 1.9-4.8 0-8.8-1.7-11.9-5.1-3.1-3.4-4.7-7.6-4.7-12.6s1.6-9.2 4.7-12.6c3.1-3.4 7.1-5.1 11.9-5.1 4.8 0 8.7 2 11.7 6v-5.4h7.5zm-28.4 16.8c0 3 .9 5.6 2.8 7.7 1.8 2.2 4.3 3.2 7.5 3.2 3.1 0 5.7-1 7.6-3.1 1.9-2.1 2.9-4.7 2.9-7.8 0-3.1-1-5.8-2.9-7.9-2-2.2-4.5-3.2-7.6-3.2-3.1 0-5.6 1.1-7.4 3.4-2 2.1-2.9 4.7-2.9 7.7zM260.9 53.6v18.5c0 1.7.5 3.1 1.4 4.1.9 1 2.2 1.5 3.8 1.5 1.6 0 3.2-.8 4.7-2.4l3.1 5.4c-2.7 2.4-5.7 3.6-8.9 3.6-3.3 0-6-1.1-8.3-3.4-2.3-2.3-3.5-5.3-3.5-9.1V53.6h-4.6v-6.2h4.6V36.1h7.7v11.4h9.6v6.2h-9.6zM309.5 83.9h-7V79c-3 3.6-7 5.4-12.1 5.4-3.8 0-6.9-1.1-9.4-3.2s-3.7-5-3.7-8.6c0-3.6 1.3-6.3 4-8 2.6-1.8 6.2-2.7 10.7-2.7h9.9v-1.4c0-4.8-2.7-7.3-8.1-7.3-3.4 0-6.9 1.2-10.5 3.7l-3.4-4.8c4.4-3.5 9.4-5.3 15.1-5.3 4.3 0 7.8 1.1 10.5 3.2 2.7 2.2 4.1 5.6 4.1 10.2v23.7zm-7.7-13.6v-3.1h-8.6c-5.5 0-8.3 1.7-8.3 5.2 0 1.8.7 3.1 2.1 4.1 1.4.9 3.3 1.4 5.7 1.4 2.4 0 4.6-.7 6.4-2.1 1.8-1.3 2.7-3.1 2.7-5.5zM319.3 40.2c-1-1-1.4-2.1-1.4-3.4 0-1.3.5-2.5 1.4-3.4 1-1 2.1-1.4 3.4-1.4 1.3 0 2.5.5 3.4 1.4 1 1 1.4 2.1 1.4 3.4 0 1.3-.5 2.5-1.4 3.4s-2.1 1.4-3.4 1.4c-1.3.1-2.4-.4-3.4-1.4zm7.2 43.7h-7.7V47.5h7.7v36.4zM342.5 83.9h-7.7V33.1h7.7v50.8z"/></g></svg>
-        </a>
-    </div>
-    <div class="header-link">
-        {% comment %}
-        This works for all cases but prerelease versions:
-        {% endcomment %}
-        <a href="{% wagtail_documentation_path %}/releases/{% wagtail_release_notes_path %}">
-            {% trans "View the release notes" %}
-        </a>
-    </div>
-</header>
-<main class="main">
-    <div class="figure">
-        <svg class="figure-space" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" aria-hidden="true">
-            <path class="egg" fill="currentColor" d="M150 250c-42.741 0-75-32.693-75-90s42.913-110 75-110c32.088 0 75 52.693 75 110s-32.258 90-75 90z"/>
-            <ellipse fill="#ddd" cx="150" cy="270" rx="40" ry="7"/>
-        </svg>
-    </div>
-    <div class="main-text">
-        <h1>{% trans "Welcome to your new Wagtail site!" %}</h1>
-        <p>{% trans 'Please feel free to <a href="https://github.com/wagtail/wagtail/wiki/Slack">join our community on Slack</a>, or get started with one of the links below.' %}</p>
-    </div>
-</main>
-<footer class="footer" role="contentinfo">
-    <a class="option option-one" href="{% wagtail_documentation_path %}/">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21c0 .5.4 1 1 1h4c.6 0 1-.5 1-1v-1H9v1zm3-19C8.1 2 5 5.1 5 9c0 2.4 1.2 4.5 3 5.7V17c0 .5.4 1 1 1h6c.6 0 1-.5 1-1v-2.3c1.8-1.3 3-3.4 3-5.7 0-3.9-3.1-7-7-7zm2.9 11.1l-.9.6V16h-4v-2.3l-.9-.6C7.8 12.2 7 10.6 7 9c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.6-.8 3.2-2.1 4.1z"/></svg>
-        <div>
-            <h2>{% trans "Wagtail Documentation" %}</h2>
-            <p>{% trans "Topics, references, & how-tos" %}</p>
+    <!-- Glowing Background Elements -->
+    <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-brand/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+    <div class="absolute top-[60vh] right-1/4 w-[400px] h-[400px] bg-coral/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+    <div class="absolute bottom-0 left-10 w-[600px] h-[600px] bg-teal/5 rounded-full blur-[140px] pointer-events-none -z-10"></div>
+
+    <!-- Navigation Bar -->
+    <nav class="sticky top-0 z-50 border-b border-darkBorder/60 bg-darkBg/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <a href="/" class="flex items-center">
+                    <img src="{% static 'img/logo_ampli.png' %}" alt="ampli" class="h-10 w-auto object-contain">
+                </a>
+
+                <!-- Nav links -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#features" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">Features</a>
+                    <a href="#workspace" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">Workspace</a>
+                    <a href="#metrics" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">Metrics</a>
+                    <a href="/api/faq/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">FAQ Support</a>
+                    <a href="/api/complaints/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">Tickets</a>
+                </div>
+
+                <!-- Right Action Buttons -->
+                <div class="hidden md:flex items-center gap-3">
+                    <a href="/admin/login/" class="text-sm font-semibold text-gray-300 hover:text-white px-4 py-2 transition-colors">
+                        Sign In
+                    </a>
+                    <a href="/admin/" class="rounded-full gradient-primary hover:scale-[1.02] active:scale-[0.98] transition px-5 py-2.5 text-sm font-bold text-white shadow-glow">
+                        Admin Control →
+                    </a>
+                </div>
+
+                <!-- Hamburger Button (Mobile Only) -->
+                <div class="flex md:hidden items-center">
+                    <button id="mobile-menu-button" type="button" class="text-gray-400 hover:text-white focus:outline-none focus:text-white p-2" aria-label="Toggle menu" aria-expanded="false">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path id="hamburger-icon" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                            <path id="close-icon" class="hidden" stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
-    </a>
-    <a class="option option-two" href="{% wagtail_documentation_path %}/getting_started/tutorial.html">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
-        <div>
-            <h2>{% trans "Tutorial" %}</h2>
-            <p>{% trans "Build your first Wagtail site" %}</p>
+
+        <!-- Mobile Menu (Dropdown Panel) -->
+        <div id="mobile-menu" class="hidden md:hidden border-t border-darkBorder/60 bg-darkBg/95 backdrop-blur-md px-4 py-6 space-y-4">
+            <div class="flex flex-col space-y-3">
+                <a href="#features" class="text-base font-medium text-gray-300 hover:text-white py-2 transition-colors">Features</a>
+                <a href="#workspace" class="text-base font-medium text-gray-300 hover:text-white py-2 transition-colors">Workspace</a>
+                <a href="#metrics" class="text-base font-medium text-gray-300 hover:text-white py-2 transition-colors">Metrics</a>
+                <a href="/api/faq/" class="text-base font-medium text-gray-300 hover:text-white py-2 transition-colors">FAQ Support</a>
+                <a href="/api/complaints/" class="text-base font-medium text-gray-300 hover:text-white py-2 transition-colors">Tickets</a>
+            </div>
+            <div class="border-t border-darkBorder/60 pt-4 flex flex-col gap-3">
+                <a href="/admin/login/" class="w-full text-center text-sm font-semibold text-gray-300 hover:text-white py-3 border border-darkBorder rounded-full transition-colors">
+                    Sign In
+                </a>
+                <a href="/admin/" class="w-full text-center rounded-full gradient-primary py-3 text-sm font-bold text-white shadow-glow transition">
+                    Admin Control →
+                </a>
+            </div>
         </div>
-    </a>
-    <a class="option option-three" href="{% url 'wagtailadmin_home' %}">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0h24v24H0z" fill="none"/><path d="M16.5 13c-1.2 0-3.07.34-4.5 1-1.43-.67-3.3-1-4.5-1C5.33 13 1 14.08 1 16.25V19h22v-2.75c0-2.17-4.33-3.25-6.5-3.25zm-4 4.5h-10v-1.25c0-.54 2.56-1.75 5-1.75s5 1.21 5 1.75v1.25zm9 0H14v-1.25c0-.46-.2-.86-.52-1.22.88-.3 1.96-.53 3.02-.53 2.44 0 5 1.21 5 1.75v1.25zM7.5 12c1.93 0 3.5-1.57 3.5-3.5S9.43 5 7.5 5 4 6.57 4 8.5 5.57 12 7.5 12zm0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 5.5c1.93 0 3.5-1.57 3.5-3.5S18.43 5 16.5 5 13 6.57 13 8.5s1.57 3.5 3.5 3.5zm0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/></svg>
-        <div>
-            <h2>{% trans "Admin Interface" %}</h2>
-            <p>{% trans "Create your superuser first!" %}</p>
+
+    <!-- Hero Section -->
+    <section class="relative pt-12 pb-20 px-4 sm:px-6 lg:px-8 text-center max-w-7xl mx-auto">
+        <div class="max-w-4xl mx-auto space-y-6">
+            <div class="inline-flex items-center gap-2 rounded-full border border-darkBorder bg-darkCard/60 px-4 py-1.5 text-xs text-brand-light font-semibold shadow-inner">
+                <span class="h-2 w-2 rounded-full bg-teal animate-pulse"></span>
+                Influencer Marketing Engine 2.6 Active
+            </div>
+            
+            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight">
+                Amplify Campaign Collaboration & <br class="hidden sm:inline" />
+                <span class="gradient-text">Milestone Escrows</span>
+            </h1>
+            
+            <p class="text-base sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
+                Connect brands and creators in high-performance workspaces. Automate milestone compliance, safety checks, and protected payouts.
+            </p>
+
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
+                <a href="/admin/" class="w-full sm:w-auto rounded-full gradient-primary px-8 py-4 text-base font-bold shadow-glow hover:scale-[1.02] active:scale-[0.98] transition">
+                    Launch Platform Admin
+                </a>
+                <a href="http://localhost:5173/dashboard/campaigns" target="_blank" class="w-full sm:w-auto rounded-full border border-darkBorder bg-darkCard/80 hover:bg-darkCard text-white hover:border-gray-600 px-8 py-4 text-base font-semibold transition">
+                    Open Brand Client
+                </a>
+            </div>
         </div>
-    </a>
-</footer>
+    </section>
+
+    <!-- Metrics Stats Section -->
+    <section id="metrics" class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            
+            <!-- Campaigns Metric -->
+            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:border-brand/30 transition-colors duration-300 relative overflow-hidden group">
+                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-brand/5 blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Campaigns Loaded</div>
+                <div class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">
+                    {% if total_campaigns %}{{ total_campaigns }}{% else %}128{% endif %}
+                </div>
+                <div class="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
+                    <span class="text-teal font-semibold">Live status</span> tracking active
+                </div>
+            </div>
+
+            <!-- Active Creators Metric -->
+            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:border-brand/30 transition-colors duration-300 relative overflow-hidden group">
+                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-coral/5 blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Registered Creators</div>
+                <div class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">
+                    {% if total_influencers %}{{ total_influencers }}{% else %}420{% endif %}
+                </div>
+                <div class="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
+                    <span class="text-coral font-semibold">Creator talent</span> profiles synced
+                </div>
+            </div>
+
+            <!-- Budget Allocation Metric -->
+            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:border-brand/30 transition-colors duration-300 relative overflow-hidden group">
+                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-teal/5 blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Total Campaign Value</div>
+                <div class="mt-2 text-3xl sm:text-4xl font-extrabold text-white font-mono">
+                    {% if total_budget %}${{ total_budget|floatformat:0 }}{% else %}$24,500{% endif %}
+                </div>
+                <div class="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
+                    <span class="text-teal font-semibold">Total funds</span> handled
+                </div>
+            </div>
+
+            <!-- Escrow Protections Metric -->
+            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:border-brand/30 transition-colors duration-300 relative overflow-hidden group">
+                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-brand/5 blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Protected Escrow</div>
+                <div class="mt-2 text-3xl sm:text-4xl font-extrabold text-white font-mono">
+                    {% if total_escrow_balance %}${{ total_escrow_balance|floatformat:0 }}{% else %}$8,200{% endif %}
+                </div>
+                <div class="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
+                    <span class="text-teal font-semibold">Secured</span> in smart contract wallets
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Workspace Preview Demonstration -->
+    <section id="workspace" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div class="text-center mb-12 space-y-3">
+            <h2 class="text-3xl font-extrabold text-white">Interactive Workspace Preview</h2>
+            <p class="text-sm text-gray-400 max-w-xl mx-auto">Experience the secure communication and step-by-step deliverable pipeline shared between brands and creators.</p>
+        </div>
+
+        <!-- Glassmorphic Mockup Container -->
+        <div class="rounded-3xl border border-darkBorder bg-darkCard/30 p-4 sm:p-6 shadow-lift grid grid-cols-1 lg:grid-cols-12 gap-6 relative overflow-hidden">
+            <!-- Background mesh -->
+            <div class="absolute top-0 right-0 w-[300px] h-[300px] bg-brand/5 blur-3xl rounded-full pointer-events-none"></div>
+
+            <!-- Workspace Chat Panel (8 columns) -->
+            <div class="lg:col-span-7 rounded-2xl border border-darkBorder bg-[#0f111b] flex flex-col h-[400px]">
+                <!-- Chat Header -->
+                <div class="flex items-center justify-between px-5 py-4 border-b border-darkBorder bg-darkCard/30">
+                    <div class="flex items-center gap-3">
+                        <div class="h-9 w-9 rounded-full bg-gradient-primary flex items-center justify-center font-bold text-xs text-white">MC</div>
+                        <div>
+                            <div class="font-bold text-xs text-white">Maya Chen</div>
+                            <div class="text-[9px] text-teal flex items-center gap-1">
+                                <span class="h-1.5 w-1.5 rounded-full bg-teal animate-ping"></span> Chat Active · Workspace #1002
+                            </div>
+                        </div>
+                    </div>
+                    <span class="rounded-full bg-accent border border-brand/20 text-[9px] font-bold text-brand-light px-2.5 py-0.5">Summer Drop 2026</span>
+                </div>
+
+                <!-- Chat Feed Messages -->
+                <div class="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+                    <!-- Message 1 -->
+                    <div class="flex items-start gap-2.5">
+                        <div class="h-7 w-7 rounded-full bg-indigo-700 text-white font-bold grid place-items-center text-[10px] shrink-0">B</div>
+                        <div class="rounded-2xl rounded-tl-none bg-darkCard/75 border border-darkBorder px-4 py-3 text-gray-300 max-w-[80%]">
+                            Hey Maya! Just uploaded the moodboard and the signature logo asset pack. Let me know your ideas for the sunset shoot! ✨
+                        </div>
+                    </div>
+
+                    <!-- Message 2 -->
+                    <div class="flex items-start gap-2.5 flex-row-reverse">
+                        <div class="h-7 w-7 rounded-full bg-pink-700 text-white font-bold grid place-items-center text-[10px] shrink-0">MC</div>
+                        <div class="rounded-2xl rounded-tr-none bg-brand/10 border border-brand/20 px-4 py-3 text-gray-200 max-w-[80%]">
+                            Love the style vector directions! Thinking we record the Reel unboxing with seamless transitions. I'll share drafts by Friday morning. 🙌
+                        </div>
+                    </div>
+
+                    <!-- Message 3 (Attachment) -->
+                    <div class="flex items-start gap-2.5">
+                        <div class="h-7 w-7 rounded-full bg-indigo-700 text-white font-bold grid place-items-center text-[10px] shrink-0">B</div>
+                        <div class="rounded-2xl rounded-tl-none bg-darkCard/75 border border-darkBorder px-4 py-3 text-gray-300 max-w-[80%] space-y-2">
+                            <div>Perfect. Uploading the updated brief details. Check the file attached:</div>
+                            <div class="rounded-xl border border-darkBorder bg-darkBg/60 p-2.5 flex items-center gap-2">
+                                <svg class="h-5 w-5 text-coral shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <div class="truncate">
+                                    <div class="font-semibold text-[10px] truncate text-white">Summer-Drop-Brief.pdf</div>
+                                    <div class="text-[9px] text-gray-500">2.4 MB · Escrow protected</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deliverables & Escrow status (5 columns) -->
+            <div class="lg:col-span-5 rounded-2xl border border-darkBorder bg-[#0f111b] p-5 flex flex-col justify-between h-[400px]">
+                <div class="space-y-4">
+                    <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                        <svg class="h-4 w-4 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        Campaign Pipeline Checklist
+                    </div>
+
+                    <!-- Checklist -->
+                    <div class="space-y-2.5">
+                        <!-- Step 1 -->
+                        <div class="rounded-xl border border-darkBorder bg-darkCard/35 p-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="h-5 w-5 rounded-full bg-teal/15 text-teal grid place-items-center text-[10px] font-bold">✓</span>
+                                <span class="text-xs text-gray-300 font-medium truncate">1. Moodboard approval</span>
+                            </div>
+                            <span class="rounded bg-teal/15 text-teal text-[9px] font-bold px-1.5 py-0.5">Approved</span>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="rounded-xl border border-darkBorder bg-darkCard/35 p-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="h-5 w-5 rounded-full bg-brand/20 text-brand-light grid place-items-center text-[10px] font-bold">2</span>
+                                <span class="text-xs text-gray-300 font-medium truncate">2. Reel #1 draft delivery</span>
+                            </div>
+                            <span class="rounded bg-brand/15 text-brand-light text-[9px] font-bold px-1.5 py-0.5">In Review</span>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="rounded-xl border border-darkBorder bg-darkCard/35 p-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="h-5 w-5 rounded-full bg-darkBorder text-gray-500 grid place-items-center text-[10px] font-bold">3</span>
+                                <span class="text-xs text-gray-500 font-medium truncate">3. Post #2 photo campaign</span>
+                            </div>
+                            <span class="rounded bg-darkBorder text-gray-500 text-[9px] font-semibold px-1.5 py-0.5">Locked</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Escrow Payout Box -->
+                <div class="rounded-xl border border-teal/20 bg-teal/5 p-4 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-teal font-bold uppercase tracking-wider flex items-center gap-1">
+                            <svg class="h-3.5 w-3.5 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            Escrow Protection
+                        </span>
+                        <span class="text-xs font-mono font-extrabold text-white">$4,200.00</span>
+                    </div>
+                    <div class="text-[10px] text-gray-400 leading-relaxed">
+                        Funds are fully secure in smart escrow wallets. Payout allocations auto-release as milestone draft validations complete.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Product Features -->
+    <section id="features" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
+        <div class="text-center space-y-3">
+            <h2 class="text-3xl font-extrabold text-white">High-Performance Workflow Engine</h2>
+            <p class="text-sm text-gray-400 max-w-xl mx-auto">Built from the ground up to solve collaboration frictions, currency gaps, and compliance audits.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            
+            <!-- Feature 1 -->
+            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-8 hover:-translate-y-1 transition duration-300">
+                <div class="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-white mt-6 mb-2">Dynamic Escrow Security</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Guard budget deposits in platform escrows. Setup distinct payment milestones that release based on creator draft feedback loops.</p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-8 hover:-translate-y-1 transition duration-300">
+                <div class="h-12 w-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-white mt-6 mb-2">Automated Compliance Filters</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Auto-scans and safety filters audit real-time chat monitor streams. Generate compliance audit tickets instantly if disputes or scope shifts occur.</p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-8 hover:-translate-y-1 transition duration-300">
+                <div class="h-12 w-12 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-white mt-6 mb-2">Rich Media Briefings</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Simplify campaign scoping for foreign talent. Upload custom screen walkthroughs, voice descriptions, and visual annotations to overcome language barriers.</p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Call to action: Launch Admin -->
+    <section class="py-16 px-4 sm:px-6 lg:px-8 border-t border-darkBorder bg-darkCard/10 text-center">
+        <div class="max-w-3xl mx-auto space-y-6">
+            <h2 class="text-3xl font-extrabold text-white">Ready to Coordinate Your Network?</h2>
+            <p class="text-sm text-gray-400 max-w-xl mx-auto">Access the super admin dashboard workspace to approve campaigns, resolve compliance audits, and configure settings.</p>
+            <div class="flex justify-center pt-2">
+                <a href="/admin/" class="rounded-full gradient-primary px-8 py-4 text-base font-bold shadow-glow hover:scale-[1.02] active:scale-[0.98] transition">
+                    Launch Admin Console
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Component -->
+    <footer class="border-t border-darkBorder bg-[#08090d] py-12 px-4 sm:px-6 lg:px-8 text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <a href="/" class="flex items-center">
+                <img src="{% static 'img/logo_ampli.png' %}" alt="ampli" class="h-8 w-auto object-contain">
+            </a>
+            
+            <div class="flex flex-wrap justify-center gap-8 text-gray-400">
+                <a href="#features" class="hover:text-white transition-colors">Features</a>
+                <a href="#workspace" class="hover:text-white transition-colors">Workspace Preview</a>
+                <a href="/admin/" class="hover:text-white transition-colors">Admin Portal</a>
+                <a href="/api/complaints/" class="hover:text-white transition-colors">Complaints System</a>
+                <a href="/api/faq/" class="hover:text-white transition-colors">FAQ Answers</a>
+            </div>
+
+            <div>
+                © 2026 ampli platform. All protections active.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Mobile Menu Script -->
+    <script>
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const hamburgerIcon = document.getElementById('hamburger-icon');
+        const closeIcon = document.getElementById('close-icon');
+
+        if (mobileMenuButton && mobileMenu && hamburgerIcon && closeIcon) {
+            mobileMenuButton.addEventListener('click', () => {
+                const isExpanded = mobileMenuButton.getAttribute('aria-expanded') === 'true';
+                mobileMenuButton.setAttribute('aria-expanded', !isExpanded);
+                mobileMenu.classList.toggle('hidden');
+                hamburgerIcon.classList.toggle('hidden');
+                closeIcon.classList.toggle('hidden');
+            });
+
+            // Close mobile menu when clicking on a link
+            const mobileLinks = mobileMenu.querySelectorAll('a');
+            mobileLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                    hamburgerIcon.classList.remove('hidden');
+                    closeIcon.classList.add('hidden');
+                    mobileMenuButton.setAttribute('aria-expanded', 'false');
+                });
+            });
+        }
+    </script>
+
+</body>
+</html>

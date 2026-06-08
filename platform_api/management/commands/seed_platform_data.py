@@ -1,9 +1,12 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from platform_api.models import (
-    Niche, UserProfile, CreatorSocialAccount, Campaign, CampaignTask,
-    CampaignMilestone, Deliverable, PaymentInstallment, WorkspaceFile,
-    WorkspaceMessage, AdminComplianceTicket
+    Niche, UserProfile, CreatorSocialAccount
+)
+from campegin.models import (
+    Campaign, CampaignTask, CampaignMilestone, Deliverable,
+    PaymentInstallment, WorkspaceFile, WorkspaceMessage, AdminComplianceTicket,
+    CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform
 )
 from rest_framework.authtoken.models import Token
 
@@ -20,6 +23,41 @@ class Command(BaseCommand):
             niche, _ = Niche.objects.get_or_create(name=name)
             niches[name] = niche
         self.stdout.write("Niches created.")
+
+        # 1b. Campaign settings
+        category_names = ["Fashion", "Beauty", "Tech", "Food", "Travel", "Fitness", "Gaming", "Lifestyle", "Finance", "Health & Wellness", "Education", "Entertainment", "Sports", "Automotive", "Real Estate", "Non-Profit"]
+        for name in category_names:
+            CampaignCategory.objects.get_or_create(name=name)
+        self.stdout.write("Campaign categories seeded.")
+
+        language_names = ["English", "Arabic", "French", "Spanish", "German", "Mandarin", "Hindi", "Portuguese", "Japanese", "Korean"]
+        for name in language_names:
+            CampaignLanguage.objects.get_or_create(name=name)
+        self.stdout.write("Campaign languages seeded.")
+
+        deliverable_names = ["1 × Instagram Reel (60s)", "2 × Instagram Stories", "1 × YouTube video (5 min)", "1 × TikTok video (30s)"]
+        for name in deliverable_names:
+            CampaignDeliverable.objects.get_or_create(name=name)
+        self.stdout.write("Campaign deliverables seeded.")
+
+        platforms_data = [
+            {"platform_id": "facebook",  "name": "Facebook",  "color": "#1877F2", "logo": "f"},
+            {"platform_id": "instagram", "name": "Instagram", "color": "#E1306C", "logo": "📷"},
+            {"platform_id": "tiktok",    "name": "TikTok",    "color": "#4f46e5", "logo": "♪"},
+            {"platform_id": "youtube",   "name": "YouTube",   "color": "#FF0000", "logo": "▶"},
+            {"platform_id": "linkedin",  "name": "LinkedIn",  "color": "#0A66C2", "logo": "in"},
+            {"platform_id": "x",         "name": "X",         "color": "#374151", "logo": "𝕏"},
+        ]
+        for plat in platforms_data:
+            CampaignPlatform.objects.get_or_create(
+                platform_id=plat["platform_id"],
+                defaults={
+                    "name": plat["name"],
+                    "color": plat["color"],
+                    "logo": plat["logo"]
+                }
+            )
+        self.stdout.write("Campaign platforms seeded.")
 
         # 2. Creators
         creators_data = [

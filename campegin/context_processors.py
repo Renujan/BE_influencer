@@ -1,6 +1,7 @@
 from django.db.models import Sum, Count
 from django.contrib.auth.models import User
-from platform_api.models import UserProfile, Campaign, CreatorSocialAccount, Deliverable, PaymentInstallment, AdminComplianceTicket
+from platform_api.models import UserProfile, CreatorSocialAccount
+from campegin.models import Campaign, Deliverable, PaymentInstallment, AdminComplianceTicket
 from notifications.models import Notification
 import decimal
 

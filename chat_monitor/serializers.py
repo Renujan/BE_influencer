@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from platform_api.models import Campaign
+from campegin.models import Campaign
 from .models import ChatMessage, ChatReview
 
 class WorkspaceMessageSerializer(serializers.ModelSerializer):
