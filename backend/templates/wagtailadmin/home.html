@@ -284,7 +284,7 @@
               </h3>
               <p class="text-xs text-slate-400 mt-0.5">Active collaboration workflows and budgets</p>
             </div>
-            <a href="/admin/platform_api/campaign/" class="text-xs text-brand-blue hover:text-blue-700 font-bold transition-all flex items-center gap-1">
+            <a href="/admin/snippets/campegin/campaign/" class="text-xs text-brand-blue hover:text-blue-700 font-bold transition-all flex items-center gap-1">
               Manage Workspaces <i class="fas fa-arrow-right text-[10px]"></i>
             </a>
           </div>
@@ -306,8 +306,8 @@
                 <tr class="text-xs hover:bg-slate-50/80 transition-all duration-150">
                   <td class="p-3 pl-4 font-bold text-slate-700">{{ camp.name }}</td>
                   <td class="p-3 text-slate-500">
-                    {% if camp.brand.profile.company_name %}
-                      {{ camp.brand.profile.company_name }}
+                    {% if camp.brand.business_profile.company_name %}
+                      {{ camp.brand.business_profile.company_name }}
                     {% else %}
                       {{ camp.brand.username }}
                     {% endif %}
@@ -337,7 +337,7 @@
                   <td class="p-3 pr-4">
                     <div class="flex items-center gap-2 justify-center">
                       <div class="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div class="bg-brand-blue h-1.5 rounded-full" style="width: {{ camp.progress }}%"></div>
+                        <div class="bg-brand-blue h-1.5 rounded-full progress-bar" data-progress="{{ camp.progress }}"></div>
                       </div>
                       <span class="font-mono text-[10px] font-bold text-slate-500">{{ camp.progress }}%</span>
                     </div>
@@ -369,7 +369,7 @@
               </h3>
               <p class="text-xs text-slate-400 mt-0.5">Top connected social metrics</p>
             </div>
-            <a href="/admin/platform_api/creatorsocialaccount/" class="text-xs text-brand-orange hover:text-orange-700 font-bold transition-all flex items-center gap-1">
+            <a href="/admin/snippets/user/creatorsocialaccount/" class="text-xs text-brand-orange hover:text-orange-700 font-bold transition-all flex items-center gap-1">
               Channels <i class="fas fa-external-link-alt text-[9px]"></i>
             </a>
           </div>
@@ -416,7 +416,7 @@
               </h3>
               <p class="text-xs text-slate-400 mt-0.5">Safety audits & milestone disputes</p>
             </div>
-            <a href="/admin/platform_api/admincomplianceticket/" class="text-xs text-rose-500 hover:text-rose-700 font-bold transition-all flex items-center gap-1">
+            <a href="/admin/snippets/campegin/admincomplianceticket/" class="text-xs text-rose-500 hover:text-rose-700 font-bold transition-all flex items-center gap-1">
               All Tickets <i class="fas fa-arrow-right text-[10px]"></i>
             </a>
           </div>
@@ -580,6 +580,14 @@
           });
         }
       })();
+
+      // Set progress bar widths dynamically to avoid inline template variables triggering CSS validation errors
+      document.querySelectorAll('.progress-bar').forEach(function(el) {
+        const progress = el.getAttribute('data-progress');
+        if (progress) {
+          el.style.width = progress + '%';
+        }
+      });
 
     });
   </script>
