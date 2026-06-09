@@ -1,6 +1,6 @@
 from django.db.models import Sum, Count
 from django.contrib.auth.models import User
-from platform_api.models import UserProfile, CreatorSocialAccount
+from user.models import CreatorProfile, BusinessProfile, CreatorSocialAccount
 from campegin.models import Campaign, Deliverable, PaymentInstallment, AdminComplianceTicket
 from notifications.models import Notification
 import decimal
@@ -16,8 +16,8 @@ def dashboard_metrics(request):
     completed_campaigns = Campaign.objects.filter(status="Completed").count()
     pending_campaigns = Campaign.objects.filter(status="Pending").count()
 
-    total_influencers = UserProfile.objects.filter(role="influencer").count()
-    total_brands = UserProfile.objects.filter(role="business").count()
+    total_influencers = CreatorProfile.objects.count()
+    total_brands = BusinessProfile.objects.count()
 
     # 2. Budget and Escrow calculations
     total_budget = Campaign.objects.aggregate(total=Sum('budget'))['total'] or 0.0

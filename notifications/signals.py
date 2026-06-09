@@ -1,15 +1,17 @@
 from django.db.models.signals import post_save
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
-from platform_api.models import UserProfile
+from user.models import BusinessProfile, CreatorProfile
 from campegin.models import Campaign, AdminComplianceTicket, PaymentInstallment
 from notifications.models import Notification
 
 @receiver(user_logged_in)
 def create_login_notification(sender, request, user, **kwargs):
     role_display = "Administrator"
-    if hasattr(user, 'profile') and user.profile:
-        role_display = "Creator" if user.profile.role == "influencer" else "Business"
+    if hasattr(user, 'creator_profile'):
+        role_display = "Creator"
+    elif hasattr(user, 'business_profile'):
+        role_display = "Business"
     Notification.objects.create(
         title="User Signed In",
         message=f"{user.username} ({role_display}) signed into the system.",
@@ -17,14 +19,24 @@ def create_login_notification(sender, request, user, **kwargs):
         icon="fas fa-sign-in-alt"
     )
 
-@receiver(post_save, sender=UserProfile)
-def create_profile_notification(sender, instance, created, **kwargs):
+@receiver(post_save, sender=BusinessProfile)
+def create_business_profile_notification(sender, instance, created, **kwargs):
     if created:
-        role_display = "Creator" if instance.role == "influencer" else "Business"
-        name_display = instance.company_name if (instance.role == "business" and instance.company_name) else instance.user.username
+        name_display = instance.company_name or instance.user.username
         Notification.objects.create(
             title="New User Registered",
-            message=f"{name_display} enrolled as a {role_display}.",
+            message=f"{name_display} enrolled as a Business.",
+            category="signup",
+            icon="fas fa-user-plus"
+        )
+
+@receiver(post_save, sender=CreatorProfile)
+def create_creator_profile_notification(sender, instance, created, **kwargs):
+    if created:
+        name_display = instance.user.username
+        Notification.objects.create(
+            title="New User Registered",
+            message=f"{name_display} enrolled as a Creator.",
             category="signup",
             icon="fas fa-user-plus"
         )
