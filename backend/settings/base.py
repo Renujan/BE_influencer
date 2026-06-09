@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
-    "platform_api",
+    "user",
     "campegin",
     "notifications",
     "complaint",
