@@ -9,10 +9,10 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from .models import (
-    Niche, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount
+    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount
 )
 from .serializers import (
-    NicheSerializer, BusinessProfileSerializer, CreatorProfileSerializer
+    NicheSerializer, BusinessTypeSerializer, BusinessProfileSerializer, CreatorProfileSerializer
 )
 
 class SendOTPView(APIView):
@@ -279,6 +279,12 @@ class MeView(APIView):
 class NicheViewSet(viewsets.ModelViewSet):
     queryset = Niche.objects.all()
     serializer_class = NicheSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class BusinessTypeViewSet(viewsets.ModelViewSet):
+    queryset = BusinessType.objects.all()
+    serializer_class = BusinessTypeSerializer
     permission_classes = [permissions.AllowAny]
 
 class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
