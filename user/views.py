@@ -276,7 +276,25 @@ class MeView(APIView):
             profile.secondary_phone = request.data.get("secondary_phone", profile.secondary_phone)
             profile.bio = request.data.get("bio", profile.bio)
             profile.company_name = request.data.get("company_name", profile.company_name)
-            profile.business_type = request.data.get("business_type", profile.business_type)
+            
+            # Handle business types updates
+            if "business_types" in request.data:
+                business_types_data = request.data.get("business_types", [])
+                if isinstance(business_types_data, str):
+                    business_types_data = [x.strip() for x in business_types_data.split(",") if x.strip()]
+                
+                profile.business_types.clear()
+                for bt_name in business_types_data:
+                    bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
+                    profile.business_types.add(bt_obj)
+                profile.business_type = ", ".join(business_types_data)
+            elif "business_type" in request.data:
+                profile.business_type = request.data.get("business_type")
+                profile.business_types.clear()
+                if profile.business_type:
+                    bt_obj, _ = BusinessType.objects.get_or_create(name=profile.business_type)
+                    profile.business_types.add(bt_obj)
+
             profile.website = request.data.get("website", profile.website)
             profile.time_zone = request.data.get("time_zone", profile.time_zone)
             profile.avatar_url = request.data.get("avatar_url", profile.avatar_url)
@@ -297,6 +315,18 @@ class MeView(APIView):
             profile.bio = request.data.get("bio", profile.bio)
             profile.location = request.data.get("location", profile.location)
             profile.avatar_url = request.data.get("avatar_url", profile.avatar_url)
+            
+            # Handle niches updates
+            if "niches" in request.data:
+                niches_data = request.data.get("niches", [])
+                if isinstance(niches_data, str):
+                    niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
+                
+                profile.niches.clear()
+                for niche_name in niches_data:
+                    niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
+                    profile.niches.add(niche_obj)
+                    
             profile.save()
             return Response(CreatorProfileSerializer(profile).data)
 
@@ -304,7 +334,6 @@ class NicheViewSet(viewsets.ModelViewSet):
     queryset = Niche.objects.all()
     serializer_class = NicheSerializer
     permission_classes = [permissions.AllowAny]
-
 
 class BusinessTypeViewSet(viewsets.ModelViewSet):
     queryset = BusinessType.objects.all()
