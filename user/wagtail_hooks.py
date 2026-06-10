@@ -74,6 +74,23 @@ class NicheViewSet(ModelViewSet):
     list_display = ("name",)
     search_fields = ("name",)
 
+# Register Viewsets directly (without adding to sidebar directly, as we will use custom menu items)
+@hooks.register("register_admin_viewset")
+def register_business_profile_viewset():
+    return BusinessProfileViewSet()
+
+@hooks.register("register_admin_viewset")
+def register_creator_profile_viewset():
+    return CreatorProfileViewSet()
+
+@hooks.register("register_admin_viewset")
+def register_niche_viewset():
+    return NicheViewSet()
+
+@hooks.register("register_admin_viewset")
+def register_business_type_viewset():
+    return BusinessTypeViewSet()
+
 # 5. Business Type Admin Viewset
 class BusinessTypeViewSet(ModelViewSet):
     model = BusinessType
@@ -85,6 +102,23 @@ class BusinessTypeViewSet(ModelViewSet):
     form_fields = ["name"]
     list_display = ("name",)
     search_fields = ("name",)
+
+# Register Viewsets directly (without adding to sidebar directly, as we will use custom menu items)
+@hooks.register("register_admin_viewset")
+def register_business_profile_viewset():
+    return BusinessProfileViewSet()
+
+@hooks.register("register_admin_viewset")
+def register_creator_profile_viewset():
+    return CreatorProfileViewSet()
+
+@hooks.register("register_admin_viewset")
+def register_niche_viewset():
+    return NicheViewSet()
+
+@hooks.register("register_admin_viewset")
+def register_business_type_viewset():
+    return BusinessTypeViewSet()
 
 
 
