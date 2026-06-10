@@ -10,10 +10,18 @@ class Niche(models.Model):
         return self.name
 
 @register_snippet
+class BusinessType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+@register_snippet
 class BusinessProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="business_profile")
     company_name = models.CharField(max_length=255, blank=True, null=True)
     business_type = models.CharField(max_length=255, blank=True, null=True)
+    business_types = models.ManyToManyField(BusinessType, blank=True, related_name="businesses")
     website = models.URLField(blank=True, null=True)
     bio = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=30, blank=True, null=True)
