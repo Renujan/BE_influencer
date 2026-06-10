@@ -159,12 +159,33 @@ class RegisterView(APIView):
             profile = BusinessProfile.objects.create(
                 user=user,
                 company_name=request.data.get("company_name", ""),
-                business_type=request.data.get("business_type", ""),
                 website=request.data.get("website", ""),
                 phone=request.data.get("phone", ""),
                 time_zone=request.data.get("time_zone", "UTC+5:30"),
                 bio=request.data.get("bio", "")
             )
+            
+            # Add business types (handles both string and list format)
+            business_types_data = request.data.get("business_types", [])
+            if isinstance(business_types_data, str):
+                business_types_data = [x.strip() for x in business_types_data.split(",") if x.strip()]
+            
+            for bt_name in business_types_data:
+                bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
+                profile.business_types.add(bt_obj)
+                
+            # Legacy field backward compatibility support
+            single_bt = request.data.get("business_type")
+            if single_bt and not business_types_data:
+                bt_obj, _ = BusinessType.objects.get_or_create(name=single_bt)
+                profile.business_types.add(bt_obj)
+                profile.business_type = single_bt
+            elif business_types_data:
+                profile.business_type = ", ".join(business_types_data)
+            else:
+                profile.business_type = ""
+                
+            profile.save()
             profile_data = BusinessProfileSerializer(profile).data
         else:
             # Create creator profile
@@ -175,8 +196,11 @@ class RegisterView(APIView):
                 bio=request.data.get("bio", ""),
             )
             
-            # Add niches for influencers
+            # Add niches for influencers (handles both string and list format)
             niches_data = request.data.get("niches", [])
+            if isinstance(niches_data, str):
+                niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
+                
             for niche_name in niches_data:
                 niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
                 profile.niches.add(niche_obj)
