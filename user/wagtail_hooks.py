@@ -1,6 +1,6 @@
 from wagtail import hooks
-from wagtail.admin.viewsets.model import ModelViewSet, ModelViewSetGroup
-from wagtail.admin.menu import MenuItem
+from wagtail.admin.viewsets.model import ModelViewSet
+from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
 from django.urls import reverse
 from .models import BusinessProfile, CreatorProfile, Niche, BusinessType
 
@@ -58,11 +58,7 @@ class CreatorProfileViewSet(ModelViewSet):
         
         return NoAddPermissionPolicy(self.model)
 
-
-
-# Register Viewsets
-
-# 4. Niche Admin Viewset
+# 3. Niche Admin Viewset
 class NicheViewSet(ModelViewSet):
     model = Niche
     menu_label = "Niches"
@@ -74,24 +70,7 @@ class NicheViewSet(ModelViewSet):
     list_display = ("name",)
     search_fields = ("name",)
 
-# Register Viewsets directly (without adding to sidebar directly, as we will use custom menu items)
-@hooks.register("register_admin_viewset")
-def register_business_profile_viewset():
-    return BusinessProfileViewSet()
-
-@hooks.register("register_admin_viewset")
-def register_creator_profile_viewset():
-    return CreatorProfileViewSet()
-
-@hooks.register("register_admin_viewset")
-def register_niche_viewset():
-    return NicheViewSet()
-
-@hooks.register("register_admin_viewset")
-def register_business_type_viewset():
-    return BusinessTypeViewSet()
-
-# 5. Business Type Admin Viewset
+# 4. Business Type Admin Viewset
 class BusinessTypeViewSet(ModelViewSet):
     model = BusinessType
     menu_label = "Business Types"
@@ -120,11 +99,49 @@ def register_niche_viewset():
 def register_business_type_viewset():
     return BusinessTypeViewSet()
 
+# Register custom nested menu items
+@hooks.register("register_admin_menu_item")
+def register_custom_user_profiles_menu():
+    # Instantiate viewsets to access their dynamic URL helpers
+    biz_prof = BusinessProfileViewSet()
+    biz_type = BusinessTypeViewSet()
+    creator_prof = CreatorProfileViewSet()
+    niche = NicheViewSet()
 
+    # Business Submenu Items
+    business_menu = Menu(items=[
+        MenuItem("Business Profiles", biz_prof.menu_url, icon_name="user"),
+        MenuItem("Business Types", biz_type.menu_url, icon_name="list-ul"),
+    ])
+    business_submenu = SubmenuMenuItem(
+        label="Business",
+        menu=business_menu,
+        icon_name="folder-open-1",
+    )
 
+    # Creator Submenu Items
+    creator_menu = Menu(items=[
+        MenuItem("Creator Profiles", creator_prof.menu_url, icon_name="user"),
+        MenuItem("Niches", niche.menu_url, icon_name="tag"),
+    ])
+    creator_submenu = SubmenuMenuItem(
+        label="Creator",
+        menu=creator_menu,
+        icon_name="folder-open-1",
+    )
 
+    # Main User Profiles Parent Submenu
+    main_menu = Menu(items=[
+        business_submenu,
+        creator_submenu,
+    ])
 
-
+    return SubmenuMenuItem(
+        label="User Profiles",
+        menu=main_menu,
+        icon_name="user",
+        order=150,
+    )
 
 @hooks.register('register_admin_menu_item')
 def register_main_admin_menu_item():
