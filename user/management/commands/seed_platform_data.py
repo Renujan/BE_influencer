@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from user.models import (
-    Niche, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount
+    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount
 )
 from campegin.models import (
     Campaign, CampaignTask, CampaignMilestone, Deliverable,
@@ -23,6 +23,15 @@ class Command(BaseCommand):
             niche, _ = Niche.objects.get_or_create(name=name)
             niches[name] = niche
         self.stdout.write("Niches created.")
+
+        # 1a. Business Types
+        business_type_names = ["DTC Brand", "E-Commerce", "Marketing Agency", "Creative Agency", "Tech / SaaS", "Retail / Local", "Fashion & Beauty", "Food & Beverage", "Personal Brand", "Enterprise", "Startup"]
+        business_types = {}
+        for name in business_type_names:
+            bt, _ = BusinessType.objects.get_or_create(name=name)
+            business_types[name] = bt
+        self.stdout.write("Business types created.")
+
 
         # 1b. Campaign settings
         category_names = ["Fashion", "Beauty", "Tech", "Food", "Travel", "Fitness", "Gaming", "Lifestyle", "Finance", "Health & Wellness", "Education", "Entertainment", "Sports", "Automotive", "Real Estate", "Non-Profit"]
