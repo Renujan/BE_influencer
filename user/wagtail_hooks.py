@@ -58,13 +58,7 @@ class CreatorProfileViewSet(ModelViewSet):
         
         return NoAddPermissionPolicy(self.model)
 
-# 3. User Profiles Group
-class UserProfileGroup(ModelViewSetGroup):
-    items = (BusinessProfileViewSet, CreatorProfileViewSet)
-    menu_icon = "user"
-    menu_label = "User Profiles"
-    menu_name = "user_profiles"
-    menu_order = 150
+
 
 # Register Viewsets
 
@@ -92,21 +86,11 @@ class BusinessTypeViewSet(ModelViewSet):
     list_display = ("name",)
     search_fields = ("name",)
 
-# 6. Platform Metadata Group
-class PlatformMetadataGroup(ModelViewSetGroup):
-    items = (NicheViewSet, BusinessTypeViewSet)
-    menu_icon = "cog"
-    menu_label = "Metadata Settings"
-    menu_name = "platform_metadata"
-    menu_order = 160
 
-@hooks.register("register_admin_viewset")
-def register_platform_metadata_group():
-    return PlatformMetadataGroup()
 
-@hooks.register("register_admin_viewset")
-def register_user_profile_group():
-    return UserProfileGroup()
+
+
+
 
 @hooks.register('register_admin_menu_item')
 def register_main_admin_menu_item():
