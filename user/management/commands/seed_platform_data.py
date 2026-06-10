@@ -32,7 +32,6 @@ class Command(BaseCommand):
             business_types[name] = bt
         self.stdout.write("Business types created.")
 
-
         # 1b. Campaign settings
         category_names = ["Fashion", "Beauty", "Tech", "Food", "Travel", "Fitness", "Gaming", "Lifestyle", "Finance", "Health & Wellness", "Education", "Entertainment", "Sports", "Automotive", "Real Estate", "Non-Profit"]
         for name in category_names:
@@ -276,6 +275,16 @@ class Command(BaseCommand):
             profile.business_type = b["business_type"]
             profile.website = b["website"]
             profile.save()
+
+            # Link to business type ManyToMany
+            profile.business_types.clear()
+            if b["business_type"]:
+                bt_name = b["business_type"]
+                bt_obj = business_types.get(bt_name)
+                if not bt_obj:
+                    bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
+                    business_types[bt_name] = bt_obj
+                profile.business_types.add(bt_obj)
             
             users[b["username"]] = user
 
