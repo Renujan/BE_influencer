@@ -14,9 +14,9 @@ class BusinessProfileViewSet(ModelViewSet):
     add_to_admin_menu = False
     exclude_form_fields = []
     create_view_enabled = False
-    list_display = ("user", "company_name", "business_type", "phone", "otp_verified")
-    list_export = ("id", "user__username", "user__email", "company_name", "business_type", "website", "phone", "otp_verified")
-    list_filter = ("otp_verified",)
+    list_display = ("user", "company_name", "business_type", "phone", "otp_verified", "status")
+    list_export = ("id", "user__username", "user__email", "company_name", "business_type", "website", "phone", "otp_verified", "status")
+    list_filter = ("otp_verified", "status")
     search_fields = ("user__username", "user__email", "company_name", "phone")
 
     @property
@@ -41,9 +41,9 @@ class CreatorProfileViewSet(ModelViewSet):
     add_to_admin_menu = False
     exclude_form_fields = []
     create_view_enabled = False
-    list_display = ("user", "phone", "location", "wallet_balance", "otp_verified")
-    list_export = ("id", "user__username", "user__email", "phone", "location", "wallet_balance", "otp_verified")
-    list_filter = ("otp_verified",)
+    list_display = ("user", "phone", "location", "wallet_balance", "otp_verified", "status")
+    list_export = ("id", "user__username", "user__email", "phone", "location", "wallet_balance", "otp_verified", "status")
+    list_filter = ("otp_verified", "status")
     search_fields = ("user__username", "user__email", "phone", "location")
 
     @property

@@ -32,6 +32,11 @@ class BusinessProfile(models.Model):
     # OTP storage
     otp_code = models.CharField(max_length=6, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=20,
+        choices=[("pending", "Pending"), ("approved", "Approved"), ("restricted", "Restricted")],
+        default="pending"
+    )
 
     def __str__(self):
         return f"{self.company_name or self.user.username} (Business)"
@@ -50,6 +55,11 @@ class CreatorProfile(models.Model):
     # OTP storage
     otp_code = models.CharField(max_length=6, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=20,
+        choices=[("pending", "Pending"), ("approved", "Approved"), ("restricted", "Restricted")],
+        default="pending"
+    )
 
     def __str__(self):
         return f"{self.user.username} (Creator)"

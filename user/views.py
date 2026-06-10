@@ -25,6 +25,11 @@ class SendOTPView(APIView):
             return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
         
         user = User.objects.filter(email=email).first()
+        if user:
+            profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+            if profile and profile.status == "restricted":
+                return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+
         if not user:
             # Frictionless onboarding placeholder user
             username = email.split("@")[0]
@@ -84,6 +89,9 @@ class VerifyOTPView(APIView):
         if not profile:
             return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
         
+        if profile.status == "restricted":
+            return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+        
         if profile.otp_code == otp_code:
             profile.otp_verified = True
             profile.save()
@@ -118,10 +126,23 @@ class RegisterView(APIView):
             return Response({"error": "Username, email, password, and role are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         if User.objects.filter(username=username).exists():
+            existing_user = User.objects.get(username=username)
+            p = getattr(existing_user, "business_profile", None) or getattr(existing_user, "creator_profile", None)
+            if p and p.status == "restricted":
+                return Response({"error": "This username is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
             return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
 
         if User.objects.filter(email=email).exists():
+            existing_user = User.objects.get(email=email)
+            p = getattr(existing_user, "business_profile", None) or getattr(existing_user, "creator_profile", None)
+            if p and p.status == "restricted":
+                return Response({"error": "This email is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
             return Response({"error": "Email already registered"}, status=status.HTTP_400_BAD_REQUEST)
+
+        phone = request.data.get("phone")
+        if phone:
+            if BusinessProfile.objects.filter(phone=phone, status="restricted").exists() or CreatorProfile.objects.filter(phone=phone, status="restricted").exists():
+                return Response({"error": "This phone number is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
 
         # Create user
         user = User.objects.create_user(
@@ -186,6 +207,10 @@ class LoginView(APIView):
 
         if not user:
             return Response({"error": "Invalid username/email or password"}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+        if profile and profile.status == "restricted":
+            return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
 
         token, _ = Token.objects.get_or_create(user=user)
         
@@ -277,3 +302,71 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(user__social_accounts__engagement_rate__gte=float(er_min))
 
         return qs.distinct()
+
+
+from rest_framework.permissions import IsAdminUser
+
+class PendingUsersView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        pending_businesses = BusinessProfile.objects.filter(status="pending")
+        pending_creators = CreatorProfile.objects.filter(status="pending")
+
+        results = []
+        for bp in pending_businesses:
+            results.append({
+                "profile_id": bp.id,
+                "role": "business",
+                "name": bp.company_name or bp.user.username,
+                "email": bp.user.email,
+                "phone": bp.phone or "",
+                "category": bp.business_type or "Tech",
+            })
+        for cp in pending_creators:
+            niches = ", ".join([n.name for n in cp.niches.all()])
+            results.append({
+                "profile_id": cp.id,
+                "role": "creator",
+                "name": f"{cp.user.first_name} {cp.user.last_name}".strip() or cp.user.username,
+                "email": cp.user.email,
+                "phone": cp.phone or "",
+                "category": niches or "Lifestyle",
+            })
+        return Response(results)
+
+class ApproveUserView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        profile_id = request.data.get("profile_id")
+        role = request.data.get("role")
+        if not profile_id or not role:
+            return Response({"error": "profile_id and role are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if role == "business":
+            profile = get_object_or_404(BusinessProfile, id=profile_id)
+        else:
+            profile = get_object_or_404(CreatorProfile, id=profile_id)
+
+        profile.status = "approved"
+        profile.save()
+        return Response({"message": f"User profile has been successfully approved."})
+
+class RestrictUserView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        profile_id = request.data.get("profile_id")
+        role = request.data.get("role")
+        if not profile_id or not role:
+            return Response({"error": "profile_id and role are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if role == "business":
+            profile = get_object_or_404(BusinessProfile, id=profile_id)
+        else:
+            profile = get_object_or_404(CreatorProfile, id=profile_id)
+
+        profile.status = "restricted"
+        profile.save()
+        return Response({"message": f"User profile has been permanently restricted."})

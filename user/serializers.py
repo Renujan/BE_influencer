@@ -22,7 +22,7 @@ class CreatorSocialAccountSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "email"]
+        fields = ["id", "username", "first_name", "last_name", "email", "is_staff", "is_superuser"]
 
 class BusinessProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
@@ -33,7 +33,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             "id", "user", "company_name", "business_type", "website", "bio",
             "phone", "secondary_phone", "time_zone", "avatar_url",
             "facebook_url", "instagram_handle", "tiktok_handle", "youtube_url",
-            "linkedin_url", "twitter_handle", "otp_verified"
+            "linkedin_url", "twitter_handle", "otp_verified", "status"
         ]
 
 class CreatorProfileSerializer(serializers.ModelSerializer):
@@ -47,5 +47,5 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id", "user", "phone", "location", "bio", "avatar_url",
             "wallet_balance", "next_payout_date", "niches", "rates",
-            "social_accounts", "otp_verified"
+            "social_accounts", "otp_verified", "status"
         ]
