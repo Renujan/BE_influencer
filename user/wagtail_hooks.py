@@ -2,7 +2,7 @@ from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet, ModelViewSetGroup
 from wagtail.admin.menu import MenuItem
 from django.urls import reverse
-from .models import BusinessProfile, CreatorProfile
+from .models import BusinessProfile, CreatorProfile, Niche, BusinessType
 
 # 1. Business Profile Admin Viewset
 class BusinessProfileViewSet(ModelViewSet):
@@ -67,6 +67,43 @@ class UserProfileGroup(ModelViewSetGroup):
     menu_order = 150
 
 # Register Viewsets
+
+# 4. Niche Admin Viewset
+class NicheViewSet(ModelViewSet):
+    model = Niche
+    menu_label = "Niches"
+    icon = "tag"
+    menu_icon = "tag"
+    menu_item_name = "niches"
+    add_to_admin_menu = False
+    form_fields = ["name"]
+    list_display = ("name",)
+    search_fields = ("name",)
+
+# 5. Business Type Admin Viewset
+class BusinessTypeViewSet(ModelViewSet):
+    model = BusinessType
+    menu_label = "Business Types"
+    icon = "list-ul"
+    menu_icon = "list-ul"
+    menu_item_name = "business_types"
+    add_to_admin_menu = False
+    form_fields = ["name"]
+    list_display = ("name",)
+    search_fields = ("name",)
+
+# 6. Platform Metadata Group
+class PlatformMetadataGroup(ModelViewSetGroup):
+    items = (NicheViewSet, BusinessTypeViewSet)
+    menu_icon = "cog"
+    menu_label = "Metadata Settings"
+    menu_name = "platform_metadata"
+    menu_order = 160
+
+@hooks.register("register_admin_viewset")
+def register_platform_metadata_group():
+    return PlatformMetadataGroup()
+
 @hooks.register("register_admin_viewset")
 def register_user_profile_group():
     return UserProfileGroup()
