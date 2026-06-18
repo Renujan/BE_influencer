@@ -74,6 +74,8 @@ class Campaign(models.Model):
         return format_html('<a class="button button-small button-secondary" href="{}">Review</a>', url)
     get_review_btn.short_description = "Review"
 
+
+
 @register_snippet
 class CampaignTask(models.Model):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name="tasks")

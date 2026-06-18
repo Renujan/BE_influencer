@@ -162,7 +162,9 @@
                 <span><strong>Creator (Talent):</strong> {% if campaign.creator %}{{ campaign.creator.username }}{% else %}Unassigned{% endif %}</span>
             </div>
         </div>
-        <div>
+        <div style="display: flex; gap: 8px;">
+            <a href="{% url 'wagtailsnippets_campegin_campaign:inspect' campaign.id %}" class="button button-secondary" style="background-color: #06b6d4; color: white !important;">View Campaign</a>
+            <a href="{% url 'download_campaign_pdf' campaign.id %}" class="button button-secondary" style="background-color: #2f54eb; color: white !important;">Download PDF</a>
             <a href="{% url 'chat_monitor_campaigns:index' %}" class="button button-secondary">Back to Chat Monitor</a>
         </div>
     </div>
@@ -195,7 +197,9 @@
         {% endfor %}
     </div>
 
-    <div style="text-align: right;">
+    <div style="text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
+        <a href="{% url 'wagtailsnippets_campegin_campaign:inspect' campaign.id %}" class="button button-secondary" style="background-color: #06b6d4; color: white !important;">View Campaign</a>
+        <a href="{% url 'download_campaign_pdf' campaign.id %}" class="button button-secondary" style="background-color: #2f54eb; color: white !important;">Download PDF</a>
         <a href="{% url 'chat_monitor_campaigns:index' %}" class="button button-secondary">Back to List</a>
     </div>
 </div>
