@@ -16,10 +16,17 @@ from .serializers import (
     CampaignDeliverableSerializer, CampaignPlatformSerializer
 )
 
+from user.permissions import IsApprovedBusiness
+
 class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
     serializer_class = CampaignSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [permissions.IsAuthenticated(), IsApprovedBusiness()]
+        return super().get_permissions()
 
     def get_queryset(self):
         user = self.request.user

@@ -431,7 +431,66 @@ class RestrictUserView(APIView):
         return Response({"message": f"User profile has been permanently restricted."})
 
 
+class SubmitVerificationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        profile = getattr(request.user, "business_profile", None)
+        if not profile:
+            return Response({"error": "Only business accounts can submit verification documents."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if profile.status == "approved":
+            return Response({"error": "Business profile is already verified and approved."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        business_reg_number = request.data.get("business_reg_number")
+        business_document = request.FILES.get("business_document")
+        
+        if not business_reg_number or not business_document:
+            return Response({"error": "Both business registration number and document file are required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        profile.business_reg_number = business_reg_number
+        profile.business_document = business_document
+        profile.verification_documents_submitted = True
+        profile.save()
+        
+        return Response(BusinessProfileSerializer(profile).data, status=status.HTTP_200_OK)
+
+
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import user_passes_test
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_approve_business_view(request, profile_id):
+    profile = get_object_or_404(BusinessProfile, pk=profile_id)
+    profile.status = "approved"
+    profile.save()
+    messages.success(request, f"Business '{profile.company_name or profile.user.username}' has been successfully approved.")
+    try:
+        from django.urls import reverse
+        inspect_url = reverse("businessprofile:inspect", args=[profile_id])
+        return redirect(inspect_url)
+    except Exception:
+        return redirect("/admin/businessprofile/")
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_restrict_business_view(request, profile_id):
+    profile = get_object_or_404(BusinessProfile, pk=profile_id)
+    profile.status = "restricted"
+    profile.save()
+    messages.warning(request, f"Business '{profile.company_name or profile.user.username}' has been restricted.")
+    try:
+        from django.urls import reverse
+        inspect_url = reverse("businessprofile:inspect", args=[profile_id])
+        return redirect(inspect_url)
+    except Exception:
+        return redirect("/admin/businessprofile/")
+
+
+
 from io import BytesIO
+
+
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import user_passes_test

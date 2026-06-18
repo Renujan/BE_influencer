@@ -46,6 +46,15 @@ class BusinessProfile(models.Model):
         default="pending"
     )
 
+    # Verification Fields
+    verification_documents_submitted = models.BooleanField(default=False)
+    business_reg_number = models.CharField(max_length=100, blank=True, null=True)
+    business_document = models.FileField(upload_to="business_documents/", blank=True, null=True)
+
+    @property
+    def role(self):
+        return "business"
+
     def __str__(self):
         return f"{self.company_name or self.user.username} (Business)"
 
@@ -69,8 +78,13 @@ class CreatorProfile(models.Model):
         default="pending"
     )
 
+    @property
+    def role(self):
+        return "creator"
+
     def __str__(self):
         return f"{self.user.username} (Creator)"
+
 
 @register_snippet
 class CreatorRate(models.Model):
@@ -100,3 +114,6 @@ class CreatorSocialAccount(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.platform} ({self.username})"
+
+User.profile = property(lambda self: getattr(self, "business_profile", None) or getattr(self, "creator_profile", None))
+

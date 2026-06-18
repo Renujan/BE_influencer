@@ -39,7 +39,8 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             "id", "user", "company_name", "business_type", "business_types", "website", "bio",
             "phone", "secondary_phone", "time_zone", "avatar_url",
             "facebook_url", "instagram_handle", "tiktok_handle", "youtube_url",
-            "linkedin_url", "twitter_handle", "otp_verified", "status"
+            "linkedin_url", "twitter_handle", "otp_verified", "status",
+            "verification_documents_submitted", "business_reg_number", "business_document"
         ]
 
 class CreatorProfileSerializer(serializers.ModelSerializer):

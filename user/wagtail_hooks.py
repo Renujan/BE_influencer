@@ -6,7 +6,7 @@ from django.utils.translation import gettext as _
 from django.urls import reverse, path
 from .models import BusinessProfile, CreatorProfile, Niche, BusinessType
 from Setting.models import CreatorSettings, BusinessSettings
-from .views import download_profile_pdf_view
+from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view
 
 # Custom Index View to change the "Inspect" button label to "View"
 class ProfileIndexView(IndexView):
@@ -338,5 +338,7 @@ def auto_hide_messages():
 def register_user_profile_pdf_urls():
     return [
         path("user-profiles/download-pdf/<str:profile_type>/<int:profile_id>/", download_profile_pdf_view, name="download_profile_pdf"),
+        path("user-profiles/approve/<int:profile_id>/", admin_approve_business_view, name="wagtail_approve_business"),
+        path("user-profiles/restrict/<int:profile_id>/", admin_restrict_business_view, name="wagtail_restrict_business"),
     ]
 

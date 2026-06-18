@@ -15,3 +15,20 @@ class IsNotRestricted(BasePermission):
             return False
             
         return True
+
+class IsApprovedBusiness(BasePermission):
+    """
+    Allows access only to approved businesses (or staff/superusers).
+    """
+    message = "You must submit verification documents and be approved by the admin to create campaigns."
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+            
+        if request.user.is_staff or request.user.is_superuser:
+            return True
+            
+        profile = getattr(request.user, "business_profile", None)
+        return profile is not None and profile.status == "approved"
+

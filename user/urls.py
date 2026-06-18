@@ -2,7 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     SendOTPView, VerifyOTPView, RegisterView, LoginView, MeView,
-    NicheViewSet, BusinessTypeViewSet, CreatorViewSet, PendingUsersView, ApproveUserView, RestrictUserView
+    NicheViewSet, BusinessTypeViewSet, CreatorViewSet, PendingUsersView, ApproveUserView, RestrictUserView,
+    SubmitVerificationView
 )
 
 router = DefaultRouter()
@@ -18,6 +19,8 @@ urlpatterns = [
     path("auth/signup/", RegisterView.as_view(), name="signup"),
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/me/", MeView.as_view(), name="me"),
+    path("auth/business/submit-verification/", SubmitVerificationView.as_view(), name="submit_verification"),
+
     
     # Admin Moderation endpoints
     path("admin/pending-users/", PendingUsersView.as_view(), name="admin_pending_users"),

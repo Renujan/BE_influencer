@@ -196,6 +196,31 @@
                 </td>
             </tr>
             <tr>
+                <td>
+                    <div class="label">Verification Status</div>
+                    <div class="value">
+                        {% if instance.verification_documents_submitted %}
+                            <span class="badge badge-approved">Documents Submitted</span>
+                        {% else %}
+                            <span class="badge badge-pending">Not Submitted</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    <div class="label">Business Registration Number</div>
+                    <div class="value">{{ instance.business_reg_number|default:"-" }}</div>
+                </td>
+            </tr>
+            {% if instance.business_document %}
+            <tr>
+                <td colspan="2">
+                    <div class="label">Verification Document File</div>
+                    <div class="value">{{ instance.business_document.name }}</div>
+                </td>
+            </tr>
+            {% endif %}
+
+            <tr>
                 <td colspan="2">
                     <div class="label">Business Types</div>
                     <div class="value">
