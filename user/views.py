@@ -429,3 +429,73 @@ class RestrictUserView(APIView):
         profile.status = "restricted"
         profile.save()
         return Response({"message": f"User profile has been permanently restricted."})
+
+
+from io import BytesIO
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.contrib.auth.decorators import user_passes_test
+from xhtml2pdf import pisa
+from Setting.models import CreatorSettings, BusinessSettings
+
+@user_passes_test(lambda u: u.is_staff)
+def download_profile_pdf_view(request, profile_type, profile_id):
+    if profile_type == 'business':
+        business_profile = get_object_or_404(BusinessProfile, pk=profile_id)
+        BusinessSettings.objects.get_or_create(business=business_profile)
+        settings = getattr(business_profile, "settings", None)
+        
+        # Pre-split business types (prioritizing ManyToMany relation)
+        business_types = []
+        if business_profile.business_types.exists():
+            business_types = [t.name for t in business_profile.business_types.all()]
+        elif business_profile.business_type:
+            # handle both comma and space separation
+            business_types = [t.strip() for t in business_profile.business_type.replace(",", " ").split() if t.strip()]
+            
+        context = {
+            "instance": business_profile,
+            "settings": settings,
+            "business_types": business_types,
+            "profile_type": "Business Profile",
+        }
+        template_name = "user/profile_pdf.html"
+        filename = f"business_profile_{business_profile.company_name or business_profile.user.username}.pdf"
+    elif profile_type == 'creator':
+        creator_profile = get_object_or_404(CreatorProfile, pk=profile_id)
+        CreatorSettings.objects.get_or_create(creator=creator_profile)
+        settings = getattr(creator_profile, "settings", None)
+        
+        # Pre-split platforms list for rates
+        rates_data = []
+        for rate in creator_profile.rates.all():
+            platforms_list = [p.strip() for p in rate.platforms.replace(",", " ").split() if p.strip()]
+            rates_data.append({
+                "content_type": rate.content_type,
+                "platforms_list": platforms_list,
+                "price": rate.price,
+                "notes": rate.notes
+            })
+            
+        context = {
+            "instance": creator_profile,
+            "settings": settings,
+            "rates": rates_data,
+            "payout_methods": creator_profile.payout_methods.all(),
+            "social_accounts": creator_profile.user.social_accounts.all(),
+            "profile_type": "Creator Profile",
+        }
+        template_name = "user/profile_pdf.html"
+        filename = f"creator_profile_{creator_profile.user.username}.pdf"
+    else:
+        return HttpResponse("Invalid profile type", status=400)
+        
+    html = render_to_string(template_name, context)
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html.encode("utf-8")), result)
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    return HttpResponse("Error generating PDF", status=500)
+

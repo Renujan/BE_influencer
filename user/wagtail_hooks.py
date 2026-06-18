@@ -1,16 +1,37 @@
 from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet
 from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
-from wagtail.admin.views.generic.models import InspectView, IndexView
+from wagtail.admin.views.generic.models import InspectView, IndexView, MenuItem as GenericMenuItem
 from django.utils.translation import gettext as _
-from django.urls import reverse
+from django.urls import reverse, path
 from .models import BusinessProfile, CreatorProfile, Niche, BusinessType
 from Setting.models import CreatorSettings, BusinessSettings
+from .views import download_profile_pdf_view
 
 # Custom Index View to change the "Inspect" button label to "View"
 class ProfileIndexView(IndexView):
     def get_list_more_buttons(self, instance):
         buttons = super().get_list_more_buttons(instance)
+        
+        # Identify profile type
+        if isinstance(instance, BusinessProfile):
+            profile_type = "business"
+        elif isinstance(instance, CreatorProfile):
+            profile_type = "creator"
+        else:
+            profile_type = None
+            
+        if profile_type:
+            download_url = reverse("download_profile_pdf", args=[profile_type, instance.pk])
+            buttons.append(
+                GenericMenuItem(
+                    _("Download PDF"),
+                    url=download_url,
+                    icon_name="download",
+                    priority=25,
+                )
+            )
+            
         for item in buttons:
             if hasattr(item, "label") and (str(item.label) == "Inspect" or item.label == _("Inspect")):
                 item.label = _("View")
@@ -311,3 +332,11 @@ def auto_hide_messages():
         </script>
         """
     )
+
+
+@hooks.register("register_admin_urls")
+def register_user_profile_pdf_urls():
+    return [
+        path("user-profiles/download-pdf/<str:profile_type>/<int:profile_id>/", download_profile_pdf_view, name="download_profile_pdf"),
+    ]
+

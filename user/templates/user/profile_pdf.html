@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ profile_type }} - {{ instance.user.username }}</title>
+    <style>
+        @page {
+            size: a4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #2c3e50;
+            font-size: 9.5pt;
+            line-height: 1.4;
+        }
+        .header-table {
+            width: 100%;
+            border-bottom: 2px solid #34495e;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .header-title {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #1a252f;
+        }
+        .header-subtitle {
+            font-size: 10pt;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+        .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            background-color: #f8fafc;
+            color: #1e293b;
+            padding: 6px 10px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-left: 4px solid #06b6d4;
+        }
+        .grid-table {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .grid-table td {
+            padding: 6px 8px;
+            vertical-align: top;
+        }
+        .label {
+            font-weight: bold;
+            color: #475569;
+            font-size: 8.5pt;
+            margin-bottom: 3px;
+        }
+        .value {
+            color: #1e293b;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            min-height: 18px;
+        }
+        .value-textarea {
+            min-height: 50px;
+        }
+        .badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+            text-transform: capitalize;
+        }
+        .badge-pending {
+            background-color: #fef9c3;
+            color: #854d0e;
+        }
+        .badge-approved {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .badge-restricted {
+            background-color: #ffe4e6;
+            color: #991b1b;
+        }
+        .tag {
+            display: inline-block;
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            font-size: 8pt;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+        .data-table th, .data-table td {
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+            font-size: 9pt;
+        }
+        .data-table th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Bar -->
+    <table class="header-table">
+        <tr>
+            <td>
+                <div class="header-title">{{ profile_type }}</div>
+                <div class="header-subtitle">
+                    {% if profile_type == "Business Profile" %}
+                        {{ instance.company_name|default:instance.user.username }} &middot; Owner: {{ instance.user.first_name }} {{ instance.user.last_name }}
+                    {% else %}
+                        {{ instance.user.username }} &middot; {{ instance.user.first_name }} {{ instance.user.last_name }}
+                    {% endif %}
+                    &middot; {{ instance.user.email }}
+                </div>
+            </td>
+            <td style="text-align: right; vertical-align: bottom; color: #94a3b8; font-size: 9pt;">
+                Generated: {% now "Y-m-d H:i" %}
+            </td>
+        </tr>
+    </table>
+
+    {% if profile_type == "Business Profile" %}
+        <!-- Business Profile Information -->
+        <div class="section-title">Company Profile Information</div>
+        <table class="grid-table">
+            <tr>
+                <td style="width: 50%;">
+                    <div class="label">Company Name</div>
+                    <div class="value"><strong>{{ instance.company_name|default:"-" }}</strong></div>
+                </td>
+                <td style="width: 50%;">
+                    <div class="label">Account Owner Username</div>
+                    <div class="value">{{ instance.user.username }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">Work Email</div>
+                    <div class="value">{{ instance.user.email }}</div>
+                </td>
+                <td>
+                    <div class="label">Website</div>
+                    <div class="value">{{ instance.website|default:"-" }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">First Name</div>
+                    <div class="value">{{ instance.user.first_name|default:"-" }}</div>
+                </td>
+                <td>
+                    <div class="label">Last Name</div>
+                    <div class="value">{{ instance.user.last_name|default:"-" }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">Primary Phone</div>
+                    <div class="value">{{ instance.phone|default:"-" }}</div>
+                </td>
+                <td>
+                    <div class="label">Secondary Phone</div>
+                    <div class="value">{{ instance.secondary_phone|default:"-" }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">Time Zone</div>
+                    <div class="value">{{ instance.time_zone|default:"-" }}</div>
+                </td>
+                <td>
+                    <div class="label">Profile Status</div>
+                    <div class="value">
+                        <span class="badge badge-{{ instance.status }}">{{ instance.get_status_display }}</span>
+                        {% if instance.otp_verified %}
+                            <span class="badge badge-approved" style="margin-left: 5px;">OTP Verified</span>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <div class="label">Business Types</div>
+                    <div class="value">
+                        {% for t in business_types %}
+                            <span class="tag">{{ t }}</span>
+                        {% empty %}
+                            <span style="color: #94a3b8;">No Types Selected</span>
+                        {% endfor %}
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <div class="label">Company Bio / Summary</div>
+                    <div class="value value-textarea">{{ instance.bio|default:"-" }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="section-title">Brand Social Media Handles</div>
+        <table class="grid-table">
+            <tr>
+                <td style="width: 50%;">
+                    <div class="label">Facebook URL</div>
+                    <div class="value">{{ instance.facebook_url|default:"-" }}</div>
+                </td>
+                <td style="width: 50%;">
+                    <div class="label">Instagram Handle</div>
+                    <div class="value">{{ instance.instagram_handle|default:"-" }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">TikTok Handle</div>
+                    <div class="value">{{ instance.tiktok_handle|default:"-" }}</div>
+                </td>
+                <td>
+                    <div class="label">YouTube URL</div>
+                    <div class="value">{{ instance.youtube_url|default:"-" }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">LinkedIn Company Page</div>
+                    <div class="value">{{ instance.linkedin_url|default:"-" }}</div>
+                </td>
+                <td>
+                    <div class="label">X (Twitter) Handle</div>
+                    <div class="value">{{ instance.twitter_handle|default:"-" }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="section-title">Subscription Plan &amp; Billing</div>
+        <table class="grid-table">
+            <tr>
+                <td style="width: 50%;">
+                    <div class="label">Current Plan</div>
+                    <div class="value"><span class="badge badge-approved">{{ settings.plan|default:"Pro" }}</span></div>
+                </td>
+                <td style="width: 50%;">
+                    <div class="label">Payment Method Details</div>
+                    <div class="value">
+                        {% if settings.card_last_four %}
+                            Card: •••• •••• •••• {{ settings.card_last_four }} (Expires {{ settings.card_expiry|default:"-" }})
+                        {% else %}
+                            No card configured
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+    {% else %}
+        <!-- Creator Profile Information -->
+        <div class="section-title">Basic Information</div>
+        <table class="grid-table">
+            <tr>
+                <td style="width: 50%;">
+                    <div class="label">Username</div>
+                    <div class="value"><strong>{{ instance.user.username }}</strong></div>
+                </td>
+                <td style="width: 50%;">
+                    <div class="label">Email Address</div>
+                    <div class="value">{{ instance.user.email }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">First Name</div>
+                    <div class="value">{{ instance.user.first_name|default:"-" }}</div>
+                </td>
+                <td>
+                    <div class="label">Last Name</div>
+                    <div class="value">{{ instance.user.last_name|default:"-" }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">Phone Number</div>
+                    <div class="value">{{ instance.phone|default:"-" }}</div>
+                </td>
+                <td>
+                    <div class="label">Location</div>
+                    <div class="value">{{ instance.location|default:"-" }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">Profile Status</div>
+                    <div class="value">
+                        <span class="badge badge-{{ instance.status }}">{{ instance.get_status_display }}</span>
+                        {% if instance.otp_verified %}
+                            <span class="badge badge-approved" style="margin-left: 5px;">OTP Verified</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    <div class="label">Wallet Balance</div>
+                    <div class="value"><strong>${{ instance.wallet_balance }}</strong></div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">Next Payout Date</div>
+                    <div class="value">{{ instance.next_payout_date|default:"Not scheduled" }}</div>
+                </td>
+                <td>
+                    <div class="label">Niches</div>
+                    <div class="value">
+                        {% for niche in instance.niches.all %}
+                            <span class="tag">{{ niche.name }}</span>
+                        {% empty %}
+                            <span style="color: #94a3b8;">No Niches Defined</span>
+                        {% endfor %}
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <div class="label">Bio / Profile Description</div>
+                    <div class="value value-textarea">{{ instance.bio|default:"-" }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="section-title">Connected Social Media Accounts</div>
+        <table class="grid-table">
+            {% for sa in social_accounts %}
+                {% if forloop.counter0|divisibleby:2 %}
+                    <tr>
+                {% endif %}
+                <td style="width: 50%;">
+                    <div class="label" style="text-transform: capitalize;">{{ sa.platform }} Handle</div>
+                    <div class="value" style="font-size: 9pt;">
+                        <strong>{{ sa.username }}</strong> 
+                        <span style="color: #7f8c8d; font-size: 8pt; float: right;">
+                            {{ sa.followers_count }} followers &middot; {{ sa.engagement_rate }}% ER
+                        </span>
+                    </div>
+                </td>
+                {% if forloop.counter|divisibleby:2 or forloop.last %}
+                    </tr>
+                {% endif %}
+            {% empty %}
+                <tr>
+                    <td colspan="2">
+                        <div class="value" style="color: #94a3b8; text-align: center;">No connected social media accounts found</div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+
+        <div class="section-title">Rate Card Pricing (Base Currency: {{ settings.currency|default:"USD ($)" }})</div>
+        {% if settings.rate_card_note %}
+            <div style="margin-bottom: 10px; padding: 6px 10px; background-color: #f8fafc; border-left: 3px solid #64748b; font-size: 8.5pt; color: #475569;">
+                <strong>Note to Brands:</strong> {{ settings.rate_card_note }}
+            </div>
+        {% endif %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Content Type</th>
+                    <th style="width: 30%;">Target Platforms</th>
+                    <th style="width: 15%;">Price</th>
+                    <th style="width: 25%;">Pricing Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rate in rates %}
+                    <tr>
+                        <td><strong>{{ rate.content_type }}</strong></td>
+                        <td>
+                            {% for plat in rate.platforms_list %}
+                                <span class="tag" style="background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-size: 7.5pt; padding: 1px 4px;">{{ plat }}</span>
+                            {% empty %}
+                                -
+                            {% endfor %}
+                        </td>
+                        <td><strong>${{ rate.price }}</strong></td>
+                        <td><span style="color: #64748b; font-size: 8pt;">{{ rate.notes|default:"-" }}</span></td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #94a3b8;">No Rate Card pricing lists found</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="section-title">Payout Methods</div>
+        <table class="grid-table">
+            {% for pm in payout_methods %}
+                {% if forloop.counter0|divisibleby:2 %}
+                    <tr>
+                {% endif %}
+                <td style="width: 50%;">
+                    <div class="label">{{ pm.method_type }} {% if pm.is_primary %}(Primary){% endif %}</div>
+                    <div class="value">
+                        {{ pm.details }}
+                        <span style="float: right;" class="badge badge-{% if pm.is_primary %}approved{% else %}pending{% endif %}">
+                            {% if pm.is_primary %}Primary{% else %}Backup{% endif %}
+                        </span>
+                    </div>
+                </td>
+                {% if forloop.counter|divisibleby:2 or forloop.last %}
+                    </tr>
+                {% endif %}
+            {% empty %}
+                <tr>
+                    <td colspan="2">
+                        <div class="value" style="color: #94a3b8; text-align: center;">No payout methods configured</div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+
+</body>
+</html>

@@ -274,6 +274,7 @@
             <p>{{ instance.user.username }} - {{ instance.user.first_name }} {{ instance.user.last_name }} - {{ instance.user.email }}</p>
         </div>
         <div class="custom-header-actions">
+            <a href="{% url 'download_profile_pdf' 'creator' instance.pk %}" class="btn-header-secondary">Download PDF</a>
             {% if view.get_edit_url %}
                 <a href="{{ view.get_edit_url }}" class="btn-header-secondary">Edit Creator</a>
             {% endif %}
@@ -507,6 +508,7 @@
             {% if view.index_url_name %}
                 <a href="{% url view.index_url_name %}" class="btn-footer-back">Back</a>
             {% endif %}
+            <a href="{% url 'download_profile_pdf' 'creator' instance.pk %}" class="btn-footer-back">Download PDF</a>
             {% if view.get_edit_url %}
                 <a href="{{ view.get_edit_url }}" class="btn-footer-edit">Edit Creator</a>
             {% endif %}
