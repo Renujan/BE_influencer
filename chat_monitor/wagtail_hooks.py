@@ -5,7 +5,7 @@ from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet
 from wagtail.admin.views.generic.models import IndexView, MenuItem as GenericMenuItem
 from campegin.models import Campaign
-from .views import chat_monitor_view_chat_view, chat_monitor_review_view
+from .views import chat_monitor_view_chat_view, chat_monitor_review_view, chat_monitor_detail_view
 
 
 # Custom Index View: adds "View Campaign" and "Download PDF" to the row dropdown menu
@@ -13,13 +13,13 @@ class ChatMonitorIndexView(IndexView):
     def get_list_more_buttons(self, instance):
         buttons = super().get_list_more_buttons(instance)
 
-        # Add "View Campaign" (links to Campaign inspect page)
+        # Add "View" — comprehensive detail page (chat + campaign + profiles)
         try:
-            campaign_url = reverse("wagtailsnippets_campegin_campaign:inspect", args=[instance.pk])
+            detail_url = reverse("chat_monitor_detail", args=[instance.pk])
             buttons.append(
                 GenericMenuItem(
-                    _("View Campaign"),
-                    url=campaign_url,
+                    _("View"),
+                    url=detail_url,
                     icon_name="view",
                     priority=30,
                 )
@@ -86,4 +86,5 @@ def register_chat_monitor_custom_urls():
     return [
         path("chat-monitor/view-chat/<int:campaign_id>/", chat_monitor_view_chat_view, name="chat_monitor_view_chat"),
         path("chat-monitor/review/<int:campaign_id>/", chat_monitor_review_view, name="chat_monitor_review"),
+        path("chat-monitor/detail/<int:campaign_id>/", chat_monitor_detail_view, name="chat_monitor_detail"),
     ]

@@ -9,6 +9,50 @@ from .models import ChatMessage, ChatReview
 from .serializers import CampaignChatSerializer, WorkspaceMessageSerializer, ChatReviewSerializer
 import datetime
 
+
+@staff_member_required
+def chat_monitor_detail_view(request, campaign_id):
+    """Comprehensive detail page: chat history + campaign info + business & creator profiles."""
+    campaign = get_object_or_404(Campaign, id=campaign_id)
+    messages = campaign.chat_messages.all().order_by("id")
+    reviews = campaign.chat_reviews.all().order_by("-id")
+
+    # Business profile
+    business_profile = getattr(campaign.brand, "business_profile", None)
+    business_social_accounts = campaign.brand.social_accounts.all() if campaign.brand else []
+
+    # Creator profile
+    creator_profile = None
+    creator_social_accounts = []
+    creator_rates = []
+    if campaign.creator:
+        creator_profile = getattr(campaign.creator, "creator_profile", None)
+        creator_social_accounts = campaign.creator.social_accounts.all()
+        if creator_profile:
+            creator_rates = creator_profile.rates.all()
+
+    # Campaign extras
+    milestones = campaign.milestones.all()
+    tasks = campaign.tasks.all()
+    deliverables = campaign.deliverables.all()
+    payments = campaign.payments.all()
+
+    context = {
+        "campaign": campaign,
+        "messages": messages,
+        "reviews": reviews,
+        "business_profile": business_profile,
+        "business_social_accounts": business_social_accounts,
+        "creator_profile": creator_profile,
+        "creator_social_accounts": creator_social_accounts,
+        "creator_rates": creator_rates,
+        "milestones": milestones,
+        "tasks": tasks,
+        "deliverables": deliverables,
+        "payments": payments,
+    }
+    return render(request, "chat_monitor/detail_view.html", context)
+
 # --- REST API ViewSet for workspace users (Business & Creator) ---
 
 class CampaignChatsViewSet(viewsets.ReadOnlyModelViewSet):
