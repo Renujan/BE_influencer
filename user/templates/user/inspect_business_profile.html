@@ -1,0 +1,533 @@
+{% extends "wagtailadmin/base.html" %}
+
+{% block titletag %}Business Details - {{ instance.company_name|default:instance.user.username }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    .custom-inspect-wrapper {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 24px;
+        background-color: #f8fafc;
+        min-height: 100vh;
+    }
+
+    .custom-header-bar {
+        background-color: #1e293b; /* Dark navy/slate */
+        padding: 24px 32px;
+        color: #ffffff;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .custom-header-title h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+    }
+
+    .custom-header-title p {
+        font-size: 14px;
+        color: #cbd5e1;
+        margin: 6px 0 0 0;
+    }
+
+    .custom-header-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-header-secondary {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-header-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-header-primary {
+        background-color: #06b6d4; /* Teal/Cyan */
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-header-primary:hover {
+        background-color: #0891b2;
+    }
+
+    .custom-body-card {
+        background: #ffffff;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        border-left: 1px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 32px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 36px;
+    }
+
+    .custom-section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 20px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e2e8f0;
+        text-transform: none;
+        letter-spacing: -0.01em;
+    }
+
+    .custom-form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px 24px;
+    }
+
+    @media (min-width: 768px) {
+        .custom-form-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .custom-form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .custom-form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .custom-form-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+
+    .custom-form-control-readonly {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 14px;
+        color: #334155;
+        min-height: 45px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        word-break: break-all;
+    }
+
+    .custom-form-control-readonly.textarea {
+        align-items: flex-start;
+        line-height: 1.5;
+        min-height: 90px;
+        white-space: pre-wrap;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+
+    .badge-status.approved {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-status.pending {
+        background-color: #fef9c3;
+        color: #854d0e;
+    }
+
+    .badge-status.restricted {
+        background-color: #ffe4e6;
+        color: #991b1b;
+    }
+
+    .tag-item {
+        display: inline-block;
+        background-color: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 4px 10px;
+        border-radius: 4px;
+        margin-right: 6px;
+        margin-bottom: 6px;
+    }
+
+    .custom-footer-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e2e8f0;
+        margin-top: 12px;
+    }
+
+    .btn-footer-back {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155 !important;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .btn-footer-back:hover {
+        background-color: #f8fafc;
+    }
+
+    .btn-footer-edit {
+        background-color: #1e293b;
+        color: #ffffff !important;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .btn-footer-edit:hover {
+        background-color: #0f172a;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="custom-inspect-wrapper">
+    <!-- Header Bar (Matches Screenshot) -->
+    <div class="custom-header-bar">
+        <div class="custom-header-title">
+            <h1>Business Details</h1>
+            <p>{{ instance.company_name|default:instance.user.username }} - Owner: {{ instance.user.first_name }} {{ instance.user.last_name }} - {{ instance.user.email }}</p>
+        </div>
+        <div class="custom-header-actions">
+            {% if view.get_edit_url %}
+                <a href="{{ view.get_edit_url }}" class="btn-header-secondary">Edit Business</a>
+            {% endif %}
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-header-primary">View Businesses List</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Body Content with Form Field Cards -->
+    <div class="custom-body-card">
+        
+        <!-- Company Profile Info Section -->
+        <div>
+            <h3 class="custom-section-title">Company Profile Information</h3>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Company Name</label>
+                    <div class="custom-form-control-readonly"><strong>{{ instance.company_name|default:"-" }}</strong></div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Account Owner Username</label>
+                    <div class="custom-form-control-readonly">{{ instance.user.username }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Work Email</label>
+                    <div class="custom-form-control-readonly">{{ instance.user.email }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">First Name</label>
+                    <div class="custom-form-control-readonly">{{ instance.user.first_name|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Last Name</label>
+                    <div class="custom-form-control-readonly">{{ instance.user.last_name|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Website</label>
+                    <div class="custom-form-control-readonly">
+                        {% if instance.website %}
+                            <a href="{{ instance.website }}" target="_blank" style="color: #0284c7; text-decoration: none;">{{ instance.website }}</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Primary Phone</label>
+                    <div class="custom-form-control-readonly">{{ instance.phone|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Secondary Phone</label>
+                    <div class="custom-form-control-readonly">{{ instance.secondary_phone|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Time Zone</label>
+                    <div class="custom-form-control-readonly">{{ instance.time_zone|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Profile Status</label>
+                    <div class="custom-form-control-readonly">
+                        <span class="badge-status {{ instance.status }}">{{ instance.get_status_display }}</span>
+                        {% if instance.otp_verified %}
+                            <span class="badge-status approved" style="background-color: #e0f2fe; color: #0369a1; margin-left: 6px;">OTP Verified</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group full-width">
+                    <label class="custom-form-label">Business Types</label>
+                    <div class="custom-form-control-readonly" style="flex-wrap: wrap; gap: 6px; min-height: auto; padding: 12px;">
+                        {% for t in business_types %}
+                            <span class="tag-item" style="margin-bottom: 0;">{{ t }}</span>
+                        {% empty %}
+                            <span style="color: #94a3b8;">No Types Selected</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group full-width">
+                    <label class="custom-form-label">Company Bio / Summary</label>
+                    <div class="custom-form-control-readonly textarea">{{ instance.bio|default:"-" }}</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Social Media Profiles Section -->
+        <div>
+            <h3 class="custom-section-title">Brand Social Media Handles</h3>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Facebook URL</label>
+                    <div class="custom-form-control-readonly">
+                        {% if instance.facebook_url %}
+                            <a href="{{ instance.facebook_url }}" target="_blank" style="color: #0284c7; text-decoration: none;">{{ instance.facebook_url }}</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Instagram Handle</label>
+                    <div class="custom-form-control-readonly">{{ instance.instagram_handle|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">TikTok Handle</label>
+                    <div class="custom-form-control-readonly">{{ instance.tiktok_handle|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">YouTube URL</label>
+                    <div class="custom-form-control-readonly">
+                        {% if instance.youtube_url %}
+                            <a href="{{ instance.youtube_url }}" target="_blank" style="color: #0284c7; text-decoration: none;">{{ instance.youtube_url }}</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">LinkedIn Company Page</label>
+                    <div class="custom-form-control-readonly">
+                        {% if instance.linkedin_url %}
+                            <a href="{{ instance.linkedin_url }}" target="_blank" style="color: #0284c7; text-decoration: none;">{{ instance.linkedin_url }}</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">X (Twitter) Handle</label>
+                    <div class="custom-form-control-readonly">{{ instance.twitter_handle|default:"-" }}</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Subscription & Billing Section -->
+        <div>
+            <h3 class="custom-section-title">Subscription Plan &amp; Billing</h3>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Current Plan</label>
+                    <div class="custom-form-control-readonly"><span class="badge-status approved" style="background-color: #e0f2fe; color: #0369a1;">{{ settings.plan|default:"Pro" }}</span></div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Payment Method Details</label>
+                    <div class="custom-form-control-readonly">
+                        {% if settings.card_last_four %}
+                            Card: <strong>•••• •••• •••• {{ settings.card_last_four }}</strong> (Expires {{ settings.card_expiry|default:"-" }})
+                        {% else %}
+                            No card configured
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Connected Integrations Section -->
+        <div>
+            <h3 class="custom-section-title">Connected Integrations</h3>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Slack Workspace</label>
+                    <div class="custom-form-control-readonly">
+                        <span class="badge-status {% if settings.slack_connected %}approved{% else %}pending{% endif %}" style="background-color: {% if settings.slack_connected %}#dcfce7{% else %}#f1f5f9{% endif %}; color: {% if settings.slack_connected %}#166534{% else %}#64748b{% endif %};">
+                            {% if settings.slack_connected %}Connected{% else %}Not Configured{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Google Analytics 4</label>
+                    <div class="custom-form-control-readonly">
+                        <span class="badge-status {% if settings.google_analytics_connected %}approved{% else %}pending{% endif %}" style="background-color: {% if settings.google_analytics_connected %}#dcfce7{% else %}#f1f5f9{% endif %}; color: {% if settings.google_analytics_connected %}#166534{% else %}#64748b{% endif %};">
+                            {% if settings.google_analytics_connected %}Connected{% else %}Not Configured{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">HubSpot CRM</label>
+                    <div class="custom-form-control-readonly">
+                        <span class="badge-status {% if settings.hubspot_connected %}approved{% else %}pending{% endif %}" style="background-color: {% if settings.hubspot_connected %}#dcfce7{% else %}#f1f5f9{% endif %}; color: {% if settings.hubspot_connected %}#166534{% else %}#64748b{% endif %};">
+                            {% if settings.hubspot_connected %}Connected{% else %}Not Configured{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Notion Workspace</label>
+                    <div class="custom-form-control-readonly">
+                        <span class="badge-status {% if settings.notion_connected %}approved{% else %}pending{% endif %}" style="background-color: {% if settings.notion_connected %}#dcfce7{% else %}#f1f5f9{% endif %}; color: {% if settings.notion_connected %}#166534{% else %}#64748b{% endif %};">
+                            {% if settings.notion_connected %}Connected{% else %}Not Configured{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Zapier Automation</label>
+                    <div class="custom-form-control-readonly">
+                        <span class="badge-status {% if settings.zapier_connected %}approved{% else %}pending{% endif %}" style="background-color: {% if settings.zapier_connected %}#dcfce7{% else %}#f1f5f9{% endif %}; color: {% if settings.zapier_connected %}#166534{% else %}#64748b{% endif %};">
+                            {% if settings.zapier_connected %}Connected{% else %}Not Configured{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Notification & Theme Settings Section -->
+        <div>
+            <h3 class="custom-section-title">Notification &amp; System Preferences</h3>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Campaign Alerts</label>
+                    <div class="custom-form-control-readonly" style="flex-wrap: wrap; gap: 8px; min-height: auto; padding: 12px;">
+                        <span class="tag-item" style="background-color: {% if settings.campaign_new_approved %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Admin Approval: {% if settings.campaign_new_approved %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item" style="background-color: {% if settings.campaign_influencer_accepts %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Influencer Accepts: {% if settings.campaign_influencer_accepts %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item" style="background-color: {% if settings.campaign_deliverable_submitted %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Deliverable Submitted: {% if settings.campaign_deliverable_submitted %}On{% else %}Off{% endif %}</span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Payment &amp; Platform Reports</label>
+                    <div class="custom-form-control-readonly" style="flex-wrap: wrap; gap: 8px; min-height: auto; padding: 12px;">
+                        <span class="tag-item" style="background-color: {% if settings.payment_released %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Payment Released: {% if settings.payment_released %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item" style="background-color: {% if settings.platform_product_updates %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Product Updates: {% if settings.platform_product_updates %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item" style="background-color: {% if settings.platform_weekly_report %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Weekly digest report: {% if settings.platform_weekly_report %}On{% else %}Off{% endif %}</span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Theme Preferences</label>
+                    <div class="custom-form-control-readonly" style="gap: 12px;">
+                        <span>Theme: <strong>{{ settings.theme|default:"Light" }}</strong></span>
+                        <span>Layout: <strong>{{ settings.sidebar_layout|default:"Full" }}</strong></span>
+                        <span>Accent: <strong>{{ settings.accent_color|default:"oklch(0.55 0.27 285)" }}</strong></span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Security Settings</label>
+                    <div class="custom-form-control-readonly" style="justify-content: space-between;">
+                        <span>Two-Factor Authentication (2FA)</span>
+                        <span class="badge-status {% if settings.two_factor_enabled %}approved{% else %}pending{% endif %}">
+                            {% if settings.two_factor_enabled %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Bottom Actions (Matches Screenshot) -->
+        <div class="custom-footer-actions">
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-footer-back">Back</a>
+            {% endif %}
+            {% if view.get_edit_url %}
+                <a href="{{ view.get_edit_url }}" class="btn-footer-edit">Edit Business</a>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

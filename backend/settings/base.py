@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "FAQ",
     "chat_monitor",
     "business_service",
+    "Setting",
 ]
 
 MIDDLEWARE = [

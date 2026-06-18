@@ -1,0 +1,517 @@
+{% extends "wagtailadmin/base.html" %}
+
+{% block titletag %}Creator Details - {{ instance.user.username }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    .custom-inspect-wrapper {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 24px;
+        background-color: #f8fafc;
+        min-height: 100vh;
+    }
+
+    .custom-header-bar {
+        background-color: #1e293b; /* Dark navy/slate */
+        padding: 24px 32px;
+        color: #ffffff;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .custom-header-title h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+    }
+
+    .custom-header-title p {
+        font-size: 14px;
+        color: #cbd5e1;
+        margin: 6px 0 0 0;
+    }
+
+    .custom-header-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-header-secondary {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-header-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-header-primary {
+        background-color: #06b6d4; /* Teal/Cyan */
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-header-primary:hover {
+        background-color: #0891b2;
+    }
+
+    .custom-body-card {
+        background: #ffffff;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        border-left: 1px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 32px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 36px;
+    }
+
+    .custom-section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 20px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e2e8f0;
+        text-transform: none;
+        letter-spacing: -0.01em;
+    }
+
+    .custom-form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px 24px;
+    }
+
+    @media (min-width: 768px) {
+        .custom-form-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .custom-form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .custom-form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .custom-form-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+
+    .custom-form-control-readonly {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 14px;
+        color: #334155;
+        min-height: 45px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        word-break: break-all;
+    }
+
+    .custom-form-control-readonly.textarea {
+        align-items: flex-start;
+        line-height: 1.5;
+        min-height: 90px;
+        white-space: pre-wrap;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+
+    .badge-status.approved {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-status.pending {
+        background-color: #fef9c3;
+        color: #854d0e;
+    }
+
+    .badge-status.restricted {
+        background-color: #ffe4e6;
+        color: #991b1b;
+    }
+
+    .tag-item {
+        display: inline-block;
+        background-color: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 4px 10px;
+        border-radius: 4px;
+        margin-right: 6px;
+        margin-bottom: 6px;
+    }
+
+    .custom-table-wrapper {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .custom-data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        text-align: left;
+    }
+
+    .custom-data-table th {
+        background-color: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .custom-data-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        color: #334155;
+    }
+
+    .custom-data-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .custom-footer-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e2e8f0;
+        margin-top: 12px;
+    }
+
+    .btn-footer-back {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155 !important;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .btn-footer-back:hover {
+        background-color: #f8fafc;
+    }
+
+    .btn-footer-edit {
+        background-color: #1e293b;
+        color: #ffffff !important;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .btn-footer-edit:hover {
+        background-color: #0f172a;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="custom-inspect-wrapper">
+    <!-- Header Bar (Matches Screenshot) -->
+    <div class="custom-header-bar">
+        <div class="custom-header-title">
+            <h1>Creator Details</h1>
+            <p>{{ instance.user.username }} - {{ instance.user.first_name }} {{ instance.user.last_name }} - {{ instance.user.email }}</p>
+        </div>
+        <div class="custom-header-actions">
+            {% if view.get_edit_url %}
+                <a href="{{ view.get_edit_url }}" class="btn-header-secondary">Edit Creator</a>
+            {% endif %}
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-header-primary">View Creators List</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Body Content with Form Field Cards -->
+    <div class="custom-body-card">
+        
+        <!-- Basic Information Section -->
+        <div>
+            <h3 class="custom-section-title">Basic Information</h3>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Username</label>
+                    <div class="custom-form-control-readonly">{{ instance.user.username }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Email Address</label>
+                    <div class="custom-form-control-readonly">{{ instance.user.email }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">First Name</label>
+                    <div class="custom-form-control-readonly">{{ instance.user.first_name|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Last Name</label>
+                    <div class="custom-form-control-readonly">{{ instance.user.last_name|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Phone Number</label>
+                    <div class="custom-form-control-readonly">{{ instance.phone|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Location</label>
+                    <div class="custom-form-control-readonly">{{ instance.location|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Profile Status</label>
+                    <div class="custom-form-control-readonly">
+                        <span class="badge-status {{ instance.status }}">{{ instance.get_status_display }}</span>
+                        {% if instance.otp_verified %}
+                            <span class="badge-status approved" style="background-color: #e0f2fe; color: #0369a1; margin-left: 6px;">OTP Verified</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Wallet Balance</label>
+                    <div class="custom-form-control-readonly"><strong>${{ instance.wallet_balance }}</strong></div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Next Payout Date</label>
+                    <div class="custom-form-control-readonly">{{ instance.next_payout_date|default:"Not scheduled" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Niches</label>
+                    <div class="custom-form-control-readonly">
+                        {% for niche in instance.niches.all %}
+                            <span class="tag-item">{{ niche.name }}</span>
+                        {% empty %}
+                            <span style="color: #94a3b8;">No Niches Defined</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group full-width">
+                    <label class="custom-form-label">Bio / Profile Description</label>
+                    <div class="custom-form-control-readonly textarea">{{ instance.bio|default:"-" }}</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Social Media Section -->
+        <div>
+            <h3 class="custom-section-title">Connected Social Media Accounts</h3>
+            <div class="custom-form-grid">
+                {% for sa in social_accounts %}
+                    <div class="custom-form-group">
+                        <label class="custom-form-label" style="text-transform: capitalize;">{{ sa.platform }} Handle</label>
+                        <div class="custom-form-control-readonly" style="justify-content: space-between;">
+                            <span><strong>{{ sa.username }}</strong></span>
+                            <span style="font-size: 11px; color: #64748b;">{{ sa.followers_count }} Followers ({{ sa.engagement_rate }}% ER)</span>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="custom-form-group full-width">
+                        <div class="custom-form-control-readonly" style="color: #94a3b8; justify-content: center; padding: 20px;">
+                            No connected social media accounts found in backend
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Rate Card Pricing Section -->
+        <div>
+            <h3 class="custom-section-title">
+                Rate Card Pricing (Base Currency: {{ settings.currency|default:"USD ($)" }})
+            </h3>
+            
+            {% if settings.rate_card_note %}
+                <div style="margin-bottom: 16px; padding: 12px 16px; background-color: #f8fafc; border-left: 4px solid #475569; font-size: 13px; color: #475569; border-radius: 4px;">
+                    <strong>Note to Brands:</strong> {{ settings.rate_card_note }}
+                </div>
+            {% endif %}
+
+            <div class="custom-table-wrapper">
+                <table class="custom-data-table">
+                    <thead>
+                        <tr>
+                            <th>Content Type</th>
+                            <th>Target Platforms</th>
+                            <th>Standard Price</th>
+                            <th>Pricing Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rate in rates %}
+                            <tr>
+                                <td><strong>{{ rate.content_type }}</strong></td>
+                                <td>
+                                    {% for plat in rate.platforms_list %}
+                                        <span class="tag-item" style="background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-size: 11px; margin-bottom: 0;">{{ plat }}</span>
+                                    {% empty %}
+                                        -
+                                    {% endfor %}
+                                </td>
+                                <td><strong>${{ rate.price }}</strong></td>
+                                <td><span style="color: #64748b;">{{ rate.notes|default:"-" }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">No Rate Card pricing lists found</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Payout Methods Section -->
+        <div>
+            <h3 class="custom-section-title">Payout Methods</h3>
+            <div class="custom-form-grid">
+                {% for pm in payout_methods %}
+                    <div class="custom-form-group">
+                        <label class="custom-form-label">{{ pm.method_type }} {% if pm.is_primary %}(Primary){% endif %}</label>
+                        <div class="custom-form-control-readonly" style="justify-content: space-between;">
+                            <span>{{ pm.details }}</span>
+                            {% if pm.is_primary %}
+                                <span class="badge-status approved" style="font-size: 10px;">Primary</span>
+                            {% else %}
+                                <span class="badge-status" style="font-size: 10px; background-color: #f1f5f9; color: #475569;">Backup</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="custom-form-group full-width">
+                        <div class="custom-form-control-readonly" style="color: #94a3b8; justify-content: center; padding: 20px;">
+                            No payout methods configured in settings
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Notification & Account Settings Section -->
+        <div>
+            <h3 class="custom-section-title">Preferences &amp; Settings Toggles</h3>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Email Notifications</label>
+                    <div class="custom-form-control-readonly" style="flex-wrap: wrap; gap: 8px; min-height: auto; padding: 12px;">
+                        <span class="tag-item" style="background-color: {% if settings.email_new_brand_requests %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Brand Requests: {% if settings.email_new_brand_requests %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item" style="background-color: {% if settings.email_campaign_updates %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Campaign Updates: {% if settings.email_campaign_updates %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item" style="background-color: {% if settings.email_payment_received %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Payments: {% if settings.email_payment_received %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item" style="background-color: {% if settings.email_profile_views %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Profile Views: {% if settings.email_profile_views %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item" style="background-color: {% if settings.email_platform_news %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Platform News: {% if settings.email_platform_news %}On{% else %}Off{% endif %}</span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Push Notifications</label>
+                    <div class="custom-form-control-readonly" style="flex-wrap: wrap; gap: 8px; min-height: auto; padding: 12px;">
+                        <span class="tag-item" style="background-color: {% if settings.push_brand_requests %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Brand Requests: {% if settings.push_brand_requests %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item" style="background-color: {% if settings.push_message_replies %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Message Replies: {% if settings.push_message_replies %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item" style="background-color: {% if settings.push_payout_completed %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Payouts: {% if settings.push_payout_completed %}On{% else %}Off{% endif %}</span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Tax Verification Form (W-9)</label>
+                    <div class="custom-form-control-readonly" style="justify-content: space-between;">
+                        <span>Tax ID: <strong>{{ settings.tax_id|default:"Not Submitted" }}</strong></span>
+                        <span class="badge-status {% if settings.tax_form_submitted %}approved{% else %}pending{% endif %}">
+                            {% if settings.tax_form_submitted %}Submitted{% else %}Pending{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Two-Factor Authentication / Plan</label>
+                    <div class="custom-form-control-readonly" style="justify-content: space-between;">
+                        <span>Current Plan: <strong>{{ settings.plan|default:"Creator Pro" }}</strong></span>
+                        <span class="badge-status {% if settings.two_factor_enabled %}approved{% else %}pending{% endif %}">
+                            2FA: {% if settings.two_factor_enabled %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Bottom Actions (Matches Screenshot) -->
+        <div class="custom-footer-actions">
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-footer-back">Back</a>
+            {% endif %}
+            {% if view.get_edit_url %}
+                <a href="{{ view.get_edit_url }}" class="btn-footer-edit">Edit Creator</a>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

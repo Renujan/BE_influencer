@@ -1,8 +1,66 @@
 from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet
 from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
+from wagtail.admin.views.generic.models import InspectView, IndexView
+from django.utils.translation import gettext as _
 from django.urls import reverse
 from .models import BusinessProfile, CreatorProfile, Niche, BusinessType
+from Setting.models import CreatorSettings, BusinessSettings
+
+# Custom Index View to change the "Inspect" button label to "View"
+class ProfileIndexView(IndexView):
+    def get_list_more_buttons(self, instance):
+        buttons = super().get_list_more_buttons(instance)
+        for item in buttons:
+            if hasattr(item, "label") and (str(item.label) == "Inspect" or item.label == _("Inspect")):
+                item.label = _("View")
+                item.icon_name = "view"
+        return buttons
+
+# Custom Inspect Views to supply settings and related objects data
+class BusinessProfileInspectView(InspectView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        business_profile = self.object
+        context["instance"] = business_profile
+        # Ensure BusinessSettings exists
+        BusinessSettings.objects.get_or_create(business=business_profile)
+        context["settings"] = getattr(business_profile, "settings", None)
+        
+        # Pre-split business types (prioritizing ManyToMany relation)
+        business_types = []
+        if business_profile.business_types.exists():
+            business_types = [t.name for t in business_profile.business_types.all()]
+        elif business_profile.business_type:
+            # handle both comma and space separation
+            business_types = [t.strip() for t in business_profile.business_type.replace(",", " ").split() if t.strip()]
+        context["business_types"] = business_types
+        return context
+
+class CreatorProfileInspectView(InspectView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        creator_profile = self.object
+        context["instance"] = creator_profile
+        # Ensure CreatorSettings exists
+        CreatorSettings.objects.get_or_create(creator=creator_profile)
+        context["settings"] = getattr(creator_profile, "settings", None)
+        
+        # Pre-split platforms list for rates
+        rates_data = []
+        for rate in creator_profile.rates.all():
+            platforms_list = [p.strip() for p in rate.platforms.replace(",", " ").split() if p.strip()]
+            rates_data.append({
+                "content_type": rate.content_type,
+                "platforms_list": platforms_list,
+                "price": rate.price,
+                "notes": rate.notes
+            })
+        context["rates"] = rates_data
+        
+        context["payout_methods"] = creator_profile.payout_methods.all()
+        context["social_accounts"] = creator_profile.user.social_accounts.all()
+        return context
 
 # 1. Business Profile Admin Viewset
 class BusinessProfileViewSet(ModelViewSet):
@@ -14,6 +72,13 @@ class BusinessProfileViewSet(ModelViewSet):
     add_to_admin_menu = False
     exclude_form_fields = []
     create_view_enabled = False
+    
+    # Custom Index and Inspect Views
+    index_view_class = ProfileIndexView
+    inspect_view_enabled = True
+    inspect_view_class = BusinessProfileInspectView
+    inspect_template_name = "user/inspect_business_profile.html"
+    
     list_display = ("user", "company_name", "business_type", "phone", "otp_verified", "status")
     list_export = ("id", "user__username", "user__email", "company_name", "business_type", "website", "phone", "otp_verified", "status")
     list_filter = ("otp_verified", "status")
@@ -41,6 +106,13 @@ class CreatorProfileViewSet(ModelViewSet):
     add_to_admin_menu = False
     exclude_form_fields = []
     create_view_enabled = False
+    
+    # Custom Index and Inspect Views
+    index_view_class = ProfileIndexView
+    inspect_view_enabled = True
+    inspect_view_class = CreatorProfileInspectView
+    inspect_template_name = "user/inspect_creator_profile.html"
+    
     list_display = ("user", "phone", "location", "wallet_balance", "otp_verified", "status")
     list_export = ("id", "user__username", "user__email", "phone", "location", "wallet_balance", "otp_verified", "status")
     list_filter = ("otp_verified", "status")
