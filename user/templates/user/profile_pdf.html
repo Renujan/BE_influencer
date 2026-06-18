@@ -360,6 +360,52 @@
                 </td>
             </tr>
             <tr>
+                <td>
+                    <div class="label">Verification Status</div>
+                    <div class="value">
+                        {% if instance.verification_documents_submitted %}
+                            <span class="badge badge-approved">Documents Submitted</span>
+                        {% else %}
+                            <span class="badge badge-pending">Not Submitted</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    <div class="label">Document Type</div>
+                    <div class="value">
+                        {% if instance.document_type == 'nic' %}
+                            National Identity Card (NIC)
+                        {% elif instance.document_type == 'passport' %}
+                            Passport
+                        {% elif instance.document_type == 'driving_license' %}
+                            Driving License
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% if instance.document_front or instance.document_back %}
+            <tr>
+                <td>
+                    <div class="label">Document Front Side</div>
+                    <div class="value">{% if instance.document_front %}{{ instance.document_front.name }}{% else %}-{% endif %}</div>
+                </td>
+                <td>
+                    <div class="label">Document Back Side</div>
+                    <div class="value">{% if instance.document_back %}{{ instance.document_back.name }}{% else %}-{% endif %}</div>
+                </td>
+            </tr>
+            {% endif %}
+            {% if instance.other_details %}
+            <tr>
+                <td colspan="2">
+                    <div class="label">Other Details / Open Notes</div>
+                    <div class="value value-textarea">{{ instance.other_details }}</div>
+                </td>
+            </tr>
+            {% endif %}
+            <tr>
                 <td colspan="2">
                     <div class="label">Bio / Profile Description</div>
                     <div class="value value-textarea">{{ instance.bio|default:"-" }}</div>

@@ -54,5 +54,7 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id", "user", "phone", "location", "bio", "avatar_url",
             "wallet_balance", "next_payout_date", "niches", "rates",
-            "social_accounts", "otp_verified", "status"
+            "social_accounts", "otp_verified", "status",
+            "verification_documents_submitted", "document_type", "document_front",
+            "document_back", "other_details"
         ]

@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     SendOTPView, VerifyOTPView, RegisterView, LoginView, MeView,
     NicheViewSet, BusinessTypeViewSet, CreatorViewSet, PendingUsersView, ApproveUserView, RestrictUserView,
-    SubmitVerificationView
+    SubmitVerificationView, CreatorSubmitVerificationView
 )
 
 router = DefaultRouter()
@@ -20,6 +20,7 @@ urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/me/", MeView.as_view(), name="me"),
     path("auth/business/submit-verification/", SubmitVerificationView.as_view(), name="submit_verification"),
+    path("auth/creator/submit-verification/", CreatorSubmitVerificationView.as_view(), name="creator_submit_verification"),
 
     
     # Admin Moderation endpoints

@@ -130,3 +130,119 @@ class BusinessVerificationAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["name"], "Summer Launch Campaign")
 
+    def test_admin_approve_creator_view(self):
+        admin_user = User.objects.create_superuser(username="admin_test", email="admin@test.com", password="password123")
+        self.client.login(username="admin_test", password="password123")
+        
+        url = reverse("wagtail_approve_creator", args=[self.creator_profile.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        # Verify it redirects to the creator inspect view (or creator profile index fallback)
+        self.assertIn("/admin/creatorprofile/", response.url)
+        
+        self.creator_profile.refresh_from_db()
+        self.assertEqual(self.creator_profile.status, "approved")
+
+    def test_admin_restrict_creator_view(self):
+        admin_user = User.objects.create_superuser(username="admin_test2", email="admin2@test.com", password="password123")
+        self.client.login(username="admin_test2", password="password123")
+        
+        url = reverse("wagtail_restrict_creator", args=[self.creator_profile.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn("/admin/creatorprofile/", response.url)
+        
+        self.creator_profile.refresh_from_db()
+        self.assertEqual(self.creator_profile.status, "restricted")
+
+    def test_submit_creator_verification_unauthenticated(self):
+        url = reverse("creator_submit_verification")
+        response = self.client.post(url, {})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_submit_creator_verification_non_creator(self):
+        self.client.force_authenticate(user=self.business_user)
+        url = reverse("creator_submit_verification")
+        response = self.client.post(url, {
+            "document_type": "nic",
+            "document_front": SimpleUploadedFile("front.jpg", b"front image", content_type="image/jpeg"),
+            "document_back": SimpleUploadedFile("back.jpg", b"back image", content_type="image/jpeg"),
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Only creator accounts can submit verification documents.")
+
+    def test_submit_creator_verification_missing_params(self):
+        self.client.force_authenticate(user=self.creator_user)
+        url = reverse("creator_submit_verification")
+        
+        # Missing type
+        response1 = self.client.post(url, {
+            "document_front": SimpleUploadedFile("front.jpg", b"front image", content_type="image/jpeg"),
+            "document_back": SimpleUploadedFile("back.jpg", b"back image", content_type="image/jpeg"),
+        })
+        self.assertEqual(response1.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Invalid type
+        response2 = self.client.post(url, {
+            "document_type": "invalid_type",
+            "document_front": SimpleUploadedFile("front.jpg", b"front image", content_type="image/jpeg"),
+            "document_back": SimpleUploadedFile("back.jpg", b"back image", content_type="image/jpeg"),
+        })
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Missing files
+        response3 = self.client.post(url, {
+            "document_type": "nic",
+        })
+        self.assertEqual(response3.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_submit_creator_verification_success(self):
+        self.client.force_authenticate(user=self.creator_user)
+        url = reverse("creator_submit_verification")
+        
+        front_file = SimpleUploadedFile("front.jpg", b"front side data", content_type="image/jpeg")
+        back_file = SimpleUploadedFile("back.jpg", b"back side data", content_type="image/jpeg")
+        
+        response = self.client.post(url, {
+            "document_type": "passport",
+            "document_front": front_file,
+            "document_back": back_file,
+            "other_details": "My passport is valid until 2030."
+        }, format="multipart")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["verification_documents_submitted"])
+        self.assertEqual(response.data["document_type"], "passport")
+        self.assertIsNotNone(response.data["document_front"])
+        self.assertIsNotNone(response.data["document_back"])
+        self.assertEqual(response.data["other_details"], "My passport is valid until 2030.")
+
+        # Check DB
+        self.creator_profile.refresh_from_db()
+        self.assertTrue(self.creator_profile.verification_documents_submitted)
+        self.assertEqual(self.creator_profile.document_type, "passport")
+        self.assertEqual(self.creator_profile.status, "pending")
+
+        # Check compliance notification created
+        from notifications.models import Notification
+        self.assertTrue(Notification.objects.filter(
+            title="Creator Verification Submitted",
+            category="compliance"
+        ).exists())
+
+    def test_submit_creator_verification_already_approved(self):
+        self.creator_profile.status = "approved"
+        self.creator_profile.save()
+
+        self.client.force_authenticate(user=self.creator_user)
+        url = reverse("creator_submit_verification")
+        response = self.client.post(url, {
+            "document_type": "nic",
+            "document_front": SimpleUploadedFile("front.jpg", b"front data", content_type="image/jpeg"),
+            "document_back": SimpleUploadedFile("back.jpg", b"back data", content_type="image/jpeg"),
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Creator profile is already verified and approved.")
+
+
+

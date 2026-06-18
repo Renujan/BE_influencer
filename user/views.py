@@ -465,6 +465,46 @@ class SubmitVerificationView(APIView):
         return Response(BusinessProfileSerializer(profile).data, status=status.HTTP_200_OK)
 
 
+class CreatorSubmitVerificationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        profile = getattr(request.user, "creator_profile", None)
+        if not profile:
+            return Response({"error": "Only creator accounts can submit verification documents."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if profile.status == "approved":
+            return Response({"error": "Creator profile is already verified and approved."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        document_type = request.data.get("document_type")
+        document_front = request.FILES.get("document_front")
+        document_back = request.FILES.get("document_back")
+        other_details = request.data.get("other_details", "")
+        
+        if not document_type or document_type not in ["nic", "passport", "driving_license"]:
+            return Response({"error": "Invalid or missing document type. Allowed types: nic, passport, driving_license."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if not document_front or not document_back:
+            return Response({"error": "Both front and back document files are required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        profile.document_type = document_type
+        profile.document_front = document_front
+        profile.document_back = document_back
+        profile.other_details = other_details
+        profile.verification_documents_submitted = True
+        profile.save()
+        
+        # Create Admin Notification
+        Notification.objects.create(
+            title="Creator Verification Submitted",
+            message=f"Creator '{request.user.username}' submitted verification documents ({document_type.upper()}) for admin review.",
+            category="compliance",
+            icon="fas fa-id-card"
+        )
+        
+        return Response(CreatorProfileSerializer(profile).data, status=status.HTTP_200_OK)
+
+
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
@@ -495,6 +535,31 @@ def admin_restrict_business_view(request, profile_id):
     except Exception:
         return redirect("/admin/businessprofile/")
 
+@user_passes_test(lambda u: u.is_staff)
+def admin_approve_creator_view(request, profile_id):
+    profile = get_object_or_404(CreatorProfile, pk=profile_id)
+    profile.status = "approved"
+    profile.save()
+    messages.success(request, f"Creator '{profile.user.username}' has been successfully approved.")
+    try:
+        from django.urls import reverse
+        inspect_url = reverse("creatorprofile:inspect", args=[profile_id])
+        return redirect(inspect_url)
+    except Exception:
+        return redirect("/admin/creatorprofile/")
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_restrict_creator_view(request, profile_id):
+    profile = get_object_or_404(CreatorProfile, pk=profile_id)
+    profile.status = "restricted"
+    profile.save()
+    messages.warning(request, f"Creator '{profile.user.username}' has been restricted.")
+    try:
+        from django.urls import reverse
+        inspect_url = reverse("creatorprofile:inspect", args=[profile_id])
+        return redirect(inspect_url)
+    except Exception:
+        return redirect("/admin/creatorprofile/")
 
 
 from io import BytesIO

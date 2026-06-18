@@ -78,6 +78,18 @@ class CreatorProfile(models.Model):
         default="pending"
     )
 
+    # Verification Fields
+    verification_documents_submitted = models.BooleanField(default=False)
+    document_type = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        choices=[("nic", "NIC"), ("passport", "Passport"), ("driving_license", "Driving License")]
+    )
+    document_front = models.FileField(upload_to="creator_documents/", blank=True, null=True)
+    document_back = models.FileField(upload_to="creator_documents/", blank=True, null=True)
+    other_details = models.TextField(blank=True, null=True)
+
     @property
     def role(self):
         return "creator"

@@ -6,7 +6,7 @@ from django.utils.translation import gettext as _
 from django.urls import reverse, path
 from .models import BusinessProfile, CreatorProfile, Niche, BusinessType
 from Setting.models import CreatorSettings, BusinessSettings
-from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view
+from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view, admin_approve_creator_view, admin_restrict_creator_view
 
 # Custom Index View to change the "Inspect" button label to "View"
 class ProfileIndexView(IndexView):
@@ -260,14 +260,15 @@ from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
 from django.contrib import messages
 
-# Hook to display success message after login
 @receiver(user_logged_in)
 def login_success_message(sender, request, user, **kwargs):
     """Add a success message when user logs in"""
-    if '/admin/' in request.path or request.session.get('_auth_user_backend'):
-        storage = messages.get_messages(request)
-        storage.used = True
-        messages.success(request, 'You have been successfully logged in.', extra_tags='login-success')
+    if request and hasattr(request, '_messages'):
+        if '/admin/' in request.path or (hasattr(request, 'session') and request.session.get('_auth_user_backend')):
+            storage = messages.get_messages(request)
+            if hasattr(storage, 'used'):
+                storage.used = True
+            messages.success(request, 'You have been successfully logged in.', extra_tags='login-success')
 
 
 from django.utils.safestring import mark_safe
@@ -340,5 +341,7 @@ def register_user_profile_pdf_urls():
         path("user-profiles/download-pdf/<str:profile_type>/<int:profile_id>/", download_profile_pdf_view, name="download_profile_pdf"),
         path("user-profiles/approve/<int:profile_id>/", admin_approve_business_view, name="wagtail_approve_business"),
         path("user-profiles/restrict/<int:profile_id>/", admin_restrict_business_view, name="wagtail_restrict_business"),
+        path("user-profiles/approve-creator/<int:profile_id>/", admin_approve_creator_view, name="wagtail_approve_creator"),
+        path("user-profiles/restrict-creator/<int:profile_id>/", admin_restrict_creator_view, name="wagtail_restrict_creator"),
     ]
 
