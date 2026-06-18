@@ -1,9 +1,14 @@
+from io import BytesIO
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import user_passes_test
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.urls import reverse
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from xhtml2pdf import pisa
 from campegin.models import Campaign
 from .models import ChatMessage, ChatReview
 from .serializers import CampaignChatSerializer, WorkspaceMessageSerializer, ChatReviewSerializer
@@ -52,6 +57,57 @@ def chat_monitor_detail_view(request, campaign_id):
         "payments": payments,
     }
     return render(request, "chat_monitor/detail_view.html", context)
+
+
+@user_passes_test(lambda u: u.is_staff)
+def chat_monitor_download_pdf_view(request, campaign_id):
+    """Generate a PDF report of the chat monitor detail page."""
+    campaign = get_object_or_404(Campaign, id=campaign_id)
+    messages = campaign.chat_messages.all().order_by("id")
+    reviews = campaign.chat_reviews.all().order_by("-id")
+
+    business_profile = getattr(campaign.brand, "business_profile", None)
+    business_social_accounts = campaign.brand.social_accounts.all() if campaign.brand else []
+
+    creator_profile = None
+    creator_social_accounts = []
+    creator_rates = []
+    if campaign.creator:
+        creator_profile = getattr(campaign.creator, "creator_profile", None)
+        creator_social_accounts = campaign.creator.social_accounts.all()
+        if creator_profile:
+            creator_rates = creator_profile.rates.all()
+
+    milestones = campaign.milestones.all()
+    tasks = campaign.tasks.all()
+    deliverables = campaign.deliverables.all()
+    payments = campaign.payments.all()
+
+    context = {
+        "campaign": campaign,
+        "messages": messages,
+        "reviews": reviews,
+        "business_profile": business_profile,
+        "business_social_accounts": business_social_accounts,
+        "creator_profile": creator_profile,
+        "creator_social_accounts": creator_social_accounts,
+        "creator_rates": creator_rates,
+        "milestones": milestones,
+        "tasks": tasks,
+        "deliverables": deliverables,
+        "payments": payments,
+    }
+
+    html = render_to_string("chat_monitor/chat_monitor_pdf.html", context, request=request)
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html.encode("utf-8")), result)
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type="application/pdf")
+        filename = f"chat_monitor_{campaign.name.replace(' ', '_')}.pdf"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+    return HttpResponse("Error generating PDF", status=500)
+
 
 # --- REST API ViewSet for workspace users (Business & Creator) ---
 

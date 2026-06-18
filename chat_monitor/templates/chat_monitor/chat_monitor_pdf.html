@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Chat Monitor Report - {{ campaign.name }}</title>
+    <style>
+        @page {
+            size: a4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            font-size: 9pt;
+            line-height: 1.4;
+        }
+
+        /* ── Header ── */
+        .doc-header {
+            width: 100%;
+            border-bottom: 2px solid #1e293b;
+            padding-bottom: 10px;
+            margin-bottom: 18px;
+        }
+        .doc-title { font-size: 18pt; font-weight: bold; color: #0f172a; }
+        .doc-subtitle { font-size: 9pt; color: #64748b; margin-top: 3px; }
+        .doc-date { font-size: 8pt; color: #94a3b8; text-align: right; vertical-align: bottom; }
+
+        /* ── Section headings ── */
+        .section-title {
+            font-size: 10pt;
+            font-weight: bold;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            padding: 5px 8px;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            border-left: 4px solid #6366f1;
+        }
+
+        /* ── Label / Value grid ── */
+        .grid-table { width: 100%; margin-bottom: 6px; border-collapse: collapse; }
+        .grid-table td { padding: 4px 6px; vertical-align: top; }
+        .lbl { font-weight: bold; color: #475569; font-size: 8pt; }
+        .val {
+            color: #1e293b;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 5px 9px;
+            border-radius: 3px;
+            min-height: 14px;
+        }
+        .val-lg { min-height: 36px; }
+
+        /* ── Badges ── */
+        .badge {
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 7.5pt;
+            font-weight: bold;
+        }
+        .b-approved, .b-live { background: #dcfce7; color: #166534; }
+        .b-pending  { background: #fef9c3; color: #854d0e; }
+        .b-restricted, .b-rejected { background: #ffe4e6; color: #991b1b; }
+        .b-completed { background: #e0f2fe; color: #0369a1; }
+
+        /* ── Data tables ── */
+        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .data-table th, .data-table td {
+            padding: 5px 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 8.5pt;
+            text-align: left;
+        }
+        .data-table th { background-color: #f8fafc; color: #475569; font-weight: bold; }
+        .data-table tr:nth-child(even) td { background-color: #f8fafc; }
+
+        /* ── Chat messages ── */
+        .chat-msg {
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 8.5pt;
+        }
+        .chat-brand { background: #f1f5f9; border-left: 3px solid #6366f1; }
+        .chat-creator { background: #fdf4ff; border-left: 3px solid #a855f7; }
+        .chat-sender { font-weight: bold; font-size: 7.5pt; color: #475569; }
+        .chat-time { font-size: 7pt; color: #94a3b8; }
+        .chat-text { margin-top: 2px; }
+
+        /* ── Progress bar ── */
+        .progress-outer {
+            width: 100%;
+            background: #e2e8f0;
+            border-radius: 4px;
+            height: 8px;
+            margin-top: 4px;
+        }
+        .progress-inner {
+            height: 8px;
+            border-radius: 4px;
+            background: #6366f1;
+        }
+
+        /* ── Divider ── */
+        hr { border: none; border-top: 1px solid #e2e8f0; margin: 12px 0; }
+    </style>
+</head>
+<body>
+
+    <!-- ── DOCUMENT HEADER ── -->
+    <table class="doc-header">
+        <tr>
+            <td>
+                <div class="doc-title">Chat Monitor Report</div>
+                <div class="doc-subtitle">
+                    Campaign: <strong>{{ campaign.name }}</strong>
+                    &middot; Status: {{ campaign.status }}
+                    &middot; Budget: ${{ campaign.budget }}
+                </div>
+            </td>
+            <td class="doc-date">Generated: {% now "Y-m-d H:i" %}</td>
+        </tr>
+    </table>
+
+    <!-- ══════════════════════════════════
+         SECTION 1: BUSINESS PROFILE
+    ══════════════════════════════════ -->
+    <div class="section-title">Business Profile</div>
+    {% if business_profile %}
+    <table class="grid-table">
+        <tr>
+            <td style="width:50%;">
+                <div class="lbl">Company Name</div>
+                <div class="val">{{ business_profile.company_name|default:campaign.brand.username }}</div>
+            </td>
+            <td style="width:50%;">
+                <div class="lbl">Username / Email</div>
+                <div class="val">{{ campaign.brand.username }} &middot; {{ campaign.brand.email }}</div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="lbl">Business Type</div>
+                <div class="val">{{ business_profile.business_type|default:"-" }}</div>
+            </td>
+            <td>
+                <div class="lbl">Phone</div>
+                <div class="val">{{ business_profile.phone|default:"-" }}</div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="lbl">Website</div>
+                <div class="val">{{ business_profile.website|default:"-" }}</div>
+            </td>
+            <td>
+                <div class="lbl">Timezone</div>
+                <div class="val">{{ business_profile.time_zone|default:"-" }}</div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="lbl">Account Status</div>
+                <div class="val">
+                    <span class="badge b-{{ business_profile.status }}">{{ business_profile.status|title }}</span>
+                </div>
+            </td>
+            <td>
+                <div class="lbl">Verification Docs</div>
+                <div class="val">
+                    {% if business_profile.verification_documents_submitted %}
+                        <span class="badge b-approved">Submitted</span>
+                    {% else %}
+                        <span class="badge b-pending">Not Submitted</span>
+                    {% endif %}
+                    {% if business_profile.business_reg_number %}
+                        &middot; Reg#: {{ business_profile.business_reg_number }}
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% if business_profile.bio %}
+        <tr>
+            <td colspan="2">
+                <div class="lbl">Bio</div>
+                <div class="val val-lg">{{ business_profile.bio }}</div>
+            </td>
+        </tr>
+        {% endif %}
+    </table>
+
+    {% if business_social_accounts %}
+    <div class="lbl" style="margin:6px 0 4px;">Social Accounts</div>
+    <table class="data-table">
+        <thead>
+            <tr><th>Platform</th><th>Handle</th><th>Followers</th><th>Engagement</th></tr>
+        </thead>
+        <tbody>
+            {% for sa in business_social_accounts %}
+            <tr>
+                <td>{{ sa.get_platform_display }}</td>
+                <td>@{{ sa.username }}</td>
+                <td>{{ sa.followers_count }}</td>
+                <td>{{ sa.engagement_rate }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% else %}
+    <p style="color:#94a3b8;">No business profile on file.</p>
+    {% endif %}
+
+    <!-- ══════════════════════════════════
+         SECTION 2: CREATOR PROFILE
+    ══════════════════════════════════ -->
+    <div class="section-title">Creator Profile</div>
+    {% if campaign.creator %}
+        {% if creator_profile %}
+        <table class="grid-table">
+            <tr>
+                <td style="width:50%;">
+                    <div class="lbl">Username / Email</div>
+                    <div class="val">{{ campaign.creator.username }} &middot; {{ campaign.creator.email }}</div>
+                </td>
+                <td style="width:50%;">
+                    <div class="lbl">Phone / Location</div>
+                    <div class="val">{{ creator_profile.phone|default:"-" }} &middot; {{ creator_profile.location|default:"-" }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="lbl">Wallet Balance</div>
+                    <div class="val">${{ creator_profile.wallet_balance }}</div>
+                </td>
+                <td>
+                    <div class="lbl">Account Status</div>
+                    <div class="val">
+                        <span class="badge b-{{ creator_profile.status }}">{{ creator_profile.status|title }}</span>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="lbl">Verification Docs</div>
+                    <div class="val">
+                        {% if creator_profile.verification_documents_submitted %}
+                            <span class="badge b-approved">Submitted</span>
+                            {% if creator_profile.document_type %}&middot; {{ creator_profile.get_document_type_display }}{% endif %}
+                        {% else %}
+                            <span class="badge b-pending">Not Submitted</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    <div class="lbl">Next Payout Date</div>
+                    <div class="val">{{ creator_profile.next_payout_date|default:"-" }}</div>
+                </td>
+            </tr>
+            {% if creator_profile.bio %}
+            <tr>
+                <td colspan="2">
+                    <div class="lbl">Bio</div>
+                    <div class="val val-lg">{{ creator_profile.bio }}</div>
+                </td>
+            </tr>
+            {% endif %}
+        </table>
+
+        {% if creator_social_accounts %}
+        <div class="lbl" style="margin:6px 0 4px;">Social Accounts</div>
+        <table class="data-table">
+            <thead>
+                <tr><th>Platform</th><th>Handle</th><th>Followers</th><th>Engagement</th></tr>
+            </thead>
+            <tbody>
+                {% for sa in creator_social_accounts %}
+                <tr>
+                    <td>{{ sa.get_platform_display }}</td>
+                    <td>@{{ sa.username }}</td>
+                    <td>{{ sa.followers_count }}</td>
+                    <td>{{ sa.engagement_rate }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% if creator_rates %}
+        <div class="lbl" style="margin:6px 0 4px;">Creator Rates</div>
+        <table class="data-table">
+            <thead>
+                <tr><th>Content Type</th><th>Platforms</th><th>Price</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+                {% for r in creator_rates %}
+                <tr>
+                    <td>{{ r.content_type }}</td>
+                    <td>{{ r.platforms }}</td>
+                    <td>${{ r.price }}</td>
+                    <td><span style="color:#64748b;font-size:7.5pt;">{{ r.notes|default:"-" }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% else %}
+        <p style="color:#94a3b8;">Creator has no profile yet.</p>
+        {% endif %}
+    {% else %}
+    <p style="color:#94a3b8;">No creator assigned to this campaign.</p>
+    {% endif %}
+
+    <!-- ══════════════════════════════════
+         SECTION 3: CAMPAIGN DETAILS
+    ══════════════════════════════════ -->
+    <div class="section-title">Campaign Details</div>
+    <table class="grid-table">
+        <tr>
+            <td style="width:50%;">
+                <div class="lbl">Campaign Name</div>
+                <div class="val"><strong>{{ campaign.name }}</strong></div>
+            </td>
+            <td style="width:50%;">
+                <div class="lbl">Category</div>
+                <div class="val">{{ campaign.category|default:"-" }}</div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="lbl">Budget</div>
+                <div class="val"><strong>${{ campaign.budget }}</strong></div>
+            </td>
+            <td>
+                <div class="lbl">Start Date</div>
+                <div class="val">{{ campaign.start_date|default:"-" }}</div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="lbl">Status</div>
+                <div class="val">
+                    <span class="badge b-{{ campaign.status|lower }}">{{ campaign.status }}</span>
+                </div>
+            </td>
+            <td>
+                <div class="lbl">Progress</div>
+                <div class="val">
+                    {{ campaign.progress }}% Complete
+                    <div class="progress-outer">
+                        <div class="progress-inner" style="width:{{ campaign.progress }}%;"></div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="lbl">Delivery Language</div>
+                <div class="val">{{ campaign.delivery_language|default:"-" }}</div>
+            </td>
+            <td>
+                <div class="lbl">Voice / Screen / Video Brief</div>
+                <div class="val" style="font-size:8pt;">
+                    {{ campaign.voice_brief|default:"-" }} /
+                    {{ campaign.screenshare_brief|default:"-" }} /
+                    {{ campaign.video_brief|default:"-" }}
+                </div>
+            </td>
+        </tr>
+        {% if campaign.brief %}
+        <tr>
+            <td colspan="2">
+                <div class="lbl">Campaign Brief</div>
+                <div class="val val-lg">{{ campaign.brief }}</div>
+            </td>
+        </tr>
+        {% endif %}
+        {% if campaign.admin_review %}
+        <tr>
+            <td colspan="2">
+                <div class="lbl">Admin Review Notes</div>
+                <div class="val val-lg" style="background:#fff1f2;border-color:#fecdd3;color:#9f1239;">{{ campaign.admin_review }}</div>
+            </td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <!-- Milestones & Tasks -->
+    <table class="grid-table">
+        <tr>
+            <td style="width:50%;padding-left:0;">
+                <div class="lbl">Milestones</div>
+                <table class="data-table">
+                    <thead><tr><th>Title</th><th>Status</th></tr></thead>
+                    <tbody>
+                        {% for m in milestones %}
+                        <tr>
+                            <td>{{ m.title }}</td>
+                            <td><span class="badge {% if m.is_done %}b-approved{% else %}b-pending{% endif %}">{% if m.is_done %}Done{% else %}Pending{% endif %}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" style="color:#94a3b8;text-align:center;">No milestones</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </td>
+            <td style="width:50%;padding-right:0;">
+                <div class="lbl">Tasks</div>
+                <table class="data-table">
+                    <thead><tr><th>Title</th><th>Due</th><th>Status</th></tr></thead>
+                    <tbody>
+                        {% for t in tasks %}
+                        <tr>
+                            <td>{{ t.title }}</td>
+                            <td>{{ t.due_date|default:"-" }}</td>
+                            <td><span class="badge {% if t.is_done %}b-approved{% else %}b-pending{% endif %}">{% if t.is_done %}Done{% else %}Pending{% endif %}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" style="color:#94a3b8;text-align:center;">No tasks</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Deliverables -->
+    {% if deliverables %}
+    <div class="lbl" style="margin:6px 0 4px;">Deliverables</div>
+    <table class="data-table">
+        <thead>
+            <tr><th>Title</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            {% for d in deliverables %}
+            <tr>
+                <td>{{ d.title }}</td>
+                <td><span class="badge {% if d.status == 'Approved' %}b-approved{% else %}b-pending{% endif %}">{{ d.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- ══════════════════════════════════
+         SECTION 4: CHAT HISTORY
+    ══════════════════════════════════ -->
+    <div class="section-title">Chat History ({{ messages|length }} messages)</div>
+    {% if messages %}
+        {% for msg in messages %}
+        <div class="chat-msg {% if msg.sender == campaign.brand %}chat-brand{% else %}chat-creator{% endif %}">
+            <table style="width:100%;border:none;">
+                <tr>
+                    <td style="border:none;padding:0;">
+                        <span class="chat-sender">{{ msg.sender.username }}</span>
+                        {% if msg.sender == campaign.brand %}<span style="font-size:7pt;color:#6366f1;">(Business)</span>{% else %}<span style="font-size:7pt;color:#a855f7;">(Creator)</span>{% endif %}
+                    </td>
+                    <td style="border:none;padding:0;text-align:right;">
+                        <span class="chat-time">{{ msg.time }}</span>
+                    </td>
+                </tr>
+            </table>
+            <div class="chat-text">{{ msg.text }}</div>
+            {% if msg.file_attachment %}
+            <div style="font-size:7.5pt;color:#64748b;margin-top:3px;">📎 {{ msg.file_attachment }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+    <p style="color:#94a3b8;font-size:8.5pt;">No messages in this workspace.</p>
+    {% endif %}
+
+    <!-- ══════════════════════════════════
+         SECTION 5: ADMIN REVIEWS
+    ══════════════════════════════════ -->
+    <div class="section-title">Admin Reviews ({{ reviews|length }})</div>
+    {% if reviews %}
+    <table class="data-table">
+        <thead>
+            <tr><th>Category</th><th>Target</th><th>Date</th><th>Review Text</th></tr>
+        </thead>
+        <tbody>
+            {% for rev in reviews %}
+            <tr>
+                <td><strong>{{ rev.category }}</strong></td>
+                <td>{{ rev.get_target_audience_display }}</td>
+                <td>{{ rev.created_at|date:"M d, Y H:i" }}</td>
+                <td>{{ rev.review_text }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:#94a3b8;font-size:8.5pt;">No admin reviews recorded.</p>
+    {% endif %}
+
+</body>
+</html>
