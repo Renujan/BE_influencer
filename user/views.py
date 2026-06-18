@@ -14,6 +14,7 @@ from .models import (
 from .serializers import (
     NicheSerializer, BusinessTypeSerializer, BusinessProfileSerializer, CreatorProfileSerializer
 )
+from notifications.models import Notification
 
 class SendOTPView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -452,6 +453,14 @@ class SubmitVerificationView(APIView):
         profile.business_document = business_document
         profile.verification_documents_submitted = True
         profile.save()
+        
+        # Create Admin Notification
+        Notification.objects.create(
+            title="Business Verification Submitted",
+            message=f"Business '{profile.company_name or request.user.username}' submitted verification details (Reg No: {business_reg_number}) for admin review.",
+            category="compliance",
+            icon="fas fa-file-contract"
+        )
         
         return Response(BusinessProfileSerializer(profile).data, status=status.HTTP_200_OK)
 

@@ -73,6 +73,14 @@ class BusinessVerificationAPITests(APITestCase):
         self.assertEqual(self.business_profile.business_reg_number, "REG-9988-AA")
         self.assertEqual(self.business_profile.status, "pending") # Status must remain pending until approved
 
+        # Check Notification was created
+        from notifications.models import Notification
+        self.assertTrue(Notification.objects.filter(
+            title="Business Verification Submitted",
+            category="compliance"
+        ).exists())
+
+
     def test_submit_verification_already_approved(self):
         # Set status to approved
         self.business_profile.status = "approved"
