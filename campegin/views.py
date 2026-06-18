@@ -236,3 +236,43 @@ class CampaignSettingsView(APIView):
             "deliverables": CampaignDeliverableSerializer(deliverables, many=True).data,
             "platforms": CampaignPlatformSerializer(platforms, many=True).data,
         })
+
+
+from io import BytesIO
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.contrib.auth.decorators import user_passes_test
+from xhtml2pdf import pisa
+
+@user_passes_test(lambda u: u.is_staff)
+def download_campaign_pdf_view(request, campaign_id):
+    campaign = get_object_or_404(Campaign, pk=campaign_id)
+    
+    # Retrieve related records
+    milestones = campaign.milestones.all()
+    tasks = campaign.tasks.all()
+    deliverables = campaign.deliverables.all()
+    payments = campaign.payments.all()
+    files = campaign.files.all()
+    tickets = campaign.tickets.all()
+    
+    context = {
+        "instance": campaign,
+        "milestones": milestones,
+        "tasks": tasks,
+        "deliverables": deliverables,
+        "payments": payments,
+        "files": files,
+        "tickets": tickets,
+    }
+    
+    html = render_to_string("campegin/campaign_pdf.html", context)
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html.encode("utf-8")), result)
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        filename = f"campaign_{campaign.name.replace(' ', '_')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    return HttpResponse("Error generating PDF", status=500)
+

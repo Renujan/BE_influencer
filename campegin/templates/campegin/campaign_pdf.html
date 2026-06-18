@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Campaign Report - {{ instance.name }}</title>
+    <style>
+        @page {
+            size: a4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #2c3e50;
+            font-size: 9pt;
+            line-height: 1.35;
+        }
+        .header-table {
+            width: 100%;
+            border-bottom: 2px solid #34495e;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .header-title {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #1a252f;
+        }
+        .header-subtitle {
+            font-size: 9.5pt;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+        .section-title {
+            font-size: 10.5pt;
+            font-weight: bold;
+            background-color: #f8fafc;
+            color: #1e293b;
+            padding: 5px 8px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            border-left: 4px solid #06b6d4;
+        }
+        .grid-table {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .grid-table td {
+            padding: 5px 6px;
+            vertical-align: top;
+        }
+        .label {
+            font-weight: bold;
+            color: #475569;
+            font-size: 8pt;
+            margin-bottom: 2px;
+        }
+        .value {
+            color: #1e293b;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 6px 10px;
+            border-radius: 4px;
+            min-height: 15px;
+        }
+        .value-textarea {
+            min-height: 40px;
+        }
+        .badge {
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 7.5pt;
+            font-weight: bold;
+            text-transform: capitalize;
+        }
+        .badge-pending {
+            background-color: #fef9c3;
+            color: #854d0e;
+        }
+        .badge-live {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .badge-completed {
+            background-color: #e0f2fe;
+            color: #0369a1;
+        }
+        .badge-rejected {
+            background-color: #ffe4e6;
+            color: #991b1b;
+        }
+        .tag {
+            display: inline-block;
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            font-size: 7.5pt;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            margin-bottom: 12px;
+        }
+        .data-table th, .data-table td {
+            padding: 6px 8px;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+            font-size: 8.5pt;
+        }
+        .data-table th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Bar -->
+    <table class="header-table">
+        <tr>
+            <td>
+                <div class="header-title">Campaign Report</div>
+                <div class="header-subtitle">
+                    {{ instance.name }} &middot; Brand: {{ instance.brand.username }} &middot; Creator: {{ instance.creator.username|default:"Not Assigned" }}
+                </div>
+            </td>
+            <td style="text-align: right; vertical-align: bottom; color: #94a3b8; font-size: 8.5pt;">
+                Generated: {% now "Y-m-d H:i" %}
+            </td>
+        </tr>
+    </table>
+
+    <!-- General Campaign Information -->
+    <div class="section-title">General Campaign Information</div>
+    <table class="grid-table">
+        <tr>
+            <td style="width: 50%;">
+                <div class="label">Campaign Name</div>
+                <div class="value"><strong>{{ instance.name }}</strong></div>
+            </td>
+            <td style="width: 50%;">
+                <div class="label">Category</div>
+                <div class="value">{{ instance.category|default:"-" }}</div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="label">Brand Owner</div>
+                <div class="value">{{ instance.brand.username }} ({{ instance.brand.email }})</div>
+            </td>
+            <td>
+                <div class="label">Assigned Creator</div>
+                <div class="value">{{ instance.creator.username|default:"Not Assigned" }}</div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="label">Budget</div>
+                <div class="value"><strong>${{ instance.budget }}</strong></div>
+            </td>
+            <td>
+                <div class="label">Start Date</div>
+                <div class="value">{{ instance.start_date|default:"-" }}</div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="label">Status</div>
+                <div class="value">
+                    <span class="badge badge-{{ instance.status|lower }}">{{ instance.status }}</span>
+                </div>
+            </td>
+            <td>
+                <div class="label">Delivery Language / Progress</div>
+                <div class="value">{{ instance.delivery_language|default:"-" }} &middot; <strong>{{ instance.progress }}% Complete</strong></div>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <div class="label">Brief Description</div>
+                <div class="value value-textarea">{{ instance.brief|default:"-" }}</div>
+            </td>
+        </tr>
+        {% if instance.admin_review %}
+            <tr>
+                <td colspan="2">
+                    <div class="label">Admin Review Comments</div>
+                    <div class="value value-textarea" style="background-color: #fff1f2; border-color: #fecdd3; color: #9f1239;">{{ instance.admin_review }}</div>
+                </td>
+            </tr>
+        {% endif %}
+    </table>
+
+    <!-- Milestones & Tasks -->
+    <div class="section-title">Campaign Checklist (Milestones &amp; Tasks)</div>
+    <table class="grid-table">
+        <tr>
+            <td style="width: 50%; padding-left: 0;">
+                <div class="label">Milestones</div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70%;">Milestone Title</th>
+                            <th style="width: 30%;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for milestone in milestones %}
+                            <tr>
+                                <td><strong>{{ milestone.title }}</strong></td>
+                                <td>
+                                    <span class="badge badge-{% if milestone.is_done %}live{% else %}pending{% endif %}">
+                                        {% if milestone.is_done %}Done{% else %}Pending{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="2" style="text-align: center; color: #94a3b8;">No milestones defined</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </td>
+            <td style="width: 50%; padding-right: 0;">
+                <div class="label">Tasks</div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50%;">Task</th>
+                            <th style="width: 25%;">Due Date</th>
+                            <th style="width: 25%;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                            <tr>
+                                <td><strong>{{ task.title }}</strong></td>
+                                <td>{{ task.due_date|default:"-" }}</td>
+                                <td>
+                                    <span class="badge badge-{% if task.is_done %}live{% else %}pending{% endif %}">
+                                        {% if task.is_done %}Done{% else %}Pending{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: #94a3b8;">No tasks configured</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Deliverables -->
+    <div class="section-title">Deliverables</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 25%;">Name</th>
+                <th style="width: 15%;">Type</th>
+                <th style="width: 15%;">Deadline</th>
+                <th style="width: 15%;">Status</th>
+                <th style="width: 30%;">Brief Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for del in deliverables %}
+                <tr>
+                    <td><strong>{{ del.name }}</strong></td>
+                    <td>{{ del.type }}</td>
+                    <td>{{ del.deadline|default:"-" }}</td>
+                    <td>
+                        <span class="badge badge-{% if del.status == 'Approved' or del.status == 'Published' %}live{% else %}pending{% endif %}">
+                            {{ del.status }}
+                        </span>
+                    </td>
+                    <td><span style="color: #64748b; font-size: 7.5pt;">{{ del.brief|default:"-" }}</span></td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: #94a3b8;">No deliverables recorded</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Payment Installments -->
+    <div class="section-title">Payment Installments</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Milestone Name</th>
+                <th>Amount</th>
+                <th>Payment Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pay in payments %}
+                <tr>
+                    <td><strong>{{ pay.milestone_name }}</strong></td>
+                    <td><strong>${{ pay.amount }}</strong></td>
+                    <td>{{ pay.payment_date|default:"-" }}</td>
+                    <td>
+                        <span class="badge badge-{% if pay.status == 'Released' %}live{% elif pay.status == 'In Escrow' %}pending{% else %}completed{% endif %}">
+                            {{ pay.status }}
+                        </span>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #94a3b8;">No payment installments found</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Compliance Tickets -->
+    <div class="section-title">Compliance Tickets</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 20%;">Category</th>
+                <th style="width: 35%;">Message</th>
+                <th style="width: 15%;">Date</th>
+                <th style="width: 15%;">Status</th>
+                <th style="width: 15%;">Reply</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+                <tr>
+                    <td><strong>{{ ticket.category }}</strong></td>
+                    <td>{{ ticket.message }}</td>
+                    <td>{{ ticket.date }}</td>
+                    <td>
+                        <span class="badge badge-{% if ticket.status == 'Resolved' or ticket.status == 'Approved' %}live{% else %}pending{% endif %}">
+                            {{ ticket.status }}
+                        </span>
+                    </td>
+                    <td><span style="color: #475569; font-size: 7.5pt;">{{ ticket.reply|default:"-" }}</span></td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: #94a3b8;">No compliance tickets raised</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>

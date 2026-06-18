@@ -1,6 +1,43 @@
-from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
+from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup, IndexView, InspectView
 from wagtail.snippets.models import register_snippet
+from wagtail import hooks
+from wagtail.admin.views.generic.models import MenuItem as GenericMenuItem
+from django.urls import path, reverse
 from .models import Campaign, CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform
+from .views import download_campaign_pdf_view
+
+# Custom Index View to customize labels and add PDF download button
+class CampaignIndexView(IndexView):
+    def get_list_more_buttons(self, instance):
+        buttons = super().get_list_more_buttons(instance)
+        download_url = reverse("download_campaign_pdf", args=[instance.pk])
+        buttons.append(
+            GenericMenuItem(
+                "Download PDF",
+                url=download_url,
+                icon_name="download",
+                priority=25,
+            )
+        )
+        for item in buttons:
+            if hasattr(item, "label") and (str(item.label) == "Inspect" or item.label == "Inspect"):
+                item.label = "View"
+                item.icon_name = "view"
+        return buttons
+
+# Custom Inspect View to populate related lists
+class CampaignInspectView(InspectView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        campaign = self.object
+        context["instance"] = campaign
+        context["milestones"] = campaign.milestones.all()
+        context["tasks"] = campaign.tasks.all()
+        context["deliverables"] = campaign.deliverables.all()
+        context["payments"] = campaign.payments.all()
+        context["files"] = campaign.files.all()
+        context["tickets"] = campaign.tickets.all()
+        return context
 
 class CampaignViewSet(SnippetViewSet):
     model = Campaign
@@ -10,6 +47,12 @@ class CampaignViewSet(SnippetViewSet):
     add_view_enabled = False
     create_view_enabled = False
     exclude_form_fields = []
+    
+    # Custom Views
+    index_view_class = CampaignIndexView
+    inspect_view_enabled = True
+    inspect_view_class = CampaignInspectView
+    inspect_template_name = "campegin/inspect_campaign.html"
 
     @property
     def permission_policy(self):
@@ -63,3 +106,11 @@ class CampaignWorkspaceGroup(SnippetViewSetGroup):
     menu_order = 200
 
 register_snippet(CampaignWorkspaceGroup)
+
+
+@hooks.register("register_admin_urls")
+def register_campaign_pdf_urls():
+    return [
+        path("campaign/download-pdf/<int:campaign_id>/", download_campaign_pdf_view, name="download_campaign_pdf"),
+    ]
+
