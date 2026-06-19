@@ -1,0 +1,346 @@
+{% extends "wagtailadmin/base.html" %}
+
+{% block titletag %}Service Details - {{ instance.title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    .custom-inspect-wrapper {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 24px;
+        background-color: #f8fafc;
+        min-height: 100vh;
+    }
+
+    .custom-header-bar {
+        background-color: #6d28d9; /* Deep purple matching the business service color scheme */
+        padding: 24px 32px;
+        color: #ffffff;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .custom-header-title h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+    }
+
+    .custom-header-title p {
+        font-size: 14px;
+        color: #ddd6fe;
+        margin: 6px 0 0 0;
+    }
+
+    .custom-header-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-header-secondary {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-header-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-header-primary {
+        background-color: #7c3aed; /* Vibrant Violet */
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-header-primary:hover {
+        background-color: #6d28d9;
+    }
+
+    .custom-body-card {
+        background: #ffffff;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        border-left: 1px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 32px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 36px;
+    }
+
+    .custom-section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 20px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e2e8f0;
+        text-transform: none;
+        letter-spacing: -0.01em;
+    }
+
+    .custom-form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px 24px;
+    }
+
+    @media (min-width: 768px) {
+        .custom-form-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .custom-form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .custom-form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .custom-form-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+
+    .custom-form-control-readonly {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 14px;
+        color: #334155;
+        min-height: 45px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        word-break: break-all;
+    }
+
+    .custom-form-control-readonly.textarea {
+        align-items: flex-start;
+        line-height: 1.5;
+        min-height: 120px;
+        white-space: pre-wrap;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+
+    .badge-status.active {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-status.inactive {
+        background-color: #f1f5f9;
+        color: #64748b;
+    }
+
+    .highlight-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 14px;
+        color: #334155;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 16px;
+    }
+
+    .highlight-icon {
+        color: #10b981;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .custom-footer-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e2e8f0;
+        margin-top: 12px;
+    }
+
+    .btn-footer-back {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155 !important;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .btn-footer-back:hover {
+        background-color: #f8fafc;
+    }
+
+    .btn-footer-edit {
+        background-color: #1e293b;
+        color: #ffffff !important;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .btn-footer-edit:hover {
+        background-color: #0f172a;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="custom-inspect-wrapper">
+    <!-- Header Bar -->
+    <div class="custom-header-bar">
+        <div class="custom-header-title">
+            <h1>Business Service Details</h1>
+            <p>{{ instance.title }} &middot; ID: {{ instance.service_id }} &middot; Provider: {{ instance.provider }}</p>
+        </div>
+        <div class="custom-header-actions">
+            <a href="{% url 'business_service:download_business_service_pdf' instance.pk %}" class="btn-header-secondary">Download PDF</a>
+            {% if view.get_edit_url %}
+                <a href="{{ view.get_edit_url }}" class="btn-header-secondary">Edit Service</a>
+            {% endif %}
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-header-primary">View Services List</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Body Content with Cards -->
+    <div class="custom-body-card">
+        
+        <!-- General Service Info Section -->
+        <div>
+            <h3 class="custom-section-title" style="border-bottom: 2px solid #6d28d9;">Service Parameters</h3>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Service Title</label>
+                    <div class="custom-form-control-readonly"><strong>{{ instance.title }}</strong></div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Service Catalog ID</label>
+                    <div class="custom-form-control-readonly"><strong>{{ instance.service_id }}</strong></div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Provider Name</label>
+                    <div class="custom-form-control-readonly">{{ instance.provider }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Service Category</label>
+                    <div class="custom-form-control-readonly">{{ instance.category.name|default:"Production" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Rate Tier</label>
+                    <div class="custom-form-control-readonly"><strong>{{ instance.rate }}</strong></div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Timeline / Speed</label>
+                    <div class="custom-form-control-readonly">{{ instance.speed }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Target Audience</label>
+                    <div class="custom-form-control-readonly">{{ instance.get_target_audience_display }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Status</label>
+                    <div class="custom-form-control-readonly">
+                        <span class="badge-status {% if instance.is_active %}active{% else %}inactive{% endif %}">
+                            {% if instance.is_active %}Active &middot; Displayed{% else %}Inactive &middot; Hidden{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group full-width">
+                    <label class="custom-form-label">Service Description</label>
+                    <div class="custom-form-control-readonly textarea">{{ instance.description }}</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Highlights Section -->
+        <div>
+            <h3 class="custom-section-title">Service Highlights (Bullet Points)</h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                {% for pt in bullet_points %}
+                    <div class="highlight-item">
+                        <span class="highlight-icon">✓</span>
+                        <span>{{ pt }}</span>
+                    </div>
+                {% empty %}
+                    <div style="text-align: center; color: #94a3b8; padding: 16px; background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
+                        No highlights defined for this service
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="custom-footer-actions">
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-footer-back">Back</a>
+            {% endif %}
+            <a href="{% url 'business_service:download_business_service_pdf' instance.pk %}" class="btn-footer-back">Download PDF</a>
+            {% if view.get_edit_url %}
+                <a href="{{ view.get_edit_url }}" class="btn-footer-edit">Edit Service</a>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

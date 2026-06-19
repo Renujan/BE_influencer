@@ -1,10 +1,17 @@
 from wagtail import hooks
-from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
+from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup, InspectView
 from wagtail.snippets.models import register_snippet
 from wagtail.snippets.widgets import SnippetListingButton
 from django.urls import reverse, path
 from .models import BusinessService, ServiceCategory, BusinessServiceRequest
 from .views import admin_connect_request_view, admin_decline_request_view
+
+class BusinessServiceInspectView(InspectView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        service = self.object
+        context["bullet_points"] = [pt.strip() for pt in service.bullet_points.split("\n") if pt.strip()] if service.bullet_points else []
+        return context
 
 class BusinessServiceViewSet(SnippetViewSet):
     model = BusinessService
@@ -12,10 +19,14 @@ class BusinessServiceViewSet(SnippetViewSet):
     icon = "cog"
     add_to_admin_menu = False
     exclude_form_fields = ["service_id"]
+    inspect_view_enabled = True
+    inspect_view_class = BusinessServiceInspectView
+    inspect_template_name = "business_service/inspect_business_service.html"
     list_display = ("service_id", "title", "provider", "category", "rate", "target_audience", "is_active", "created_at")
     list_export = ("service_id", "title", "provider", "category__name", "rate", "speed", "description", "bullet_points", "target_audience", "is_active", "created_at", "updated_at")
     list_filter = ("category", "target_audience", "is_active")
     search_fields = ("service_id", "title", "provider", "description")
+
 
 class ServiceCategoryViewSet(SnippetViewSet):
     model = ServiceCategory
