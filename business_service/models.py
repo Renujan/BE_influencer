@@ -110,7 +110,7 @@ from django.contrib.auth.models import User
 
 class BusinessServiceRequest(models.Model):
     STATUS_CHOICES = (
-        ("pending", "Pending"),
+        ("pending", "Transferring to Company"),
         ("connected", "Connected"),
         ("declined", "Declined"),
     )
