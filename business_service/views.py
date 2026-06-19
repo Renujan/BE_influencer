@@ -261,17 +261,7 @@ def api_business_service_inquiries(request):
                 status="pending"
             )
 
-            # Create notification for admin
-            try:
-                from notifications.models import Notification
-                Notification.objects.create(
-                    title="New Service Inquiry",
-                    message=f"User '{user.username}' submitted an inquiry for service '{service.title}' (Provider: {service.provider}).",
-                    category="campaign",
-                    icon="fas fa-paper-plane"
-                )
-            except Exception as e:
-                print(f"Failed to create admin notification: {e}")
+
 
             return JsonResponse({
                 "message": "Inquiry submitted successfully",

@@ -169,6 +169,13 @@ class BusinessServiceInquiryAdminTests(APITestCase):
         self.request.refresh_from_db()
         self.assertEqual(self.request.status, "connected")
 
+        # Verify status change notification is logged
+        from notifications.models import Notification
+        self.assertTrue(Notification.objects.filter(
+            title="Service Inquiry Connected",
+            category="campaign"
+        ).exists())
+
     def test_admin_decline_request_view_success(self):
         url = reverse("wagtail_decline_business_service_request", args=[self.request.id])
         
@@ -180,4 +187,12 @@ class BusinessServiceInquiryAdminTests(APITestCase):
         # Verify status changed to declined
         self.request.refresh_from_db()
         self.assertEqual(self.request.status, "declined")
+
+        # Verify status change notification is logged
+        from notifications.models import Notification
+        self.assertTrue(Notification.objects.filter(
+            title="Service Inquiry Declined",
+            category="campaign"
+        ).exists())
+
 
