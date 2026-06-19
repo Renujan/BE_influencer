@@ -1,3 +1,4 @@
 Django>=5.2,<6.0
 wagtail>=7.4,<7.5
 django-cors-headers>=4.0
+xhtml2pdf>=0.2.17
