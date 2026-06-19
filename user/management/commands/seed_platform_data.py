@@ -9,6 +9,10 @@ from campegin.models import (
     CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform
 )
 from rest_framework.authtoken.models import Token
+from FAQ.models import FAQ
+from terms.models import TermsAndCondition
+from complaint.models import Complaint
+from notifications.models import Notification
 
 class Command(BaseCommand):
     help = "Seeds the database with default mockup data for influencers, brands, and campaigns"
@@ -414,6 +418,150 @@ class Command(BaseCommand):
             progress=15,
             brief="Teaser campaign for the holiday winter drop."
         )
+
+        # 9. Clear and Seed FAQs
+        FAQ.objects.all().delete()
+        faqs_data = [
+            {
+                "question": "How do I link my Instagram/TikTok account?",
+                "answer": "Go to your Profile settings, scroll to Social Accounts, click Link and input your username. Our platform will sync your follower and engagement metrics.",
+                "target": "creator"
+            },
+            {
+                "question": "When do I get paid?",
+                "answer": "Once the brand approves your final deliverable, the escrow amount is released and added to your wallet balance. You can request payout on the next scheduled payout date.",
+                "target": "creator"
+            },
+            {
+                "question": "How does the Escrow Payment system work?",
+                "answer": "When you start a campaign, you fund the agreed budget. The funds are held safely in escrow. They are only released to the creator when milestones or final deliverables are approved.",
+                "target": "business"
+            },
+            {
+                "question": "Can I request revisions for a draft?",
+                "answer": "Yes, you can request revisions on any deliverable before final approval. Just use the 'Request Revision' action in the campaign workspace.",
+                "target": "business"
+            },
+            {
+                "question": "What is the platform service fee?",
+                "answer": "We charge a standard 5% fee on successfully completed campaign transactions to cover escrow and compliance audit costs.",
+                "target": "both"
+            }
+        ]
+        for faq in faqs_data:
+            FAQ.objects.create(
+                question=faq["question"],
+                answer=faq["answer"],
+                target_audience=faq["target"],
+                is_active=True
+            )
+        self.stdout.write("FAQs seeded.")
+
+        # 10. Clear and Seed Terms
+        TermsAndCondition.objects.all().delete()
+        terms_data = [
+            {
+                "title": "Creator Content Ownership Guidelines",
+                "content": "Creators retain the intellectual property rights of their content but grant the brand a non-exclusive, worldwide, royalty-free license to usage of the content for 6 months.",
+                "target": "creator"
+            },
+            {
+                "title": "Brand Payment & Refund Terms",
+                "content": "Funds deposited in escrow are non-refundable once content creation begins, unless the creator violates the campaign brief or deadline. Disputes are audited by our compliance team.",
+                "target": "business"
+            },
+            {
+                "title": "Platform Code of Conduct",
+                "content": "All communications, file sharing, and contract adjustments must occur within the platform workspace chat to ensure protection under our escrow and safety guidelines.",
+                "target": "both"
+            }
+        ]
+        for term in terms_data:
+            TermsAndCondition.objects.create(
+                title=term["title"],
+                content=term["content"],
+                target_audience=term["target"],
+                is_active=True
+            )
+        self.stdout.write("Terms and Conditions seeded.")
+
+        # 11. Clear and Seed Complaints
+        Complaint.objects.all().delete()
+        complaints_data = [
+            {
+                "username": "maya",
+                "campaign": c1,
+                "category": "payment",
+                "subject": "Escrow release delay for milestone #2",
+                "description": "I successfully submitted the second milestone draft and it was approved. However, the escrow amount of $1,500 has not been released yet.",
+                "status": "resolved",
+                "admin_reply": "Our compliance team audited the milestone completion and the funds have been manually released to your wallet."
+            },
+            {
+                "username": "alex",
+                "campaign": c1,
+                "category": "deliverable",
+                "subject": "Delivered video doesn't match styling guidelines",
+                "description": "The Reel #1 submitted by Maya does not follow the visual branding guidelines specified in the briefing PDF. Requesting a review.",
+                "status": "investigating",
+                "admin_reply": "We are reviewing the campaign brief and comparing it with the submitted deliverable."
+            },
+            {
+                "username": "priya",
+                "campaign": c4,
+                "category": "technical",
+                "subject": "Cannot upload screenshot for deliverable",
+                "description": "Getting a network error when trying to upload my screenshot on the campaign workspace.",
+                "status": "pending",
+                "admin_reply": ""
+            }
+        ]
+        for comp in complaints_data:
+            Complaint.objects.create(
+                user=users[comp["username"]],
+                campaign=comp["campaign"],
+                category=comp["category"],
+                subject=comp["subject"],
+                description=comp["description"],
+                status=comp["status"],
+                admin_reply=comp["admin_reply"]
+            )
+        self.stdout.write("Complaints seeded.")
+
+        # 12. Clear and Seed Notifications
+        Notification.objects.all().delete()
+        notifications_data = [
+            {
+                "title": "New Business Registration",
+                "message": "Business user 'alex' registered Acme Inc. and is awaiting verification.",
+                "category": "signup",
+                "icon": "fas fa-user-plus",
+                "target_url": "/admin/snippets/user/businessprofile/"
+            },
+            {
+                "title": "Campaign Created: Summer Drop 2026",
+                "message": "Acme Inc. created a new campaign 'Summer Drop 2026' with a budget of $4200.00.",
+                "category": "campaign",
+                "icon": "fas fa-bullhorn",
+                "target_url": "/admin/snippets/campegin/campaign/"
+            },
+            {
+                "title": "Dispute Filed on Escrow",
+                "message": "Maya Chen filed a dispute regarding escrow payment release delays.",
+                "category": "compliance",
+                "icon": "fas fa-gavel",
+                "target_url": "/admin/snippets/complaint/complaint/"
+            }
+        ]
+        for notif in notifications_data:
+            Notification.objects.create(
+                title=notif["title"],
+                message=notif["message"],
+                category=notif["category"],
+                icon=notif["icon"],
+                target_url=notif["target_url"]
+            )
+        self.stdout.write("Notifications seeded.")
 
         self.stdout.write("Campaigns and safety workflows seeded.")
         self.stdout.write(self.style.SUCCESS("Database seeding completed successfully."))
