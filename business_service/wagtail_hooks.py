@@ -2,8 +2,9 @@ from wagtail import hooks
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
 from wagtail.snippets.models import register_snippet
 from wagtail.snippets.widgets import SnippetListingButton
-from django.urls import reverse
-from .models import BusinessService, ServiceCategory
+from django.urls import reverse, path
+from .models import BusinessService, ServiceCategory, BusinessServiceRequest
+from .views import admin_connect_request_view, admin_decline_request_view
 
 class BusinessServiceViewSet(SnippetViewSet):
     model = BusinessService
@@ -24,8 +25,35 @@ class ServiceCategoryViewSet(SnippetViewSet):
     list_display = ("name",)
     search_fields = ("name",)
 
+class BusinessServiceRequestViewSet(SnippetViewSet):
+    model = BusinessServiceRequest
+    menu_label = "Service Requests"
+    icon = "mail"
+    add_to_admin_menu = False
+    inspect_view_enabled = True
+    add_view_enabled = False
+    create_view_enabled = False
+    inspect_template_name = "business_service/inspect_business_service_request.html"
+    list_display = ("service", "user", "get_user_role", "budget", "timeline", "status", "created_at")
+    list_export = ("id", "service__service_id", "service__title", "user__username", "user__email", "message", "budget", "timeline", "status", "created_at", "updated_at")
+    list_filter = ("status", "timeline", "service")
+    search_fields = ("service__title", "user__username", "message")
+
+    @property
+    def permission_policy(self):
+        from wagtail.permissions import ModelPermissionPolicy
+        
+        class NoAddPermissionPolicy(ModelPermissionPolicy):
+            def user_has_permission(self, user, action):
+                if action == "add":
+                    return False
+                return super().user_has_permission(user, action)
+        
+        return NoAddPermissionPolicy(self.model)
+
+
 class BusinessServiceGroup(SnippetViewSetGroup):
-    items = (BusinessServiceViewSet, ServiceCategoryViewSet)
+    items = (BusinessServiceViewSet, ServiceCategoryViewSet, BusinessServiceRequestViewSet)
     menu_icon = "cog"
     menu_label = "Business Services"
     menu_name = "business_services_group"
@@ -52,3 +80,19 @@ def add_business_service_buttons(snippet, user, next_url=None):
             pass
         return buttons
     return []
+
+@hooks.register("register_admin_urls")
+def register_business_service_request_admin_urls():
+    return [
+        path(
+            "business-services/request/connect/<int:request_id>/",
+            admin_connect_request_view,
+            name="wagtail_connect_business_service_request",
+        ),
+        path(
+            "business-services/request/decline/<int:request_id>/",
+            admin_decline_request_view,
+            name="wagtail_decline_business_service_request",
+        ),
+    ]
+

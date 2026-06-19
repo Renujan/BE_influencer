@@ -105,3 +105,69 @@ class BusinessService(models.Model):
 
     def __str__(self):
         return f"{self.service_id or 'TEMP'} - {self.title} by {self.provider} ({self.get_target_audience_display()})"
+
+from django.contrib.auth.models import User
+
+class BusinessServiceRequest(models.Model):
+    STATUS_CHOICES = (
+        ("pending", "Pending"),
+        ("connected", "Connected"),
+        ("declined", "Declined"),
+    )
+    TIMELINE_CHOICES = (
+        ("Standard", "Standard Speed"),
+        ("Urgent", "Urgent / Rush"),
+        ("Flexible", "Flexible / Ongoing"),
+    )
+
+    service = models.ForeignKey(
+        BusinessService,
+        on_delete=models.CASCADE,
+        related_name="requests",
+        help_text="The service that is being requested."
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="business_service_requests",
+        help_text="The user (creator or business) making the request."
+    )
+    message = models.TextField(
+        help_text="Project brief or inquiry details."
+    )
+    budget = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Proposed budget for the request (e.g. '1500' or 'Flexible')."
+    )
+    timeline = models.CharField(
+        max_length=50,
+        choices=TIMELINE_CHOICES,
+        default="Standard",
+        help_text="Timeline requirement."
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+        help_text="Status of the request."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Service Request"
+        verbose_name_plural = "Service Requests"
+        ordering = ["-created_at"]
+
+    def get_user_role(self):
+        try:
+            return self.user.profile.role.capitalize()
+        except AttributeError:
+            return "Unknown"
+    get_user_role.short_description = "User Role"
+
+    def __str__(self):
+        return f"Request by {self.user.username} for {self.service.title} ({self.get_status_display()})"
+
