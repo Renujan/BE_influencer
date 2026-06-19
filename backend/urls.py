@@ -10,12 +10,12 @@ from search import views as search_views
 
 urlpatterns = [
     path("django-admin/", admin.site.urls),
+    path("admin/notifications/", include("notifications.urls")),
     path("admin/", include(wagtailadmin_urls)),
     path("documents/", include(wagtaildocs_urls)),
     path("search/", search_views.search, name="search"),
     path("api/", include("user.urls")),
     path("api/campegins/", include("campegin.urls")),
-    path("admin/notifications/", include("notifications.urls")),
     path("api/complaints/", include("complaint.urls")),
     path("api/terms/", include("terms.urls")),
     path("api/faq/", include("FAQ.urls")),
@@ -23,6 +23,7 @@ urlpatterns = [
     path("api/business-services/", include("business_service.urls")),
     path("api/settings/", include("Setting.urls")),
 ]
+
 
 
 if settings.DEBUG:

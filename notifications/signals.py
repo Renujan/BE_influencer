@@ -27,7 +27,8 @@ def create_business_profile_notification(sender, instance, created, **kwargs):
             title="New User Registered",
             message=f"{name_display} enrolled as a Business.",
             category="signup",
-            icon="fas fa-user-plus"
+            icon="fas fa-user-plus",
+            target_url=f"/admin/snippets/user/businessprofile/inspect/{instance.id}/"
         )
 
 @receiver(post_save, sender=CreatorProfile)
@@ -38,7 +39,8 @@ def create_creator_profile_notification(sender, instance, created, **kwargs):
             title="New User Registered",
             message=f"{name_display} enrolled as a Creator.",
             category="signup",
-            icon="fas fa-user-plus"
+            icon="fas fa-user-plus",
+            target_url=f"/admin/snippets/user/creatorprofile/inspect/{instance.id}/"
         )
 
 @receiver(post_save, sender=Campaign)
@@ -48,7 +50,8 @@ def create_campaign_notification(sender, instance, created, **kwargs):
             title="New Campaign Workspace",
             message=f"Campaign '{instance.name}' has been created with a budget of ${instance.budget:,.2f}.",
             category="campaign",
-            icon="fas fa-bullhorn"
+            icon="fas fa-bullhorn",
+            target_url=f"/admin/snippets/campegin/campaign/inspect/{instance.id}/"
         )
 
 @receiver(post_save, sender=AdminComplianceTicket)
@@ -58,7 +61,8 @@ def create_compliance_notification(sender, instance, created, **kwargs):
             title="Compliance Ticket Submitted",
             message=f"Ticket '{instance.category}' submitted for campaign '{instance.campaign.name}'.",
             category="compliance",
-            icon="fas fa-exclamation-triangle"
+            icon="fas fa-exclamation-triangle",
+            target_url=f"/admin/snippets/campegin/admincomplianceticket/inspect/{instance.id}/"
         )
 
 @receiver(post_save, sender=PaymentInstallment)
@@ -69,7 +73,8 @@ def create_payment_notification(sender, instance, created, **kwargs):
             title="Escrow Payment Action",
             message=f"Payment of ${instance.amount:,.2f} for '{instance.campaign.name}' milestone '{instance.milestone_name}' was {status_text}.",
             category="payment",
-            icon="fas fa-wallet"
+            icon="fas fa-wallet",
+            target_url=f"/admin/snippets/campegin/paymentinstallment/inspect/{instance.id}/"
         )
 
 
@@ -99,7 +104,8 @@ def create_business_service_request_notification(sender, instance, created, **kw
             title="New Service Inquiry",
             message=f"{role_display} '{user.username}' submitted an inquiry for service '{instance.service.title}' (Provider: {instance.service.provider}).",
             category="campaign",
-            icon="fas fa-paper-plane"
+            icon="fas fa-paper-plane",
+            target_url=f"/admin/snippets/business_service/businessservicerequest/inspect/{instance.id}/"
         )
     else:
         old_status = getattr(instance, "_old_status", None)
@@ -117,14 +123,17 @@ def create_business_service_request_notification(sender, instance, created, **kw
                     title="Service Inquiry Connected",
                     message=f"{role_display} '{user.username}' inquiry for '{instance.service.title}' has been successfully connected.",
                     category="campaign",
-                    icon="fas fa-handshake"
+                    icon="fas fa-handshake",
+                    target_url=f"/admin/snippets/business_service/businessservicerequest/inspect/{instance.id}/"
                 )
             elif instance.status == "declined":
                 Notification.objects.create(
                     title="Service Inquiry Declined",
                     message=f"{role_display} '{user.username}' inquiry for '{instance.service.title}' has been declined.",
                     category="campaign",
-                    icon="fas fa-times-circle"
+                    icon="fas fa-times-circle",
+                    target_url=f"/admin/snippets/business_service/businessservicerequest/inspect/{instance.id}/"
                 )
+
 
 

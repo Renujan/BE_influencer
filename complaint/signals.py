@@ -13,7 +13,8 @@ def handle_complaint_created(sender, instance, created, **kwargs):
             title="New Support Ticket",
             message=f"Ticket #{instance.id} '{instance.subject}' was raised by {instance.user.username}.",
             category="compliance",
-            icon="fas fa-exclamation-circle"
+            icon="fas fa-exclamation-circle",
+            target_url=f"/admin/snippets/complaint/complaint/inspect/{instance.id}/"
         )
 
 @receiver(pre_save, sender=Complaint)
@@ -30,7 +31,9 @@ def handle_complaint_reply_notification(sender, instance, **kwargs):
                     title="Support Ticket Replied",
                     message=f"Admin replied to ticket #{instance.id} '{instance.subject}': \"{instance.admin_reply[:60]}...\"",
                     category="compliance",
-                    icon="fas fa-reply"
+                    icon="fas fa-reply",
+                    target_url=f"/admin/snippets/complaint/complaint/inspect/{instance.id}/"
                 )
         except Complaint.DoesNotExist:
             pass
+

@@ -103,7 +103,7 @@
             <!-- Notifications content -->
             <div id="notificationsContent" class="max-h-80 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
               {% for notification in recent_notifications %}
-                <div class="flex items-start gap-3 p-4 hover:bg-slate-50 transition-all duration-150 {% if not notification.is_read %}bg-slate-50/50{% endif %}">
+                <a href="/admin/notifications/redirect/{{ notification.id }}/" class="flex items-start gap-3 p-4 hover:bg-slate-50 transition-all duration-150 {% if not notification.is_read %}bg-slate-50/50{% endif %} block text-inherit hover:no-underline">
                   <div class="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 {% if notification.category == 'signup' %}bg-indigo-50 text-indigo-600{% elif notification.category == 'campaign' %}bg-blue-50 text-brand-blue{% elif notification.category == 'compliance' %}bg-rose-50 text-rose-500{% else %}bg-amber-50 text-amber-500{% endif %}">
                     <i class="{{ notification.icon|default:'fas fa-bell' }} text-xs"></i>
                   </div>
@@ -120,13 +120,14 @@
                       <span class="text-[9px] text-slate-400 font-semibold">{{ notification.created_at|date:"M d" }}</span>
                     </div>
                   </div>
-                </div>
+                </a>
               {% empty %}
                 <div class="p-8 text-center text-slate-400 text-xs italic">
                   <i class="fas fa-bell-slash text-3xl mb-2 block"></i> No notifications yet.
                 </div>
               {% endfor %}
             </div>
+
 
             <!-- Empty State (hidden by default) -->
             <div id="emptyNotificationsState" class="hidden p-8 text-center">
