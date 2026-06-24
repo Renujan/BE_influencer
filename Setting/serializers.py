@@ -138,7 +138,7 @@ class BusinessFullSettingsSerializer(serializers.Serializer):
     
     # Profile fields
     company_name = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    business_types = serializers.ListField(child=serializers.CharField(), required=False)
+    business_types = serializers.ListField(child=serializers.CharField(), required=False, write_only=True)
     website = serializers.URLField(required=False, allow_null=True, allow_blank=True)
     bio = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     phone = serializers.CharField(required=False, allow_null=True, allow_blank=True)
