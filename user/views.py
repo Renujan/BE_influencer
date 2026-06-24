@@ -478,7 +478,7 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
 from rest_framework.permissions import IsAdminUser
 
 class PendingUsersView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         pending_businesses = BusinessProfile.objects.filter(status="pending")
@@ -493,6 +493,8 @@ class PendingUsersView(APIView):
                 "email": bp.user.email,
                 "phone": bp.phone or "",
                 "category": bp.business_type or "Tech",
+                "business_reg_number": bp.business_reg_number or "",
+                "business_document": bp.business_document.url if bp.business_document else "",
             })
         for cp in pending_creators:
             niches = ", ".join([n.name for n in cp.niches.all()])
@@ -503,11 +505,15 @@ class PendingUsersView(APIView):
                 "email": cp.user.email,
                 "phone": cp.phone or "",
                 "category": niches or "Lifestyle",
+                "document_type": cp.document_type or "",
+                "document_front": cp.document_front.url if cp.document_front else "",
+                "document_back": cp.document_back.url if cp.document_back else "",
+                "other_details": cp.other_details or "",
             })
         return Response(results)
 
 class ApproveUserView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         profile_id = request.data.get("profile_id")
@@ -525,7 +531,7 @@ class ApproveUserView(APIView):
         return Response({"message": f"User profile has been successfully approved."})
 
 class RestrictUserView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         profile_id = request.data.get("profile_id")

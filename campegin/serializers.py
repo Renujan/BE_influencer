@@ -64,6 +64,7 @@ class CampaignSerializer(serializers.ModelSerializer):
             "category", "delivery_language", "voice_brief", "screenshare_brief", "video_brief",
             "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets"
         ]
+        read_only_fields = ["brand"]
 
 class CampaignCategorySerializer(serializers.ModelSerializer):
     class Meta:
