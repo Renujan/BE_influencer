@@ -8,6 +8,8 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.core.mail import send_mail
+from django.conf import settings
 from .models import (
     Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount
 )
@@ -21,72 +23,145 @@ class SendOTPView(APIView):
 
     def post(self, request):
         email = request.data.get("email")
+        phone = request.data.get("phone")
+        otp_method = request.data.get("otp_method", "email") # "email" or "mobile"
         role = request.data.get("role", "influencer") # Default to creator/influencer
-        if not email:
-            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
         
-        user = User.objects.filter(email=email).first()
-        if user:
-            profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
-            if profile and profile.status == "restricted":
-                return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
-
-        if not user:
-            # Frictionless onboarding placeholder user
-            username = email.split("@")[0]
-            original_username = username
-            idx = 1
-            while User.objects.filter(username=username).exists():
-                username = f"{original_username}{idx}"
-                idx += 1
-            user = User.objects.create_user(username=username, email=email, password=User.objects.make_random_password())
+        # If mobile OTP login (no email provided)
+        if otp_method == "mobile" and phone and not email:
+            profile = None
+            if role == "business":
+                profile = BusinessProfile.objects.filter(phone=phone).first()
+            else:
+                profile = CreatorProfile.objects.filter(phone=phone).first()
+                
+            if not profile:
+                return Response({"error": "No account found with this mobile number. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
             
-            # Create corresponding profile
-            if role == "business":
-                BusinessProfile.objects.create(user=user)
-            else:
-                CreatorProfile.objects.create(user=user)
-        
-        # Check which profile exists
-        profile = None
-        if hasattr(user, "business_profile"):
-            profile = user.business_profile
-        elif hasattr(user, "creator_profile"):
-            profile = user.creator_profile
+            user = profile.user
         else:
-            # Default fallback if somehow User exists without profile
-            if role == "business":
-                profile = BusinessProfile.objects.create(user=user)
+            # Email-based check or lookup
+            if not email:
+                return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            user = User.objects.filter(email=email).first()
+            if user:
+                profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+                if profile and profile.status == "restricted":
+                    return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+
+            if not user:
+                # Frictionless onboarding placeholder user
+                username = email.split("@")[0]
+                original_username = username
+                idx = 1
+                while User.objects.filter(username=username).exists():
+                    username = f"{original_username}{idx}"
+                    idx += 1
+                user = User.objects.create_user(username=username, email=email, password=User.objects.make_random_password())
+                
+                # Create corresponding profile
+                if role == "business":
+                    profile = BusinessProfile.objects.create(user=user, phone=phone if phone else "")
+                else:
+                    profile = CreatorProfile.objects.create(user=user, phone=phone if phone else "")
             else:
-                profile = CreatorProfile.objects.create(user=user)
+                profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+                if not profile:
+                    if role == "business":
+                        profile = BusinessProfile.objects.create(user=user)
+                    else:
+                        profile = CreatorProfile.objects.create(user=user)
+                
+                if phone:
+                    profile.phone = phone
+                    profile.save()
         
         otp = str(random.randint(100000, 999999))
         profile.otp_code = otp
+        profile.otp_method = otp_method
         profile.otp_verified = False
         profile.save()
 
-        # Log OTP to stdout as if it was sent by email
-        print(f"\n[EMAIL OTP] =======================================")
-        print(f"[EMAIL OTP] Sent to: {email}")
-        print(f"[EMAIL OTP] OTP Code: {otp}")
-        print(f"[EMAIL OTP] =======================================\n")
+        # Dispatch OTP based on the chosen method
+        if otp_method == "mobile":
+            # Mobile OTP: log to console (connect SMS provider when ready)
+            print(f"\n[MOBILE OTP] =======================================")
+            print(f"[MOBILE OTP] Sent to: {phone or profile.phone}")
+            print(f"[MOBILE OTP] OTP Code: {otp}")
+            print(f"[MOBILE OTP] =======================================\n")
+            return Response({"message": f"OTP successfully sent to mobile {phone or profile.phone}", "otp_method": "mobile"})
+        else:
+            # Email OTP: send via SMTP
+            recipient_email = email or user.email
+            try:
+                send_mail(
+                    subject="Your Ampli Verification Code",
+                    message=(
+                        f"Your Ampli one-time verification code is:\n\n"
+                        f"  {otp}\n\n"
+                        f"This code expires in 10 minutes. Do not share it with anyone."
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[recipient_email],
+                    fail_silently=False,
+                    html_message=(
+                        f"""
+                        <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9fb;border-radius:12px;">
+                          <h2 style="color:#2F54EB;margin-bottom:8px;">Ampli Verification</h2>
+                          <p style="color:#555;font-size:15px;">Use the code below to verify your identity:</p>
+                          <div style="background:#fff;border:2px solid #2F54EB;border-radius:10px;padding:24px;text-align:center;margin:24px 0;">
+                            <span style="font-size:40px;font-weight:700;letter-spacing:10px;color:#2F54EB;">{otp}</span>
+                          </div>
+                          <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Never share it with anyone.</p>
+                          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+                          <p style="color:#bbb;font-size:12px;">Sent by Ampli Platform &middot; atom.lift.1@gmail.com</p>
+                        </div>
+                        """
+                    ),
+                )
+                print(f"\n[EMAIL OTP] Sent to: {recipient_email} | Code: {otp}\n")
+            except Exception as e:
+                print(f"\n[EMAIL OTP] SMTP error: {e}")
+                print(f"[EMAIL OTP] Fallback code for {recipient_email}: {otp}\n")
+                # Return the code in dev mode so flow doesn't break
+                return Response({"message": f"OTP generated (email delivery failed): {e}", "otp_code": otp, "otp_method": "email"}, status=status.HTTP_200_OK)
 
-        return Response({"message": f"OTP successfully sent to {email}", "otp_code": otp})
+            return Response({"message": f"OTP successfully sent to email {recipient_email}", "otp_method": "email"})
 
 class VerifyOTPView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         email = request.data.get("email")
+        phone = request.data.get("phone")
         otp_code = request.data.get("otp_code")
-        if not email or not otp_code:
-            return Response({"error": "Email and otp_code are required"}, status=status.HTTP_400_BAD_REQUEST)
+        otp_method = request.data.get("otp_method", "email") # "email" or "mobile"
         
-        user = User.objects.filter(email=email).first()
-        if not user:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        if not otp_code:
+            return Response({"error": "otp_code is required"}, status=status.HTTP_400_BAD_REQUEST)
         
-        profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+        user = None
+        if otp_method == "mobile" and phone and not email:
+            # Look up by phone
+            profile = None
+            role = request.data.get("role", "influencer")
+            if role == "business":
+                profile = BusinessProfile.objects.filter(phone=phone).first()
+            else:
+                profile = CreatorProfile.objects.filter(phone=phone).first()
+                
+            if not profile:
+                return Response({"error": "Profile not found for this mobile number"}, status=status.HTTP_404_NOT_FOUND)
+            user = profile.user
+        else:
+            if not email:
+                return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+            user = User.objects.filter(email=email).first()
+            if not user:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+
         if not profile:
             return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
         

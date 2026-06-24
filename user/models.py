@@ -39,6 +39,7 @@ class BusinessProfile(models.Model):
 
     # OTP storage
     otp_code = models.CharField(max_length=6, blank=True, null=True)
+    otp_method = models.CharField(max_length=10, choices=[("email", "Email"), ("mobile", "Mobile")], default="email")
     otp_verified = models.BooleanField(default=False)
     status = models.CharField(
         max_length=20,
@@ -71,6 +72,7 @@ class CreatorProfile(models.Model):
 
     # OTP storage
     otp_code = models.CharField(max_length=6, blank=True, null=True)
+    otp_method = models.CharField(max_length=10, choices=[("email", "Email"), ("mobile", "Mobile")], default="email")
     otp_verified = models.BooleanField(default=False)
     status = models.CharField(
         max_length=20,
