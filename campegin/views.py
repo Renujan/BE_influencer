@@ -48,8 +48,60 @@ class CampaignViewSet(viewsets.ModelViewSet):
             qs = qs.filter(status=status_param)
         return qs.distinct()
 
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        # Remove file objects so CharField serialization does not throw errors
+        for field in ["voice_brief", "screenshare_brief", "video_brief"]:
+            if field in data and not isinstance(data[field], str):
+                data.pop(field)
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        data = request.data.copy()
+        # Remove file objects so CharField serialization does not throw errors
+        for field in ["voice_brief", "screenshare_brief", "video_brief"]:
+            if field in data and not isinstance(data[field], str):
+                data.pop(field)
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
     def perform_create(self, serializer):
-        campaign = serializer.save(brand=self.request.user)
+        voice_file = self.request.FILES.get("voice_brief")
+        screenshare_file = self.request.FILES.get("screenshare_brief")
+        video_file = self.request.FILES.get("video_brief")
+
+        from django.core.files.storage import default_storage
+        import os
+
+        voice_brief_path = ""
+        if voice_file:
+            path = default_storage.save(os.path.join('campaign_briefs', voice_file.name), voice_file)
+            voice_brief_path = default_storage.url(path)
+
+        screenshare_brief_path = ""
+        if screenshare_file:
+            path = default_storage.save(os.path.join('campaign_briefs', screenshare_file.name), screenshare_file)
+            screenshare_brief_path = default_storage.url(path)
+
+        video_brief_path = ""
+        if video_file:
+            path = default_storage.save(os.path.join('campaign_briefs', video_file.name), video_file)
+            video_brief_path = default_storage.url(path)
+
+        campaign = serializer.save(
+            brand=self.request.user,
+            voice_brief=voice_brief_path or serializer.validated_data.get("voice_brief", ""),
+            screenshare_brief=screenshare_brief_path or serializer.validated_data.get("screenshare_brief", ""),
+            video_brief=video_brief_path or serializer.validated_data.get("video_brief", "")
+        )
         
         # Auto create default tasks for this campaign
         CampaignTask.objects.create(campaign=campaign, title="Brief approval", is_done=True)
@@ -68,6 +120,27 @@ class CampaignViewSet(viewsets.ModelViewSet):
         PaymentInstallment.objects.create(campaign=campaign, milestone_name="Kickoff payment", amount=1000.0, status="Released", payment_date="May 02")
         PaymentInstallment.objects.create(campaign=campaign, milestone_name="Drafts approved", amount=1500.0, status="Released", payment_date="May 10")
         PaymentInstallment.objects.create(campaign=campaign, milestone_name="Final delivery", amount=max(budget_val - 2500.0, 0.0), status="In Escrow")
+
+    def perform_update(self, serializer):
+        voice_file = self.request.FILES.get("voice_brief")
+        screenshare_file = self.request.FILES.get("screenshare_brief")
+        video_file = self.request.FILES.get("video_brief")
+
+        from django.core.files.storage import default_storage
+        import os
+
+        kwargs = {}
+        if voice_file:
+            path = default_storage.save(os.path.join('campaign_briefs', voice_file.name), voice_file)
+            kwargs["voice_brief"] = default_storage.url(path)
+        if screenshare_file:
+            path = default_storage.save(os.path.join('campaign_briefs', screenshare_file.name), screenshare_file)
+            kwargs["screenshare_brief"] = default_storage.url(path)
+        if video_file:
+            path = default_storage.save(os.path.join('campaign_briefs', video_file.name), video_file)
+            kwargs["video_brief"] = default_storage.url(path)
+
+        serializer.save(**kwargs)
 
     @action(detail=True, methods=["get"])
     def download_pdf(self, request, pk=None):

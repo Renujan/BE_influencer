@@ -395,7 +395,7 @@
                     <label class="custom-form-label">Voice Brief Attachment</label>
                     <div class="custom-form-control-readonly">
                         {% if instance.voice_brief %}
-                            <a href="/media/{{ instance.voice_brief }}" target="_blank" style="color: #0284c7; text-decoration: none;">View Voice Brief URL</a>
+                            <a href="{% if 'media' in instance.voice_brief or 'http' in instance.voice_brief %}{{ instance.voice_brief }}{% else %}/media/{{ instance.voice_brief }}{% endif %}" target="_blank" style="color: #0284c7; text-decoration: none;">View Voice Brief URL</a>
                         {% else %}
                             -
                         {% endif %}
@@ -406,7 +406,7 @@
                     <label class="custom-form-label">Screenshare Brief Attachment</label>
                     <div class="custom-form-control-readonly">
                         {% if instance.screenshare_brief %}
-                            <a href="/media/{{ instance.screenshare_brief }}" target="_blank" style="color: #0284c7; text-decoration: none;">View Screenshare Brief URL</a>
+                            <a href="{% if 'media' in instance.screenshare_brief or 'http' in instance.screenshare_brief %}{{ instance.screenshare_brief }}{% else %}/media/{{ instance.screenshare_brief }}{% endif %}" target="_blank" style="color: #0284c7; text-decoration: none;">View Screenshare Brief URL</a>
                         {% else %}
                             -
                         {% endif %}
@@ -417,7 +417,7 @@
                     <label class="custom-form-label">Video Brief Attachment</label>
                     <div class="custom-form-control-readonly">
                         {% if instance.video_brief %}
-                            <a href="/media/{{ instance.video_brief }}" target="_blank" style="color: #0284c7; text-decoration: none;">View Video Brief URL</a>
+                            <a href="{% if 'media' in instance.video_brief or 'http' in instance.video_brief %}{{ instance.video_brief }}{% else %}/media/{{ instance.video_brief }}{% endif %}" target="_blank" style="color: #0284c7; text-decoration: none;">View Video Brief URL</a>
                         {% else %}
                             -
                         {% endif %}
