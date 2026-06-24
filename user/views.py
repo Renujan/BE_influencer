@@ -19,6 +19,39 @@ from .serializers import (
 )
 from notifications.models import Notification
 
+def send_status_update_email(user, status_type, role):
+    role_label = "Business" if role == "business" else "Creator"
+    
+    if status_type == "approved":
+        subject = f"Your Ampli Account has been Approved!"
+        message = (
+            f"Dear {user.first_name or user.username},\n\n"
+            f"We are excited to inform you that your Ampli {role_label} account has been reviewed and approved by our team!\n\n"
+            f"You can now access your dashboard, connect with campaigns/creators, and explore the platform's features.\n\n"
+            f"Log in to get started: http://localhost:5173/auth?mode=signin\n\n"
+            f"Best regards,\nThe Ampli Team"
+        )
+    else: # restricted
+        subject = f"Your Ampli Account Status Update"
+        message = (
+            f"Dear {user.first_name or user.username},\n\n"
+            f"We regret to inform you that your Ampli {role_label} account has been restricted following a review by our compliance team.\n\n"
+            f"If you believe this was an error or wish to appeal this decision, please reply to this email or contact support@ampli.co.\n\n"
+            f"Best regards,\nThe Ampli Compliance Team"
+        )
+
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        print(f"\n[EMAIL STATUS UPDATE] Sent to: {user.email} | Status: {status_type}\n")
+    except Exception as e:
+        print(f"\n[EMAIL STATUS UPDATE] Error sending email: {e}\n")
+
 class SendOTPView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -528,6 +561,10 @@ class ApproveUserView(APIView):
 
         profile.status = "approved"
         profile.save()
+        
+        # Send status email
+        send_status_update_email(profile.user, "approved", role)
+        
         return Response({"message": f"User profile has been successfully approved."})
 
 class RestrictUserView(APIView):
@@ -546,6 +583,10 @@ class RestrictUserView(APIView):
 
         profile.status = "restricted"
         profile.save()
+        
+        # Send status email
+        send_status_update_email(profile.user, "restricted", role)
+        
         return Response({"message": f"User profile has been permanently restricted."})
 
 
@@ -634,6 +675,7 @@ def admin_approve_business_view(request, profile_id):
     profile = get_object_or_404(BusinessProfile, pk=profile_id)
     profile.status = "approved"
     profile.save()
+    send_status_update_email(profile.user, "approved", "business")
     messages.success(request, f"Business '{profile.company_name or profile.user.username}' has been successfully approved.")
     try:
         from django.urls import reverse
@@ -647,6 +689,7 @@ def admin_restrict_business_view(request, profile_id):
     profile = get_object_or_404(BusinessProfile, pk=profile_id)
     profile.status = "restricted"
     profile.save()
+    send_status_update_email(profile.user, "restricted", "business")
     messages.warning(request, f"Business '{profile.company_name or profile.user.username}' has been restricted.")
     try:
         from django.urls import reverse
@@ -660,6 +703,7 @@ def admin_approve_creator_view(request, profile_id):
     profile = get_object_or_404(CreatorProfile, pk=profile_id)
     profile.status = "approved"
     profile.save()
+    send_status_update_email(profile.user, "approved", "creator")
     messages.success(request, f"Creator '{profile.user.username}' has been successfully approved.")
     try:
         from django.urls import reverse
@@ -673,6 +717,7 @@ def admin_restrict_creator_view(request, profile_id):
     profile = get_object_or_404(CreatorProfile, pk=profile_id)
     profile.status = "restricted"
     profile.save()
+    send_status_update_email(profile.user, "restricted", "creator")
     messages.warning(request, f"Creator '{profile.user.username}' has been restricted.")
     try:
         from django.urls import reverse
