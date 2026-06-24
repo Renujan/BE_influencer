@@ -15,7 +15,7 @@ class NotificationTests(TestCase):
             title="Notification 1",
             message="Message 1",
             category="signup",
-            target_url="/admin/snippets/user/creatorprofile/"
+            target_url="/admin/creatorprofile/"
         )
         self.notification_2 = Notification.objects.create(
             title="Notification 2",

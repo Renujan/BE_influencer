@@ -28,7 +28,7 @@ def create_business_profile_notification(sender, instance, created, **kwargs):
             message=f"{name_display} enrolled as a Business.",
             category="signup",
             icon="fas fa-user-plus",
-            target_url=f"/admin/snippets/user/businessprofile/inspect/{instance.id}/"
+            target_url=f"/admin/businessprofile/inspect/{instance.id}/"
         )
 
 @receiver(post_save, sender=CreatorProfile)
@@ -40,7 +40,7 @@ def create_creator_profile_notification(sender, instance, created, **kwargs):
             message=f"{name_display} enrolled as a Creator.",
             category="signup",
             icon="fas fa-user-plus",
-            target_url=f"/admin/snippets/user/creatorprofile/inspect/{instance.id}/"
+            target_url=f"/admin/creatorprofile/inspect/{instance.id}/"
         )
 
 @receiver(post_save, sender=Campaign)

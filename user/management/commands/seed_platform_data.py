@@ -536,7 +536,7 @@ class Command(BaseCommand):
                 "message": "Business user 'alex' registered Acme Inc. and is awaiting verification.",
                 "category": "signup",
                 "icon": "fas fa-user-plus",
-                "target_url": "/admin/snippets/user/businessprofile/"
+                "target_url": "/admin/businessprofile/"
             },
             {
                 "title": "Campaign Created: Summer Drop 2026",

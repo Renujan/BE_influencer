@@ -618,7 +618,7 @@ class SubmitVerificationView(APIView):
             message=f"Business '{profile.company_name or request.user.username}' submitted verification details (Reg No: {business_reg_number}) for admin review.",
             category="compliance",
             icon="fas fa-file-contract",
-            target_url=f"/admin/snippets/user/businessprofile/inspect/{profile.id}/"
+            target_url=f"/admin/businessprofile/inspect/{profile.id}/"
         )
         
         return Response(BusinessProfileSerializer(profile).data, status=status.HTTP_200_OK)
@@ -659,7 +659,7 @@ class CreatorSubmitVerificationView(APIView):
             message=f"Creator '{request.user.username}' submitted verification documents ({document_type.upper()}) for admin review.",
             category="compliance",
             icon="fas fa-id-card",
-            target_url=f"/admin/snippets/user/creatorprofile/inspect/{profile.id}/"
+            target_url=f"/admin/creatorprofile/inspect/{profile.id}/"
         )
 
         
