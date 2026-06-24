@@ -10,6 +10,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from django.conf import settings
+from django.utils.crypto import get_random_string
 from .models import (
     Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount
 )
@@ -58,7 +59,7 @@ class SendOTPView(APIView):
                 while User.objects.filter(username=username).exists():
                     username = f"{original_username}{idx}"
                     idx += 1
-                user = User.objects.create_user(username=username, email=email, password=User.objects.make_random_password())
+                user = User.objects.create_user(username=username, email=email, password=get_random_string(32))
                 
                 # Create corresponding profile
                 if role == "business":
@@ -201,51 +202,84 @@ class RegisterView(APIView):
         if not username or not email or not password or not role:
             return Response({"error": "Username, email, password, and role are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if User.objects.filter(username=username).exists():
-            existing_user = User.objects.get(username=username)
-            p = getattr(existing_user, "business_profile", None) or getattr(existing_user, "creator_profile", None)
-            if p and p.status == "restricted":
-                return Response({"error": "This username is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
-            return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
-
-        if User.objects.filter(email=email).exists():
-            existing_user = User.objects.get(email=email)
-            p = getattr(existing_user, "business_profile", None) or getattr(existing_user, "creator_profile", None)
-            if p and p.status == "restricted":
-                return Response({"error": "This email is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
-            return Response({"error": "Email already registered"}, status=status.HTTP_400_BAD_REQUEST)
-
         phone = request.data.get("phone")
         if phone:
             if BusinessProfile.objects.filter(phone=phone, status="restricted").exists() or CreatorProfile.objects.filter(phone=phone, status="restricted").exists():
                 return Response({"error": "This phone number is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Create user
-        user = User.objects.create_user(
-            username=username, 
-            email=email, 
-            password=password,
-            first_name=request.data.get("first_name", ""),
-            last_name=request.data.get("last_name", "")
-        )
-        
+        # Check if user already exists
+        user = User.objects.filter(email=email).first()
+        profile = None
+
+        if user:
+            # Check if this user has a restricted profile
+            p = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+            if p and p.status == "restricted":
+                return Response({"error": "This email is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+            
+            # Check if user has verified OTP and is completing registration
+            if p and p.otp_verified:
+                profile = p
+                # Check username conflicts with other users
+                if User.objects.filter(username=username).exclude(id=user.id).exists():
+                    conflicting_user = User.objects.get(username=username)
+                    cp = getattr(conflicting_user, "business_profile", None) or getattr(conflicting_user, "creator_profile", None)
+                    if cp and cp.status == "restricted":
+                        return Response({"error": "This username is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+                    return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Update user fields
+                user.username = username
+                user.set_password(password)
+                user.first_name = request.data.get("first_name", "")
+                user.last_name = request.data.get("last_name", "")
+                user.save()
+            else:
+                return Response({"error": "Email already registered"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # No user exists with this email, check if username is taken
+            if User.objects.filter(username=username).exists():
+                conflicting_user = User.objects.get(username=username)
+                cp = getattr(conflicting_user, "business_profile", None) or getattr(conflicting_user, "creator_profile", None)
+                if cp and cp.status == "restricted":
+                    return Response({"error": "This username is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create new user
+            user = User.objects.create_user(
+                username=username, 
+                email=email, 
+                password=password,
+                first_name=request.data.get("first_name", ""),
+                last_name=request.data.get("last_name", "")
+            )
+
+        # Check if the role matches the existing profile type
+        if profile:
+            current_role = "business" if hasattr(user, "business_profile") else "influencer"
+            if current_role != role:
+                profile.delete()
+                profile = None
+
         profile_data = None
         if role == "business":
-            # Create business profile
-            profile = BusinessProfile.objects.create(
-                user=user,
-                company_name=request.data.get("company_name", ""),
-                website=request.data.get("website", ""),
-                phone=request.data.get("phone", ""),
-                time_zone=request.data.get("time_zone", "UTC+5:30"),
-                bio=request.data.get("bio", "")
-            )
+            # Get or create business profile
+            if not profile:
+                profile, _ = BusinessProfile.objects.get_or_create(user=user)
+            
+            profile.company_name = request.data.get("company_name", "")
+            profile.website = request.data.get("website", "")
+            profile.phone = request.data.get("phone", "")
+            profile.time_zone = request.data.get("time_zone", "UTC+5:30")
+            profile.bio = request.data.get("bio", "")
             
             # Add business types (handles both string and list format)
             business_types_data = request.data.get("business_types", [])
             if isinstance(business_types_data, str):
                 business_types_data = [x.strip() for x in business_types_data.split(",") if x.strip()]
             
+            # Clear and rebuild business types
+            profile.business_types.clear()
             for bt_name in business_types_data:
                 bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
                 profile.business_types.add(bt_obj)
@@ -264,22 +298,24 @@ class RegisterView(APIView):
             profile.save()
             profile_data = BusinessProfileSerializer(profile).data
         else:
-            # Create creator profile
-            profile = CreatorProfile.objects.create(
-                user=user,
-                phone=request.data.get("phone", ""),
-                location=request.data.get("location", ""),
-                bio=request.data.get("bio", ""),
-            )
+            # Get or create creator profile
+            if not profile:
+                profile, _ = CreatorProfile.objects.get_or_create(user=user)
+            
+            profile.phone = request.data.get("phone", "")
+            profile.location = request.data.get("location", "")
+            profile.bio = request.data.get("bio", "")
             
             # Add niches for influencers (handles both string and list format)
             niches_data = request.data.get("niches", [])
             if isinstance(niches_data, str):
                 niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
                 
+            profile.niches.clear()
             for niche_name in niches_data:
                 niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
                 profile.niches.add(niche_obj)
+            profile.save()
             profile_data = CreatorProfileSerializer(profile).data
 
         token, _ = Token.objects.get_or_create(user=user)
