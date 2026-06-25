@@ -265,3 +265,175 @@ class ComplaintAppTests(TestCase):
         latest_msg = SupportMessage.objects.filter(user=self.user).latest("id")
         self.assertEqual(latest_msg.sender_role, "admin")
         self.assertEqual(latest_msg.message, "Admin reply message to User 1")
+
+    def test_wagtail_admin_support_chat_premium_actions(self):
+        """
+        Verify that support chat management actions (edit message, delete message,
+        delete chat, file upload) operate successfully via the inspect view.
+        """
+        # Create persistent thread target message
+        main_msg = SupportMessage.objects.create(user=self.user, sender_role="user", message="Thread target message")
+        # Create message to edit
+        msg_to_edit = SupportMessage.objects.create(user=self.user, sender_role="user", message="Original Text")
+        # Create message to delete
+        msg_to_delete = SupportMessage.objects.create(user=self.user, sender_role="user", message="To be deleted")
+        
+        # Log in admin
+        admin_user = User.objects.create_superuser(username="adminuser2", password="adminpassword123", email="admin2@example.com")
+        self.client.login(username="adminuser2", password="adminpassword123")
+
+        from django.urls import reverse
+        inspect_url = reverse("support_message_admin:inspect", args=[main_msg.pk])
+
+        # 1. Test edit message
+        edit_payload = {
+            "action": "edit_msg",
+            "message_id": msg_to_edit.id,
+            "message": "Edited Message Text"
+        }
+        res_edit = self.client.post(inspect_url, data=edit_payload)
+        self.assertEqual(res_edit.status_code, 302)
+        msg_to_edit.refresh_from_db()
+        self.assertEqual(msg_to_edit.message, "Edited Message Text")
+
+        # 2. Test delete message
+        delete_payload = {
+            "action": "delete_msg",
+            "message_id": msg_to_delete.id
+        }
+        res_delete = self.client.post(inspect_url, data=delete_payload)
+        self.assertEqual(res_delete.status_code, 302)
+        self.assertFalse(SupportMessage.objects.filter(id=msg_to_delete.id).exists())
+
+        # 3. Test sending message with file upload
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        file_data = SimpleUploadedFile("test_document.txt", b"Support file content.", content_type="text/plain")
+        upload_payload = {
+            "action": "send_msg",
+            "message": "Uploading document",
+            "attachment": file_data
+        }
+        res_upload = self.client.post(inspect_url, data=upload_payload)
+        self.assertEqual(res_upload.status_code, 302)
+        
+        uploaded_msg = SupportMessage.objects.filter(user=self.user).latest("id")
+        self.assertEqual(uploaded_msg.message, "Uploading document")
+        self.assertTrue(uploaded_msg.attachment.name.endswith(".txt"))
+        self.assertFalse(uploaded_msg.is_voice)
+
+        # 4. Test deleting the whole conversation thread
+        clear_payload = {
+            "action": "delete_chat"
+        }
+        res_clear = self.client.post(inspect_url, data=clear_payload)
+        self.assertEqual(res_clear.status_code, 302)
+        self.assertEqual(SupportMessage.objects.filter(user=self.user).count(), 0)
+
+    def test_support_message_thread_sender_role(self):
+        """
+        Verify get_thread_sender_role identifies creator/business/admin roles correctly.
+        """
+        # Create a creator user
+        creator_user = User.objects.create_user(username="creator_user", password="password123")
+        from user.models import CreatorProfile
+        CreatorProfile.objects.create(user=creator_user)
+        
+        # Create a business user
+        business_user = User.objects.create_user(username="business_user", password="password123")
+        from user.models import BusinessProfile
+        BusinessProfile.objects.create(user=business_user)
+
+        # Message initiated by creator
+        msg_c = SupportMessage.objects.create(user=creator_user, sender_role="user", message="Creator message")
+        self.assertEqual(msg_c.get_thread_sender_role(), "Creator")
+
+        # Message initiated by business
+        msg_b = SupportMessage.objects.create(user=business_user, sender_role="user", message="Business message")
+        self.assertEqual(msg_b.get_thread_sender_role(), "Business")
+
+        # Message initiated by admin (fallback test)
+        admin_only_user = User.objects.create_user(username="admin_only", password="password123")
+        msg_admin = SupportMessage.objects.create(user=admin_only_user, sender_role="admin", message="Admin message")
+        self.assertEqual(msg_admin.get_thread_sender_role(), "Admin")
+
+    def test_user_facing_chat_api_actions(self):
+        """
+        Verify user-facing chat API endpoints (delete, edit, clear, and attachment upload).
+        """
+        # Create some initial messages
+        msg1 = SupportMessage.objects.create(user=self.user, sender_role="user", message="Message 1")
+        msg2 = SupportMessage.objects.create(user=self.user, sender_role="admin", message="Message 2")
+
+        # 1. Test listing chat messages includes attachment & is_voice info
+        response = self.client.get(
+            "/api/complaints/chat/list/",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data["messages"]), 2)
+        self.assertEqual(data["messages"][0]["message"], "Message 1")
+        self.assertIn("attachment", data["messages"][0])
+        self.assertIn("is_voice", data["messages"][0])
+
+        # 2. Test sending message with file upload
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        file_data = SimpleUploadedFile("chat_doc.txt", b"API chat attachment.", content_type="text/plain")
+        payload = {
+            "message": "Sent via API with file",
+            "attachment": file_data
+        }
+        res_send = self.client.post(
+            "/api/complaints/chat/send/",
+            data=payload,
+            HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        self.assertEqual(res_send.status_code, 201)
+        send_data = res_send.json()
+        self.assertEqual(send_data["user_message"]["message"], "Sent via API with file")
+        self.assertIsNotNone(send_data["user_message"]["attachment"])
+
+        # 3. Test editing user's own message
+        edit_payload = {
+            "message_id": msg1.id,
+            "message": "Message 1 Updated"
+        }
+        res_edit = self.client.post(
+            "/api/complaints/chat/edit/",
+            data=json.dumps(edit_payload),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        self.assertEqual(res_edit.status_code, 200)
+        msg1.refresh_from_db()
+        self.assertEqual(msg1.message, "Message 1 Updated")
+
+        # Verify editing admin message fails
+        res_edit_admin = self.client.post(
+            "/api/complaints/chat/edit/",
+            data=json.dumps({"message_id": msg2.id, "message": "Trying to edit admin message"}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        self.assertEqual(res_edit_admin.status_code, 404)
+
+        # 4. Test deleting a single message
+        delete_payload = {
+            "message_id": msg1.id
+        }
+        res_delete = self.client.post(
+            "/api/complaints/chat/delete/",
+            data=json.dumps(delete_payload),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        self.assertEqual(res_delete.status_code, 200)
+        self.assertFalse(SupportMessage.objects.filter(id=msg1.id).exists())
+
+        # 5. Test clearing the entire chat
+        res_clear = self.client.post(
+            "/api/complaints/chat/clear/",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        self.assertEqual(res_clear.status_code, 200)
+        self.assertEqual(SupportMessage.objects.filter(user=self.user).count(), 0)

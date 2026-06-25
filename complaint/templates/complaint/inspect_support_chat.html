@@ -24,6 +24,8 @@
         justify-content: space-between;
         align-items: center;
         border-bottom: 1px solid #334155;
+        flex-wrap: wrap;
+        gap: 16px;
     }
 
     .chat-header-title h1 {
@@ -99,7 +101,7 @@
 
     .message-bubble {
         max-width: 70%;
-        padding: 12px 16px;
+        padding: 12px 32px 12px 16px;
         font-size: 14px;
         line-height: 1.5;
         position: relative;
@@ -202,6 +204,41 @@
         transform: scale(0.98);
     }
 
+    .btn-attach, .btn-mic {
+        background-color: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+    }
+    
+    .btn-attach:hover, .btn-mic:hover {
+        background-color: #e2e8f0;
+    }
+    
+    .btn-mic.recording {
+        background-color: #fee2e2;
+        border-color: #fca5a5;
+        color: #ef4444;
+        animation: mic-pulse 1.2s infinite alternate;
+    }
+
+    @keyframes mic-pulse {
+        from { transform: scale(1); }
+        to { transform: scale(1.05); }
+    }
+    
+    @keyframes recording-pulse-anim {
+        from { opacity: 0.3; }
+        to { opacity: 1; }
+    }
+
     .empty-chat {
         display: flex;
         flex-direction: column;
@@ -215,6 +252,65 @@
     .empty-chat-icon {
         font-size: 40px;
     }
+
+    /* Message actions dropdown styles */
+    .msg-actions-dropdown {
+        position: absolute;
+        right: 8px;
+        top: 8px;
+    }
+    
+    .msg-action-trigger {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 0 4px;
+        line-height: 1;
+        outline: none;
+        border-radius: 4px;
+    }
+    
+    .message-row.admin .msg-action-trigger {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .msg-action-trigger:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    .msg-action-menu {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 20px;
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        z-index: 50;
+        width: 100px;
+        overflow: hidden;
+    }
+    
+    .msg-action-menu button {
+        background: none;
+        border: none;
+        width: 100%;
+        text-align: left;
+        padding: 8px 12px;
+        font-size: 12px;
+        color: #334155;
+        cursor: pointer;
+        display: block;
+        font-family: inherit;
+        outline: none;
+    }
+    
+    .msg-action-menu button:hover {
+        background-color: #f1f5f9;
+    }
 </style>
 {% endblock %}
 
@@ -226,7 +322,15 @@
             <h1>Chat with {{ instance.user.username }}</h1>
             <p>Email: {{ instance.user.email }} &middot; Active support log thread</p>
         </div>
-        <div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            {% if profile_url %}
+                <a href="{{ profile_url }}" class="btn-header-back" target="_blank" style="background-color: #3b82f6; border-color: #3b82f6;">View User Profile</a>
+            {% endif %}
+            <form method="POST" action="" style="margin: 0;" onsubmit="return confirm('Are you sure you want to clear the entire chat history for this user?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_chat">
+                <button type="submit" class="btn-header-back" style="background-color: #ef4444; border-color: #ef4444; cursor: pointer;">Delete Conversation</button>
+            </form>
             {% if view.index_url_name %}
                 <a href="{% url view.index_url_name %}" class="btn-header-back">Back to Chats</a>
             {% endif %}
@@ -237,12 +341,62 @@
     <div class="chat-body-card">
         <div class="messages-container" id="messages-container">
             {% for msg in chat_messages %}
-                <div class="message-row {% if msg.sender_role == 'admin' %}admin{% else %}user{% endif %}">
+                <div class="message-row {% if msg.sender_role == 'admin' %}admin{% else %}user{% endif %}" id="msg-row-{{ msg.id }}">
                     <div class="message-bubble">
                         <span class="message-sender">
                             {% if msg.sender_role == 'admin' %}Support Admin{% else %}{{ msg.user.username }}{% endif %}
                         </span>
-                        <div>{{ msg.message }}</div>
+                        
+                        <!-- Options dropdown for admin messages or user messages (admin can moderate both) -->
+                        <div class="msg-actions-dropdown">
+                            <button class="msg-action-trigger" onclick="toggleMsgMenu({{ msg.id }})">⋮</button>
+                            <div class="msg-action-menu" id="msg-menu-{{ msg.id }}">
+                                {% if msg.message %}
+                                    <button type="button" onclick="startEditMsg({{ msg.id }}, '{{ msg.message|escapejs }}')">Edit</button>
+                                {% endif %}
+                                <form method="POST" action="" style="display: inline; margin: 0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_msg">
+                                    <input type="hidden" name="message_id" value="{{ msg.id }}">
+                                    <button type="submit" style="color: #ef4444;" onclick="return confirm('Are you sure you want to delete this message?');">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Message Text Display -->
+                        <div id="msg-content-{{ msg.id }}">
+                            {{ msg.message }}
+                        </div>
+                        
+                        <!-- Inline Edit form -->
+                        <form method="POST" action="" id="msg-edit-form-{{ msg.id }}" style="display: none; margin-top: 8px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="edit_msg">
+                            <input type="hidden" name="message_id" value="{{ msg.id }}">
+                            <input type="text" name="message" id="msg-edit-input-{{ msg.id }}" class="custom-chat-input" style="height: 34px; padding: 4px 8px; font-size: 13px;" required>
+                            <div style="margin-top: 4px; display: flex; gap: 4px; justify-content: flex-end;">
+                                <button type="submit" class="btn-chat-send" style="height: 28px; padding: 0 12px; font-size: 12px;">Save</button>
+                                <button type="button" class="btn-header-back" style="height: 28px; padding: 0 12px; font-size: 12px; color: #334155 !important; border-color: #cbd5e1; background-color: #f8fafc; cursor: pointer;" onclick="cancelEditMsg({{ msg.id }})">Cancel</button>
+                            </div>
+                        </form>
+
+                        <!-- Attachments Display -->
+                        {% if msg.attachment %}
+                            <div style="margin-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.05); padding-top: 8px;">
+                                {% if msg.is_voice %}
+                                    <audio src="{{ msg.attachment.url }}" controls style="max-width: 100%; display: block;"></audio>
+                                {% elif '.png' in msg.attachment.name|lower or '.jpg' in msg.attachment.name|lower or '.jpeg' in msg.attachment.name|lower or '.gif' in msg.attachment.name|lower %}
+                                    <a href="{{ msg.attachment.url }}" target="_blank">
+                                        <img src="{{ msg.attachment.url }}" style="max-width: 100%; max-height: 200px; border-radius: 6px; display: block; box-shadow: 0 1px 2px rgba(0,0,0,0.1);" />
+                                    </a>
+                                {% else %}
+                                    <a href="{{ msg.attachment.url }}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 13px; text-decoration: none; color: inherit;">
+                                        📄 Download File
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
                         <span class="message-meta">{{ msg.created_at|date:"M d, Y, h:i A" }}</span>
                     </div>
                 </div>
@@ -256,20 +410,180 @@
         </div>
 
         <!-- Input Footer Form -->
-        <form method="POST" action="" class="chat-input-form">
+        <form method="POST" action="" class="chat-input-form" enctype="multipart/form-data" id="chat-form">
             {% csrf_token %}
-            <input type="text" name="message" class="custom-chat-input" placeholder="Type a message to {{ instance.user.username }}..." required autocomplete="off" autofocus>
-            <button type="submit" class="btn-chat-send">Send Message</button>
+            
+            <input type="file" name="attachment" id="file-input" style="display: none;" onchange="handleFileSelected()">
+            <input type="hidden" name="is_voice" id="is-voice-input" value="false">
+
+            <!-- Attachment Trigger -->
+            <button type="button" class="btn-attach" onclick="triggerFileInput()" title="Attach file">
+                📎
+            </button>
+
+            <!-- Text Message Input -->
+            <input type="text" name="message" id="message-text-input" class="custom-chat-input" placeholder="Type a message to {{ instance.user.username }}..." autocomplete="off" autofocus>
+            
+            <!-- Voice recording trigger -->
+            <button type="button" class="btn-mic" id="mic-btn" onclick="toggleVoiceRecording()" title="Record voice note">
+                🎤
+            </button>
+
+            <button type="submit" class="btn-chat-send">Send</button>
         </form>
+        
+        <!-- Live Recording indicator overlay -->
+        <div id="recording-overlay" style="display: none; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: #ef4444; margin-top: 12px; background-color: #fef2f2; border: 1px solid #fee2e2; padding: 8px 16px; border-radius: 8px; width: fit-content;">
+            <span class="recording-pulse" style="width: 10px; height: 10px; border-radius: 50%; background-color: #ef4444; display: inline-block; animation: recording-pulse-anim 1s infinite alternate;"></span>
+            Recording Voice Note: <span id="recording-timer">00:00</span>
+            <button type="button" onclick="cancelRecording()" style="background: none; border: none; color: #64748b; cursor: pointer; font-size: 12px; margin-left: 12px; text-decoration: underline;">Cancel</button>
+        </div>
     </div>
 </div>
 
 <script>
+    var mediaRecorder = null;
+    var audioChunks = [];
+    var recordStartTime = 0;
+    var timerInterval = null;
+
     document.addEventListener("DOMContentLoaded", function() {
         var container = document.getElementById("messages-container");
         if (container) {
             container.scrollTop = container.scrollHeight;
         }
     });
+
+    function triggerFileInput() {
+        document.getElementById('file-input').click();
+    }
+
+    function handleFileSelected() {
+        var fileInput = document.getElementById('file-input');
+        if (fileInput.files.length > 0) {
+            var fileName = fileInput.files[0].name;
+            var textInput = document.getElementById('message-text-input');
+            textInput.placeholder = "Selected file: " + fileName + " (click Send to upload)";
+            textInput.style.backgroundColor = "#ecfdf5";
+            textInput.style.borderColor = "#10b981";
+        }
+    }
+
+    function toggleVoiceRecording() {
+        var micBtn = document.getElementById('mic-btn');
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            stopRecordingAndSend();
+        } else {
+            startVoiceRecording();
+        }
+    }
+
+    function startVoiceRecording() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Your browser does not support audio recording.");
+            return;
+        }
+
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function(stream) {
+                audioChunks = [];
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = function(e) {
+                    audioChunks.push(e.data);
+                };
+                mediaRecorder.onstop = function() {
+                    var audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    var voiceFile = new File([audioBlob], "voice_note.webm", { type: 'audio/webm' });
+                    
+                    var dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(voiceFile);
+                    document.getElementById('file-input').files = dataTransfer.files;
+                    
+                    document.getElementById('is-voice-input').value = "true";
+                    document.getElementById('chat-form').submit();
+                };
+
+                mediaRecorder.start();
+                recordStartTime = Date.now();
+                document.getElementById('recording-overlay').style.display = "flex";
+                document.getElementById('mic-btn').classList.add('recording');
+                
+                timerInterval = setInterval(updateRecordTimer, 1000);
+            })
+            .catch(function(err) {
+                console.error("Mic access failed:", err);
+                alert("Microphone access is required to record voice notes.");
+            });
+    }
+
+    function stopRecordingAndSend() {
+        if (mediaRecorder) {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            clearInterval(timerInterval);
+        }
+    }
+
+    function cancelRecording() {
+        if (mediaRecorder) {
+            mediaRecorder.onstop = null;
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+        clearInterval(timerInterval);
+        document.getElementById('recording-overlay').style.display = "none";
+        document.getElementById('mic-btn').classList.remove('recording');
+        document.getElementById('file-input').value = "";
+        document.getElementById('is-voice-input').value = "false";
+    }
+
+    function updateRecordTimer() {
+        var elapsedMs = Date.now() - recordStartTime;
+        var elapsedSecs = Math.floor(elapsedMs / 1000);
+        var mins = Math.floor(elapsedSecs / 60);
+        var secs = elapsedSecs % 60;
+        
+        var minsStr = mins < 10 ? "0" + mins : mins;
+        var secsStr = secs < 10 ? "0" + secs : secs;
+        document.getElementById('recording-timer').innerText = minsStr + ":" + secsStr;
+    }
+
+    function toggleMsgMenu(msgId) {
+        var menu = document.getElementById('msg-menu-' + msgId);
+        var allMenus = document.querySelectorAll('.msg-action-menu');
+        allMenus.forEach(function(m) {
+            if (m.id !== 'msg-menu-' + msgId) m.style.display = 'none';
+        });
+        
+        if (menu.style.display === 'block') {
+            menu.style.display = 'none';
+        } else {
+            menu.style.display = 'block';
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.classList.contains('msg-action-trigger')) {
+            var allMenus = document.querySelectorAll('.msg-action-menu');
+            allMenus.forEach(function(m) {
+                m.style.display = 'none';
+            });
+        }
+    });
+
+    function startEditMsg(msgId, currentText) {
+        document.getElementById('msg-content-' + msgId).style.display = 'none';
+        var form = document.getElementById('msg-edit-form-' + msgId);
+        form.style.display = 'block';
+        
+        var input = document.getElementById('msg-edit-input-' + msgId);
+        input.value = currentText;
+        input.focus();
+    }
+
+    function cancelEditMsg(msgId) {
+        document.getElementById('msg-content-' + msgId).style.display = 'block';
+        document.getElementById('msg-edit-form-' + msgId).style.display = 'none';
+    }
 </script>
 {% endblock %}

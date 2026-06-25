@@ -49,8 +49,22 @@ class SupportMessage(models.Model):
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="support_messages")
     sender_role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="user")
-    message = models.TextField()
+    message = models.TextField(blank=True, default="")
+    attachment = models.FileField(upload_to="support_attachments/", null=True, blank=True)
+    is_voice = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def get_thread_sender_role(self):
+        first_msg = SupportMessage.objects.filter(user=self.user).order_by("created_at").first()
+        if first_msg and first_msg.sender_role == "admin":
+            return "Admin"
+        if hasattr(self.user, "creator_profile") and self.user.creator_profile:
+            return "Creator"
+        elif hasattr(self.user, "business_profile") and self.user.business_profile:
+            return "Business"
+        return "User"
+    get_thread_sender_role.short_description = "Sender role"
+
     def __str__(self):
-        return f"{self.user.username} ({self.get_sender_role_display()}): {self.message[:30]}"
+        msg_snippet = self.message[:30] if self.message else (f"[Attachment: {self.attachment.name}]" if self.attachment else "")
+        return f"{self.user.username} ({self.get_sender_role_display()}): {msg_snippet}"

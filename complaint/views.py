@@ -147,6 +147,8 @@ def api_list_chat_messages(request):
             "id": msg.id,
             "sender_role": msg.sender_role,
             "message": msg.message,
+            "attachment": request.build_absolute_uri(msg.attachment.url) if msg.attachment else None,
+            "is_voice": msg.is_voice,
             "created_at": msg.created_at.isoformat()
         } for msg in messages]
         return JsonResponse({"messages": data}, status=200)
@@ -157,7 +159,7 @@ def api_list_chat_messages(request):
 def api_send_chat_message(request):
     """
     POST view accepting user support chat messages and saving them,
-    triggering simulated auto-replies from the admin.
+    supporting file and voice uploads, and triggering simulated auto-replies.
     """
     if request.method != "POST":
         return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
@@ -172,24 +174,32 @@ def api_send_chat_message(request):
         else:
             data = request.POST
             
-        message_text = data.get("message")
-        if not message_text:
-            return JsonResponse({"error": "Message text is required"}, status=400)
+        message_text = data.get("message", "").strip()
+        attachment_file = request.FILES.get("attachment")
+        is_voice_val = data.get("is_voice") == "true" or data.get("is_voice") is True
+        
+        if not message_text and not attachment_file:
+            return JsonResponse({"error": "Message text or attachment is required"}, status=400)
             
         user_msg = SupportMessage.objects.create(
             user=user,
             sender_role="user",
-            message=message_text
+            message=message_text,
+            attachment=attachment_file,
+            is_voice=is_voice_val
         )
         
-        msg_lower = message_text.lower()
-        reply_text = "Thank you for contacting support! Our admin team has been notified and will review your inquiry shortly. Let us know if you need anything else."
-        if "payment" in msg_lower or "escrow" in msg_lower or "money" in msg_lower:
-            reply_text = "I see your inquiry is regarding payments or escrow. For security reasons, payouts are held in escrow until deliverables are approved. If you have a dispute, you can file a ticket and our compliance team will investigate within 24 hours."
-        elif "campaign" in msg_lower or "hired" in msg_lower or "influencer" in msg_lower:
-            reply_text = "Regarding campaigns or influencer contracts: you can review progress in your campaigns tab. If the creator is unresponsive, you can file a dispute ticket."
-        elif "technical" in msg_lower or "bug" in msg_lower or "error" in msg_lower or "fail" in msg_lower:
-            reply_text = "Sorry you are experiencing a technical issue. Could you please specify which page/action is failing, or submit a support ticket with description so our tech team can debug it?"
+        if message_text:
+            msg_lower = message_text.lower()
+            reply_text = "Thank you for contacting support! Our admin team has been notified and will review your inquiry shortly. Let us know if you need anything else."
+            if "payment" in msg_lower or "escrow" in msg_lower or "money" in msg_lower:
+                reply_text = "I see your inquiry is regarding payments or escrow. For security reasons, payouts are held in escrow until deliverables are approved. If you have a dispute, you can file a ticket and our compliance team will investigate within 24 hours."
+            elif "campaign" in msg_lower or "hired" in msg_lower or "influencer" in msg_lower:
+                reply_text = "Regarding campaigns or influencer contracts: you can review progress in your campaigns tab. If the creator is unresponsive, you can file a dispute ticket."
+            elif "technical" in msg_lower or "bug" in msg_lower or "error" in msg_lower or "fail" in msg_lower:
+                reply_text = "Sorry you are experiencing a technical issue. Could you please specify which page/action is failing, or submit a support ticket with description so our tech team can debug it?"
+        else:
+            reply_text = "Thank you for sending the file/voice note. We have received it and will look into it shortly!"
             
         admin_msg = SupportMessage.objects.create(
             user=user,
@@ -202,14 +212,98 @@ def api_send_chat_message(request):
                 "id": user_msg.id,
                 "sender_role": "user",
                 "message": user_msg.message,
+                "attachment": request.build_absolute_uri(user_msg.attachment.url) if user_msg.attachment else None,
+                "is_voice": user_msg.is_voice,
                 "created_at": user_msg.created_at.isoformat()
             },
             "admin_message": {
                 "id": admin_msg.id,
                 "sender_role": "admin",
                 "message": admin_msg.message,
+                "attachment": request.build_absolute_uri(admin_msg.attachment.url) if admin_msg.attachment else None,
+                "is_voice": admin_msg.is_voice,
                 "created_at": admin_msg.created_at.isoformat()
             }
         }, status=201)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def api_delete_chat_message(request):
+    """
+    POST view allowing a user to delete a single support chat message.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
+        
+    user = get_user_from_request(request)
+    if not user:
+        return JsonResponse({"error": "Invalid or missing token"}, status=401)
+        
+    try:
+        if request.content_type == "application/json":
+            data = json.loads(request.body)
+        else:
+            data = request.POST
+            
+        message_id = data.get("message_id")
+        if not message_id:
+            return JsonResponse({"error": "message_id is required"}, status=400)
+            
+        deleted_count, _ = SupportMessage.objects.filter(id=message_id, user=user).delete()
+        if deleted_count == 0:
+            return JsonResponse({"error": "Message not found or not owned by you"}, status=404)
+            
+        return JsonResponse({"message": "Message deleted successfully"}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def api_edit_chat_message(request):
+    """
+    POST view allowing a user to edit their own support chat message.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
+        
+    user = get_user_from_request(request)
+    if not user:
+        return JsonResponse({"error": "Invalid or missing token"}, status=401)
+        
+    try:
+        if request.content_type == "application/json":
+            data = json.loads(request.body)
+        else:
+            data = request.POST
+            
+        message_id = data.get("message_id")
+        new_text = data.get("message", "").strip()
+        
+        if not message_id or not new_text:
+            return JsonResponse({"error": "message_id and message are required"}, status=400)
+            
+        updated_count = SupportMessage.objects.filter(id=message_id, user=user, sender_role="user").update(message=new_text)
+        if updated_count == 0:
+            return JsonResponse({"error": "Message not found or cannot be edited by you"}, status=404)
+            
+        return JsonResponse({"message": "Message updated successfully"}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def api_clear_chat(request):
+    """
+    POST view allowing a user to clear their support chat history.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
+        
+    user = get_user_from_request(request)
+    if not user:
+        return JsonResponse({"error": "Invalid or missing token"}, status=401)
+        
+    try:
+        SupportMessage.objects.filter(user=user).delete()
+        return JsonResponse({"message": "Chat history cleared successfully"}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)

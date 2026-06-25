@@ -1,5 +1,6 @@
 from django.shortcuts import redirect
 from django.contrib import messages
+from django.urls import reverse
 from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet, ModelViewSetGroup
 from wagtail.admin.views.generic.models import InspectView, IndexView
@@ -128,21 +129,63 @@ class SupportMessageInspectView(InspectView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["instance"] = self.object
+        target_user = self.object.user
+        profile_url = None
+        
+        # Determine the user's Wagtail admin inspect page URL based on role
+        if hasattr(target_user, "business_profile") and target_user.business_profile:
+            profile_url = reverse("businessprofile:inspect", args=[target_user.business_profile.pk])
+        elif hasattr(target_user, "creator_profile") and target_user.creator_profile:
+            profile_url = reverse("creatorprofile:inspect", args=[target_user.creator_profile.pk])
+        else:
+            profile_url = reverse("wagtailusers_users:edit", args=[target_user.pk])
+
+        context["profile_url"] = profile_url
         # Retrieve complete chronological conversation history for this user
-        context["chat_messages"] = SupportMessage.objects.filter(user=self.object.user).order_by("created_at")
+        context["chat_messages"] = SupportMessage.objects.filter(user=target_user).order_by("created_at")
         return context
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        message_text = request.POST.get("message")
-        if message_text and message_text.strip():
-            SupportMessage.objects.create(
-                user=self.object.user,
-                sender_role="admin",
-                message=message_text.strip()
-            )
-            messages.success(request, "Reply sent successfully.")
-        return redirect(self.request.path)
+        action = request.POST.get("action", "send_msg")
+
+        if action == "delete_chat":
+            # Delete whole chat history for this user
+            SupportMessage.objects.filter(user=self.object.user).delete()
+            messages.success(request, "Conversation cleared successfully.")
+            return redirect(reverse("support_message_admin:index"))
+
+        elif action == "delete_msg":
+            # Delete single message
+            message_id = request.POST.get("message_id")
+            SupportMessage.objects.filter(id=message_id, user=self.object.user).delete()
+            messages.success(request, "Message deleted.")
+            return redirect(self.request.path)
+
+        elif action == "edit_msg":
+            # Edit single message content
+            message_id = request.POST.get("message_id")
+            new_text = request.POST.get("message", "").strip()
+            SupportMessage.objects.filter(id=message_id, user=self.object.user).update(message=new_text)
+            messages.success(request, "Message updated.")
+            return redirect(self.request.path)
+
+        else:
+            # Send new message/media (default action)
+            message_text = request.POST.get("message", "").strip()
+            attachment_file = request.FILES.get("attachment")
+            is_voice_val = request.POST.get("is_voice") == "true"
+
+            if message_text or attachment_file:
+                SupportMessage.objects.create(
+                    user=self.object.user,
+                    sender_role="admin",
+                    message=message_text,
+                    attachment=attachment_file,
+                    is_voice=is_voice_val
+                )
+                messages.success(request, "Message sent.")
+            return redirect(self.request.path)
 
 class SupportMessageViewSet(ModelViewSet):
     model = SupportMessage
@@ -160,8 +203,8 @@ class SupportMessageViewSet(ModelViewSet):
     edit_view_enabled = False
     create_view_enabled = False  # Hides 'Add support message' button
     list_display_add_buttons = None
-    list_display = ("id", "user", "sender_role", "message", "created_at")
-    list_filter = ("sender_role",)
+    list_display = ("id", "user", "get_thread_sender_role", "message", "created_at")
+    list_filter = ()
     search_fields = ("message", "user__username")
 
 class ComplaintGroup(ModelViewSetGroup):
