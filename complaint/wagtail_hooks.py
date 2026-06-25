@@ -1,5 +1,8 @@
+from django.shortcuts import redirect
+from django.contrib import messages
 from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet
+from wagtail.admin.views.generic.models import InspectView, IndexView
 from campegin.models import AdminComplianceTicket
 from complaint.models import Complaint, SupportMessage
 
@@ -15,6 +18,35 @@ class AdminComplianceTicketViewSet(ModelViewSet):
     list_filter = ("category", "status")
     search_fields = ("campaign__name", "message")
 
+class ComplaintIndexView(IndexView):
+    def get_list_more_buttons(self, instance):
+        buttons = super().get_list_more_buttons(instance)
+        for item in buttons:
+            if hasattr(item, "label") and (str(item.label) == "Inspect" or item.label == "Inspect"):
+                item.label = "View / Review"
+                item.icon_name = "view"
+        return buttons
+
+class ComplaintInspectView(InspectView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["instance"] = self.object
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        status = request.POST.get("status")
+        admin_reply = request.POST.get("admin_reply")
+
+        if status in [choice[0] for choice in self.model.STATUS_CHOICES]:
+            self.object.status = status
+
+        self.object.admin_reply = admin_reply or ""
+        self.object.save()
+
+        messages.success(request, "Ticket updated successfully.")
+        return redirect(self.request.path)
+
 class ComplaintViewSet(ModelViewSet):
     model = Complaint
     url_namespace = "complaint_admin"
@@ -26,6 +58,10 @@ class ComplaintViewSet(ModelViewSet):
     exclude_form_fields = []
     create_view_enabled = False  # Disable manual creation, hide add button
     list_display_add_buttons = None  # Hide add button from list display
+    inspect_view_enabled = True
+    inspect_view_class = ComplaintInspectView
+    inspect_template_name = "complaint/inspect_complaint.html"
+    index_view_class = ComplaintIndexView
     list_display = ("id", "user", "category", "subject", "status", "created_at")
     list_export = ("id", "user__username", "campaign__name", "category", "subject", "description", "status", "admin_reply", "created_at")
     list_filter = ("status", "category")

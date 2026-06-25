@@ -170,3 +170,40 @@ class ComplaintAppTests(TestCase):
             content_type="application/json"
         )
         self.assertEqual(response_send.status_code, 401)
+
+    def test_wagtail_admin_update_complaint_status_and_reply(self):
+        """
+        Verify that a staff/admin user can update complaint status and admin reply
+        via a POST request to the custom inspect/review page.
+        """
+        # Create an admin user and log them in
+        admin_user = User.objects.create_superuser(username="adminuser", password="adminpassword123", email="admin@example.com")
+        self.client.login(username="adminuser", password="adminpassword123")
+
+        # Create a test ticket/complaint
+        complaint = Complaint.objects.create(
+            user=self.user,
+            subject="Campaign payment locked",
+            description="The money is stuck.",
+            category="payment",
+            status="pending",
+            admin_reply=""
+        )
+
+        from django.urls import reverse
+        inspect_url = reverse("complaint_admin:inspect", args=[complaint.pk])
+
+        # Submit the status update form
+        payload = {
+            "status": "investigating",
+            "admin_reply": "We are looking into this escrow issue."
+        }
+        response = self.client.post(inspect_url, data=payload)
+
+        # Assert status code is a redirect (back to the same page)
+        self.assertEqual(response.status_code, 302)
+
+        # Verify database is updated
+        complaint.refresh_from_db()
+        self.assertEqual(complaint.status, "investigating")
+        self.assertEqual(complaint.admin_reply, "We are looking into this escrow issue.")

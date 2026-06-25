@@ -235,7 +235,6 @@
             <p>Category: {{ instance.category }} &middot; Campaign: {{ instance.campaign.name }}</p>
         </div>
         <div class="custom-header-actions">
-            <a href="{% url 'download_ticket_pdf' instance.pk %}" class="btn-header-secondary">Download PDF</a>
             {% if view.get_edit_url %}
                 <a href="{{ view.get_edit_url }}" class="btn-header-secondary">Reply / Edit</a>
             {% endif %}
@@ -299,7 +298,6 @@
             {% if view.index_url_name %}
                 <a href="{% url view.index_url_name %}" class="btn-footer-back">Back</a>
             {% endif %}
-            <a href="{% url 'download_ticket_pdf' instance.pk %}" class="btn-footer-back">Download PDF</a>
             {% if view.get_edit_url %}
                 <a href="{{ view.get_edit_url }}" class="btn-footer-edit">Reply / Edit</a>
             {% endif %}
