@@ -1,13 +1,13 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from campegin.models import Campaign
-from .models import ChatMessage, ChatReview
+from campegin.models import Campaign, WorkspaceMessage
+from .models import ChatReview
 
 class WorkspaceMessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(source="sender.username", read_only=True)
 
     class Meta:
-        model = ChatMessage
+        model = WorkspaceMessage
         fields = ["id", "sender", "sender_name", "text", "file_attachment", "time"]
 
 class CampaignChatSerializer(serializers.ModelSerializer):

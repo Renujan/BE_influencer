@@ -10,6 +10,15 @@ from .views import chat_monitor_view_chat_view, chat_monitor_review_view, chat_m
 
 # Custom Index View: adds "View Campaign" and "Download PDF" to the row dropdown menu
 class ChatMonitorIndexView(IndexView):
+    def get_edit_url(self, instance):
+        try:
+            return reverse("chat_monitor_detail", args=[instance.pk])
+        except Exception:
+            return None
+
+    def get_queryset(self):
+        return super().get_queryset().filter(creator__isnull=False)
+
     def get_list_more_buttons(self, instance):
         buttons = super().get_list_more_buttons(instance)
 
@@ -56,6 +65,9 @@ class ChatMonitorCampaignViewSet(ModelViewSet):
     create_view_enabled = False
     list_display_add_buttons = None
     exclude_form_fields = []
+
+    def get_queryset(self):
+        return super().get_queryset().filter(creator__isnull=False)
 
     # Use our custom index view for the dropdown additions
     index_view_class = ChatMonitorIndexView

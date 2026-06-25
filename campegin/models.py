@@ -54,7 +54,7 @@ class Campaign(models.Model):
     get_creator_name.short_description = "Creator Name"
 
     def get_last_chat_time(self):
-        last_msg = self.chat_messages.all().order_by("-id").first()
+        last_msg = self.messages.all().order_by("-id").first()
         if last_msg:
             return last_msg.time
         return "-"

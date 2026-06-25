@@ -9,8 +9,8 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from xhtml2pdf import pisa
-from campegin.models import Campaign
-from .models import ChatMessage, ChatReview
+from campegin.models import Campaign, WorkspaceMessage
+from .models import ChatReview
 from .serializers import CampaignChatSerializer, WorkspaceMessageSerializer, ChatReviewSerializer
 import datetime
 
@@ -19,7 +19,7 @@ import datetime
 def chat_monitor_detail_view(request, campaign_id):
     """Comprehensive detail page: chat history + campaign info + business & creator profiles."""
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    messages = campaign.chat_messages.all().order_by("id")
+    messages = campaign.messages.all().order_by("id")
     reviews = campaign.chat_reviews.all().order_by("-id")
 
     # Business profile
@@ -63,7 +63,7 @@ def chat_monitor_detail_view(request, campaign_id):
 def chat_monitor_download_pdf_view(request, campaign_id):
     """Generate a PDF report of the chat monitor detail page."""
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    messages = campaign.chat_messages.all().order_by("id")
+    messages = campaign.messages.all().order_by("id")
     reviews = campaign.chat_reviews.all().order_by("-id")
 
     business_profile = getattr(campaign.brand, "business_profile", None)
@@ -137,7 +137,7 @@ class CampaignChatsViewSet(viewsets.ReadOnlyModelViewSet):
             now = datetime.datetime.now()
             time_str = now.strftime("%H:%M")
             
-            msg = ChatMessage.objects.create(
+            msg = WorkspaceMessage.objects.create(
                 campaign=campaign,
                 sender=request.user,
                 text=text,
@@ -147,7 +147,7 @@ class CampaignChatsViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(WorkspaceMessageSerializer(msg).data, status=status.HTTP_201_CREATED)
         else:
             # GET: return all messages ordered by ID
-            msgs = campaign.chat_messages.all().order_by("id")
+            msgs = campaign.messages.all().order_by("id")
             return Response(WorkspaceMessageSerializer(msgs, many=True).data)
 
     @action(detail=True, methods=["get"])
@@ -175,7 +175,7 @@ class CampaignChatsViewSet(viewsets.ReadOnlyModelViewSet):
 @staff_member_required
 def chat_monitor_view_chat_view(request, campaign_id):
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    messages = campaign.chat_messages.all().order_by("id")
+    messages = campaign.messages.all().order_by("id")
     context = {
         "campaign": campaign,
         "messages": messages,
