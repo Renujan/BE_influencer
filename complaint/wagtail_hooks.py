@@ -6,6 +6,24 @@ from wagtail.admin.views.generic.models import InspectView, IndexView
 from campegin.models import AdminComplianceTicket
 from complaint.models import Complaint, SupportMessage
 
+class AdminComplianceTicketIndexView(IndexView):
+    def get_edit_url(self, instance):
+        return None
+
+    def get_list_more_buttons(self, instance):
+        buttons = super().get_list_more_buttons(instance)
+        for item in buttons:
+            if hasattr(item, "label") and (str(item.label) == "Inspect" or item.label == "Inspect"):
+                item.label = "View"
+                item.icon_name = "view"
+        return buttons
+
+class AdminComplianceTicketInspectView(InspectView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["instance"] = self.object
+        return context
+
 class AdminComplianceTicketViewSet(ModelViewSet):
     model = AdminComplianceTicket
     menu_label = "Compliance & Tickets"
@@ -14,11 +32,19 @@ class AdminComplianceTicketViewSet(ModelViewSet):
     menu_item_name = "compliance_tickets"
     add_to_admin_menu = False
     exclude_form_fields = []
+    inspect_view_enabled = True
+    inspect_view_class = AdminComplianceTicketInspectView
+    inspect_template_name = "complaint/inspect_ticket.html"
+    index_view_class = AdminComplianceTicketIndexView
+    edit_view_enabled = False  # Link list table rows to inspect view instead of edit view
     list_display = ("campaign", "category", "status", "date")
     list_filter = ("category", "status")
     search_fields = ("campaign__name", "message")
 
 class ComplaintIndexView(IndexView):
+    def get_edit_url(self, instance):
+        return None
+
     def get_list_more_buttons(self, instance):
         buttons = super().get_list_more_buttons(instance)
         for item in buttons:
@@ -62,6 +88,7 @@ class ComplaintViewSet(ModelViewSet):
     inspect_view_class = ComplaintInspectView
     inspect_template_name = "complaint/inspect_complaint.html"
     index_view_class = ComplaintIndexView
+    edit_view_enabled = False  # Link list table rows to inspect view instead of edit view
     list_display = ("id", "user", "category", "subject", "status", "created_at")
     list_export = ("id", "user__username", "campaign__name", "category", "subject", "description", "status", "admin_reply", "created_at")
     list_filter = ("status", "category")
