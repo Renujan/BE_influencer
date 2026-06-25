@@ -2,6 +2,8 @@ from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup,
 from wagtail.snippets.models import register_snippet
 from wagtail import hooks
 from wagtail.admin.views.generic.models import MenuItem as GenericMenuItem
+from django.shortcuts import redirect
+from django.contrib import messages
 from django.urls import path, reverse
 from .models import Campaign, CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform
 from .views import download_campaign_pdf_view
@@ -38,6 +40,21 @@ class CampaignInspectView(InspectView):
         context["files"] = campaign.files.all()
         context["tickets"] = campaign.tickets.all()
         return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        status = request.POST.get("status")
+        admin_review = request.POST.get("admin_review")
+
+        if status in [choice[0] for choice in self.object.STATUS_CHOICES]:
+            self.object.status = status
+
+        self.object.admin_review = admin_review or ""
+        self.object.save()
+
+        messages.success(request, f"Campaign status successfully updated to '{self.object.status}'.")
+        return redirect(self.request.path)
+
 
 class CampaignViewSet(SnippetViewSet):
     model = Campaign
