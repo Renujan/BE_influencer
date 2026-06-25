@@ -1,7 +1,7 @@
 from django.shortcuts import redirect
 from django.contrib import messages
 from wagtail import hooks
-from wagtail.admin.viewsets.model import ModelViewSet
+from wagtail.admin.viewsets.model import ModelViewSet, ModelViewSetGroup
 from wagtail.admin.views.generic.models import InspectView, IndexView
 from campegin.models import AdminComplianceTicket
 from complaint.models import Complaint, SupportMessage
@@ -76,11 +76,11 @@ class ComplaintInspectView(InspectView):
 class ComplaintViewSet(ModelViewSet):
     model = Complaint
     url_namespace = "complaint_admin"
-    menu_label = "Complaints & Tickets"
+    menu_label = "Tickets"
     icon = "warning"
     menu_icon = "warning"
     menu_item_name = "complaints_tickets"
-    add_to_admin_menu = True
+    add_to_admin_menu = False
     exclude_form_fields = []
     create_view_enabled = False  # Disable manual creation, hide add button
     list_display_add_buttons = None  # Hide add button from list display
@@ -113,20 +113,23 @@ class SupportMessageViewSet(ModelViewSet):
     icon = "mail"
     menu_icon = "mail"
     menu_item_name = "support_chats"
-    add_to_admin_menu = True
+    add_to_admin_menu = False
     exclude_form_fields = []
     list_display = ("id", "user", "sender_role", "message", "created_at")
     list_filter = ("sender_role",)
     search_fields = ("message", "user__username")
+
+class ComplaintGroup(ModelViewSetGroup):
+    items = (ComplaintViewSet, SupportMessageViewSet)
+    menu_label = "Complaints"
+    menu_icon = "warning"
+    menu_name = "complaints_group"
+    menu_order = 150
 
 @hooks.register("register_admin_viewset")
 def register_compliance_ticket_viewset():
     return AdminComplianceTicketViewSet()
 
 @hooks.register("register_admin_viewset")
-def register_complaint_viewset():
-    return ComplaintViewSet()
-
-@hooks.register("register_admin_viewset")
-def register_support_message_viewset():
-    return SupportMessageViewSet()
+def register_complaint_group_viewset():
+    return ComplaintGroup()
