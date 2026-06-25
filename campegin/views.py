@@ -48,7 +48,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
             qs = qs.filter(status=status_param)
         return qs.distinct()
 
-    def create(self, request, *args, **kwargs):
+ges    def create(self, request, *args, **kwargs):
         data = request.data.copy()
         # Remove file objects so CharField serialization does not throw errors
         for field in ["voice_brief", "screenshare_brief", "video_brief"]:

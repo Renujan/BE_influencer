@@ -1,3 +1,5 @@
+import os
+from django.core.files.storage import default_storage
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -75,3 +77,34 @@ class ChangePasswordView(APIView):
         update_session_auth_hash(request, user)
         
         return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
+
+class UploadAvatarView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        file_obj = request.FILES.get("avatar") or request.FILES.get("file")
+        if not file_obj:
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+            return Response({"error": "Invalid file type. Only image files are allowed."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = request.user
+        role = "business" if hasattr(user, "business_profile") else "influencer"
+        profile = user.business_profile if role == "business" else user.creator_profile
+        
+        file_name = f"avatars/{role}_{user.id}{ext}"
+        if default_storage.exists(file_name):
+            default_storage.delete(file_name)
+            
+        saved_path = default_storage.save(file_name, file_obj)
+        avatar_url = default_storage.url(saved_path)
+        
+        if not avatar_url.startswith('http') and not avatar_url.startswith('/'):
+            avatar_url = '/' + avatar_url
+            
+        profile.avatar_url = avatar_url
+        profile.save()
+        
+        return Response({"avatar_url": avatar_url}, status=status.HTTP_200_OK)

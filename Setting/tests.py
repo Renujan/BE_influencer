@@ -183,3 +183,17 @@ class SettingAPITests(APITestCase):
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["error"], "Invalid current password")
+
+    def test_upload_avatar_success(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.client.force_authenticate(user=self.creator_user)
+        url = reverse("upload_avatar")
+        
+        avatar_file = SimpleUploadedFile("avatar.png", b"file_content", content_type="image/png")
+        response = self.client.post(url, {"avatar": avatar_file}, format="multipart")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("avatar_url", response.data)
+        
+        self.creator_profile.refresh_from_db()
+        self.assertEqual(self.creator_profile.avatar_url, response.data["avatar_url"])
