@@ -1,7 +1,7 @@
 from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet
 from campegin.models import AdminComplianceTicket
-from complaint.models import Complaint
+from complaint.models import Complaint, SupportMessage
 
 class AdminComplianceTicketViewSet(ModelViewSet):
     model = AdminComplianceTicket
@@ -43,6 +43,19 @@ class ComplaintViewSet(ModelViewSet):
         
         return NoAddComplaintPermissionPolicy(self.model)
 
+class SupportMessageViewSet(ModelViewSet):
+    model = SupportMessage
+    url_namespace = "support_message_admin"
+    menu_label = "Support Chats"
+    icon = "mail"
+    menu_icon = "mail"
+    menu_item_name = "support_chats"
+    add_to_admin_menu = True
+    exclude_form_fields = []
+    list_display = ("id", "user", "sender_role", "message", "created_at")
+    list_filter = ("sender_role",)
+    search_fields = ("message", "user__username")
+
 @hooks.register("register_admin_viewset")
 def register_compliance_ticket_viewset():
     return AdminComplianceTicketViewSet()
@@ -50,3 +63,7 @@ def register_compliance_ticket_viewset():
 @hooks.register("register_admin_viewset")
 def register_complaint_viewset():
     return ComplaintViewSet()
+
+@hooks.register("register_admin_viewset")
+def register_support_message_viewset():
+    return SupportMessageViewSet()

@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
-from complaint.models import Complaint
+from complaint.models import Complaint, SupportMessage
 from notifications.models import Notification
 import json
 
@@ -85,3 +85,88 @@ class ComplaintAppTests(TestCase):
         self.assertEqual(len(data["complaints"]), 2)
         self.assertEqual(data["complaints"][0]["subject"], "Bug 2")
         self.assertEqual(data["complaints"][1]["subject"], "Bug 1")
+
+    def test_list_chat_messages_empty(self):
+        """
+        Verify that listing chat messages is empty initially.
+        """
+        response = self.client.get(
+            "/api/complaints/chat/list/",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["messages"], [])
+
+    def test_send_chat_message_success(self):
+        """
+        Verify user can send message and receives automatic simulated admin response.
+        """
+        payload = {
+            "message": "I have a payment dispute."
+        }
+        response = self.client.post(
+            "/api/complaints/chat/send/",
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertIn("user_message", data)
+        self.assertIn("admin_message", data)
+        self.assertEqual(data["user_message"]["message"], "I have a payment dispute.")
+        self.assertIn("escrow", data["admin_message"]["message"].lower() or "payment" in data["admin_message"]["message"].lower())
+
+        # Verify DB entries
+        messages = SupportMessage.objects.filter(user=self.user).order_by("created_at")
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0].sender_role, "user")
+        self.assertEqual(messages[0].message, "I have a payment dispute.")
+        self.assertEqual(messages[1].sender_role, "admin")
+
+    def test_list_chat_messages_populated(self):
+        """
+        Verify list API returns existing chat history in order.
+        """
+        SupportMessage.objects.create(user=self.user, sender_role="user", message="Hello admin")
+        SupportMessage.objects.create(user=self.user, sender_role="admin", message="Hi user")
+
+        response = self.client.get(
+            "/api/complaints/chat/list/",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data["messages"]), 2)
+        self.assertEqual(data["messages"][0]["message"], "Hello admin")
+        self.assertEqual(data["messages"][1]["message"], "Hi user")
+
+    def test_send_chat_message_missing_field(self):
+        """
+        Verify API returns error when message is empty or missing.
+        """
+        payload = {}
+        response = self.client.post(
+            "/api/complaints/chat/send/",
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertIn("error", data)
+
+    def test_chat_unauthorized(self):
+        """
+        Verify that unauthorized requests fail.
+        """
+        response_list = self.client.get("/api/complaints/chat/list/")
+        self.assertEqual(response_list.status_code, 401)
+
+        response_send = self.client.post(
+            "/api/complaints/chat/send/",
+            data=json.dumps({"message": "test"}),
+            content_type="application/json"
+        )
+        self.assertEqual(response_send.status_code, 401)
