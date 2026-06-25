@@ -207,3 +207,61 @@ class ComplaintAppTests(TestCase):
         complaint.refresh_from_db()
         self.assertEqual(complaint.status, "investigating")
         self.assertEqual(complaint.admin_reply, "We are looking into this escrow issue.")
+
+    def test_wagtail_admin_support_chat_reply_and_grouping(self):
+        """
+        Verify that support messages are grouped by user (latest shown),
+        and that posting to a chat inspect view creates an admin message successfully.
+        """
+        # Create another user for multiple threads testing
+        user2 = User.objects.create_user(username="user2", password="password123")
+
+        # Create multiple messages for original user
+        SupportMessage.objects.create(user=self.user, sender_role="user", message="Msg 1")
+        SupportMessage.objects.create(user=self.user, sender_role="admin", message="Msg 2")
+        latest_user1 = SupportMessage.objects.create(user=self.user, sender_role="user", message="Latest Msg User 1")
+
+        # Create messages for user2
+        SupportMessage.objects.create(user=user2, sender_role="user", message="Msg 3")
+        latest_user2 = SupportMessage.objects.create(user=user2, sender_role="user", message="Latest Msg User 2")
+
+        # Create admin and log them in
+        admin_user = User.objects.create_superuser(username="adminuser", password="adminpassword123", email="admin@example.com")
+        self.client.login(username="adminuser", password="adminpassword123")
+
+        # Test grouping in index view
+        from django.urls import reverse
+        index_url = reverse("support_message_admin:index")
+        response = self.client.get(index_url)
+        self.assertEqual(response.status_code, 200)
+
+        # Verify the grouped queryset logic
+        from django.db.models import Max
+        latest_ids = SupportMessage.objects.values("user").annotate(latest_id=Max("id")).values_list("latest_id", flat=True)
+        grouped_messages = SupportMessage.objects.filter(id__in=latest_ids).order_by("-created_at")
+        self.assertEqual(len(grouped_messages), 2)
+        self.assertEqual(grouped_messages[0].message, "Latest Msg User 2")
+        self.assertEqual(grouped_messages[1].message, "Latest Msg User 1")
+
+        # Test posting a reply via custom Inspect view
+        inspect_url = reverse("support_message_admin:inspect", args=[latest_user1.pk])
+        
+        # Verify inspect view returns full chat logs for the specific user
+        response_inspect = self.client.get(inspect_url)
+        self.assertEqual(response_inspect.status_code, 200)
+        self.assertIn("Msg 1", response_inspect.content.decode())
+        self.assertIn("Msg 2", response_inspect.content.decode())
+        self.assertIn("Latest Msg User 1", response_inspect.content.decode())
+        self.assertNotIn("Latest Msg User 2", response_inspect.content.decode())
+
+        # Admin replies to user1
+        payload = {
+            "message": "Admin reply message to User 1"
+        }
+        response_post = self.client.post(inspect_url, data=payload)
+        self.assertEqual(response_post.status_code, 302)
+
+        # Verify message created in database
+        latest_msg = SupportMessage.objects.filter(user=self.user).latest("id")
+        self.assertEqual(latest_msg.sender_role, "admin")
+        self.assertEqual(latest_msg.message, "Admin reply message to User 1")

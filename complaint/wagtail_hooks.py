@@ -106,6 +106,44 @@ class ComplaintViewSet(ModelViewSet):
         
         return NoAddComplaintPermissionPolicy(self.model)
 
+class SupportMessageIndexView(IndexView):
+    def get_queryset(self):
+        from django.db.models import Max
+        # Fetch only the latest SupportMessage ID for each user to group chat threads
+        latest_ids = SupportMessage.objects.values("user").annotate(latest_id=Max("id")).values_list("latest_id", flat=True)
+        return SupportMessage.objects.filter(id__in=latest_ids).order_by("-created_at")
+
+    def get_edit_url(self, instance):
+        return None
+
+    def get_list_more_buttons(self, instance):
+        buttons = super().get_list_more_buttons(instance)
+        for item in buttons:
+            if hasattr(item, "label") and (str(item.label) == "Inspect" or item.label == "Inspect"):
+                item.label = "Chat"
+                item.icon_name = "comment"
+        return buttons
+
+class SupportMessageInspectView(InspectView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["instance"] = self.object
+        # Retrieve complete chronological conversation history for this user
+        context["chat_messages"] = SupportMessage.objects.filter(user=self.object.user).order_by("created_at")
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        message_text = request.POST.get("message")
+        if message_text and message_text.strip():
+            SupportMessage.objects.create(
+                user=self.object.user,
+                sender_role="admin",
+                message=message_text.strip()
+            )
+            messages.success(request, "Reply sent successfully.")
+        return redirect(self.request.path)
+
 class SupportMessageViewSet(ModelViewSet):
     model = SupportMessage
     url_namespace = "support_message_admin"
@@ -115,6 +153,13 @@ class SupportMessageViewSet(ModelViewSet):
     menu_item_name = "support_chats"
     add_to_admin_menu = False
     exclude_form_fields = []
+    inspect_view_enabled = True
+    inspect_view_class = SupportMessageInspectView
+    inspect_template_name = "complaint/inspect_support_chat.html"
+    index_view_class = SupportMessageIndexView
+    edit_view_enabled = False
+    create_view_enabled = False  # Hides 'Add support message' button
+    list_display_add_buttons = None
     list_display = ("id", "user", "sender_role", "message", "created_at")
     list_filter = ("sender_role",)
     search_fields = ("message", "user__username")
