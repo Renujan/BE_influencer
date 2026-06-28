@@ -14,6 +14,7 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 
 try:
+    # pyrefly: ignore [missing-import]
     from .local import *
 except ImportError:
     pass
