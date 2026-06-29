@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    SendOTPView, VerifyOTPView, RegisterView, LoginView, MeView,
+    SendOTPView, VerifyOTPView, RegisterView, LoginView, GoogleLoginView, MeView,
     NicheViewSet, BusinessTypeViewSet, CreatorViewSet, BusinessViewSet, PendingUsersView, ApproveUserView, RestrictUserView,
     SubmitVerificationView, CreatorSubmitVerificationView
 )
@@ -19,6 +19,7 @@ urlpatterns = [
     path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/signup/", RegisterView.as_view(), name="signup"),
     path("auth/login/", LoginView.as_view(), name="login"),
+    path("auth/google/", GoogleLoginView.as_view(), name="google_login"),
     path("auth/me/", MeView.as_view(), name="me"),
     path("auth/business/submit-verification/", SubmitVerificationView.as_view(), name="submit_verification"),
     path("auth/creator/submit-verification/", CreatorSubmitVerificationView.as_view(), name="creator_submit_verification"),

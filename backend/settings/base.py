@@ -224,3 +224,9 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "amplinow2026@gmail.com"
 EMAIL_HOST_PASSWORD = "rtqpgnqxjpahlbpt"
 DEFAULT_FROM_EMAIL = "Ampli Platform <atom.lift.1@gmail.com>"
+
+# Google OAuth settings
+import os
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "58882443328-44qvoqt4rbai23n9fpv75c54k72dtk0c.apps.googleusercontent.com")
+
+

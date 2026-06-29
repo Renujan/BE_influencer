@@ -419,6 +419,267 @@ class LoginView(APIView):
             "profile": profile_data
         })
 
+class GoogleLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        access_token = request.data.get("access_token")
+        requested_role = request.data.get("role")  # "business" or "influencer"
+
+        if not access_token:
+            return Response({"error": "Access token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Verify access token with Google
+        import json
+        import urllib.request
+        from django.conf import settings
+        
+        userinfo_url = f"https://www.googleapis.com/oauth2/v3/userinfo?access_token={access_token}"
+        try:
+            req = urllib.request.Request(userinfo_url)
+            with urllib.request.urlopen(req) as response:
+                google_user = json.loads(response.read().decode("utf-8"))
+        except Exception as e:
+            return Response({"error": f"Failed to verify token with Google: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = google_user.get("email")
+        if not email:
+            return Response({"error": "Google account does not provide email"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Verify client ID if GOOGLE_CLIENT_ID is configured in settings
+        google_client_id = getattr(settings, "GOOGLE_CLIENT_ID", None)
+        if google_client_id:
+            try:
+                tokeninfo_url = f"https://oauth2.googleapis.com/tokeninfo?access_token={access_token}"
+                req = urllib.request.Request(tokeninfo_url)
+                with urllib.request.urlopen(req) as response:
+                    tokeninfo = json.loads(response.read().decode("utf-8"))
+                aud = tokeninfo.get("aud") or tokeninfo.get("azp")
+                if aud != google_client_id:
+                    return Response({"error": "Invalid token audience"}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                # Log error or return failure if token audience verification failed
+                return Response({"error": f"Failed to verify token audience: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        given_name = google_user.get("given_name", "")
+        family_name = google_user.get("family_name", "")
+        picture = google_user.get("picture", "")
+
+        # 2. Check if user already exists
+        user = User.objects.filter(email=email).first()
+        is_new_user = False
+
+        if user:
+            # Check if they have a profile
+            has_business = hasattr(user, "business_profile")
+            has_creator = hasattr(user, "creator_profile")
+            
+            if not has_business and not has_creator:
+                # User exists but has no profile yet - create it now!
+                if not requested_role or requested_role not in ["business", "influencer"]:
+                    return Response({"error": "Role is required to create a profile"}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Check if registration details are provided or if we need to collect them
+                is_registering = False
+                if requested_role == "business" and request.data.get("company_name"):
+                    is_registering = True
+                elif requested_role == "influencer" and (request.data.get("niches") or request.data.get("phone")):
+                    is_registering = True
+
+                if not is_registering:
+                    return Response({
+                        "is_new_user": True,
+                        "email": email,
+                        "given_name": given_name,
+                        "family_name": family_name,
+                        "picture": picture
+                    }, status=status.HTTP_200_OK)
+
+                if requested_role == "business":
+                    profile = BusinessProfile.objects.create(
+                        user=user,
+                        company_name=request.data.get("company_name") or f"{given_name} {family_name}".strip() or user.username,
+                        website=request.data.get("website", ""),
+                        phone=request.data.get("phone", ""),
+                        avatar_url=picture,
+                        otp_verified=True,
+                        status="pending"
+                    )
+                    business_types_data = request.data.get("business_types", [])
+                    if isinstance(business_types_data, str):
+                        business_types_data = [x.strip() for x in business_types_data.split(",") if x.strip()]
+                    for bt_name in business_types_data:
+                        bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
+                        profile.business_types.add(bt_obj)
+                    profile.save()
+                else:
+                    profile = CreatorProfile.objects.create(
+                        user=user,
+                        phone=request.data.get("phone", ""),
+                        avatar_url=picture,
+                        otp_verified=True,
+                        status="pending"
+                    )
+                    niches_data = request.data.get("niches", [])
+                    if isinstance(niches_data, str):
+                        niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
+                    for niche_name in niches_data:
+                        niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
+                        profile.niches.add(niche_obj)
+                    profile.save()
+                
+                password = request.data.get("password")
+                if password:
+                    user.set_password(password)
+                    user.save()
+                is_new_user = True
+            else:
+                profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+                if profile and profile.status == "restricted":
+                    return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+                
+                actual_role = "business" if has_business else "influencer"
+                if requested_role and requested_role != actual_role:
+                    role_label = "Business" if requested_role == "business" else "Creator"
+                    return Response(
+                        {"error": f"No {role_label} account found with these credentials. Please check your role selection."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+
+                # If registering and profile already exists (e.g. placeholder created by SendOTPView), update it!
+                is_registering = False
+                if requested_role == "business" and request.data.get("company_name"):
+                    is_registering = True
+                elif requested_role == "influencer" and (request.data.get("niches") or request.data.get("phone")):
+                    is_registering = True
+
+                if is_registering:
+                    if requested_role == "business":
+                        profile.company_name = request.data.get("company_name") or profile.company_name or user.username
+                        profile.website = request.data.get("website", "")
+                        profile.phone = request.data.get("phone", "")
+                        profile.avatar_url = picture or profile.avatar_url
+                        profile.otp_verified = True
+                        
+                        business_types_data = request.data.get("business_types", [])
+                        if isinstance(business_types_data, str):
+                            business_types_data = [x.strip() for x in business_types_data.split(",") if x.strip()]
+                        for bt_name in business_types_data:
+                            bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
+                            profile.business_types.add(bt_obj)
+                        profile.save()
+                    else:
+                        profile.phone = request.data.get("phone", "")
+                        profile.avatar_url = picture or profile.avatar_url
+                        profile.otp_verified = True
+                        
+                        niches_data = request.data.get("niches", [])
+                        if isinstance(niches_data, str):
+                            niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
+                        for niche_name in niches_data:
+                            niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
+                            profile.niches.add(niche_obj)
+                        profile.save()
+                    
+                    password = request.data.get("password")
+                    if password:
+                        user.set_password(password)
+                        user.save()
+                    is_new_user = True
+        else:
+            # New user registration
+            if not requested_role or requested_role not in ["business", "influencer"]:
+                return Response({"error": "Role is required for new registration"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if registration details are provided or if we need to collect them
+            is_registering = False
+            if requested_role == "business" and request.data.get("company_name"):
+                is_registering = True
+            elif requested_role == "influencer" and (request.data.get("niches") or request.data.get("phone")):
+                is_registering = True
+
+            if not is_registering:
+                return Response({
+                    "is_new_user": True,
+                    "email": email,
+                    "given_name": given_name,
+                    "family_name": family_name,
+                    "picture": picture
+                }, status=status.HTTP_200_OK)
+
+            # Generate unique username
+            base_username = email.split("@")[0] or "google_user"
+            username = base_username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+
+            # Create User
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=given_name,
+                last_name=family_name
+            )
+            password = request.data.get("password")
+            if password:
+                user.set_password(password)
+            else:
+                user.set_unusable_password()
+            user.save()
+            is_new_user = True
+
+            # Create appropriate profile based on requested role and save details
+            if requested_role == "business":
+                profile = BusinessProfile.objects.create(
+                    user=user,
+                    company_name=request.data.get("company_name") or f"{given_name} {family_name}".strip() or username,
+                    website=request.data.get("website", ""),
+                    phone=request.data.get("phone", ""),
+                    avatar_url=picture,
+                    otp_verified=True,
+                    status="pending"
+                )
+                business_types_data = request.data.get("business_types", [])
+                if isinstance(business_types_data, str):
+                    business_types_data = [x.strip() for x in business_types_data.split(",") if x.strip()]
+                for bt_name in business_types_data:
+                    bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
+                    profile.business_types.add(bt_obj)
+                profile.save()
+            else:
+                profile = CreatorProfile.objects.create(
+                    user=user,
+                    phone=request.data.get("phone", ""),
+                    avatar_url=picture,
+                    otp_verified=True,
+                    status="pending"
+                )
+                niches_data = request.data.get("niches", [])
+                if isinstance(niches_data, str):
+                    niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
+                for niche_name in niches_data:
+                    niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
+                    profile.niches.add(niche_obj)
+                profile.save()
+
+        # 3. Retrieve or create Auth Token
+        token, _ = Token.objects.get_or_create(user=user)
+        role = "business" if hasattr(user, "business_profile") else "influencer"
+
+        if role == "business":
+            profile_data = BusinessProfileSerializer(user.business_profile).data
+        else:
+            profile_data = CreatorProfileSerializer(user.creator_profile).data
+
+        return Response({
+            "token": token.key,
+            "role": role,
+            "profile": profile_data,
+            "is_new_user": is_new_user
+        }, status=status.HTTP_200_OK if not is_new_user else status.HTTP_201_CREATED)
+
 class MeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
