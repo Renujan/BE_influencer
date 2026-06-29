@@ -66,8 +66,8 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             "facebook_url", "instagram_handle", "tiktok_handle", "youtube_url",
             "linkedin_url", "twitter_handle", "otp_verified", "status",
             "verification_documents_submitted", "business_reg_number", "business_document",
-             "campaign_count", "creators_hired_count", "total_spent", "settings"
-            "is_featured", "featured_at"
+             "campaign_count", "creators_hired_count", "total_spent", "settings",
+             "is_featured", "featured_at"
         ]
 
     def get_campaign_count(self, instance):
