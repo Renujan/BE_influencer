@@ -6,7 +6,7 @@ from django.utils.translation import gettext as _
 from django.urls import reverse, path
 from .models import BusinessProfile, CreatorProfile, Niche, BusinessType
 from Setting.models import CreatorSettings, BusinessSettings
-from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view, admin_approve_creator_view, admin_restrict_creator_view
+from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view, admin_approve_creator_view, admin_restrict_creator_view, admin_toggle_featured_view
 
 # Custom Index View to change the "Inspect" button label to "View"
 class ProfileIndexView(IndexView):
@@ -91,7 +91,7 @@ class BusinessProfileViewSet(ModelViewSet):
     menu_icon = "user"
     menu_item_name = "business_profiles"
     add_to_admin_menu = False
-    exclude_form_fields = []
+    exclude_form_fields = ["featured_at"]
     create_view_enabled = False
     
     # Custom Index and Inspect Views
@@ -125,7 +125,7 @@ class CreatorProfileViewSet(ModelViewSet):
     menu_icon = "user"
     menu_item_name = "creator_profiles"
     add_to_admin_menu = False
-    exclude_form_fields = []
+    exclude_form_fields = ["featured_at"]
     create_view_enabled = False
     
     # Custom Index and Inspect Views
@@ -343,5 +343,7 @@ def register_user_profile_pdf_urls():
         path("user-profiles/restrict/<int:profile_id>/", admin_restrict_business_view, name="wagtail_restrict_business"),
         path("user-profiles/approve-creator/<int:profile_id>/", admin_approve_creator_view, name="wagtail_approve_creator"),
         path("user-profiles/restrict-creator/<int:profile_id>/", admin_restrict_creator_view, name="wagtail_restrict_creator"),
+        path("user-profiles/toggle-featured/<str:profile_type>/<int:profile_id>/", admin_toggle_featured_view, name="wagtail_toggle_featured"),
     ]
+
 

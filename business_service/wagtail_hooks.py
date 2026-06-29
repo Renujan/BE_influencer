@@ -30,6 +30,7 @@ class BusinessServiceInspectView(InspectView):
         service = self.object
         context["instance"] = service
         context["bullet_points"] = [pt.strip() for pt in service.bullet_points.split("\n") if pt.strip()] if service.bullet_points else []
+        context["service_requests"] = service.requests.select_related("user").order_by("-created_at")
         return context
 
 class BusinessServiceRequestInspectView(InspectView):

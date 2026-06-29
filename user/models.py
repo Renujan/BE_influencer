@@ -52,9 +52,21 @@ class BusinessProfile(models.Model):
     business_reg_number = models.CharField(max_length=100, blank=True, null=True)
     business_document = models.FileField(upload_to="business_documents/", blank=True, null=True)
 
+    # Featured (Top) business flag and timestamp
+    is_featured = models.BooleanField(default=False, help_text="Mark as Featured / Top profile")
+    featured_at = models.DateTimeField(null=True, blank=True)
+
     @property
     def role(self):
         return "business"
+
+    def save(self, *args, **kwargs):
+        from django.utils import timezone
+        if self.is_featured and not self.featured_at:
+            self.featured_at = timezone.now()
+        elif not self.is_featured:
+            self.featured_at = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.company_name or self.user.username} (Business)"
@@ -92,9 +104,21 @@ class CreatorProfile(models.Model):
     document_back = models.FileField(upload_to="creator_documents/", blank=True, null=True)
     other_details = models.TextField(blank=True, null=True)
 
+    # Featured (Top) creator flag and timestamp
+    is_featured = models.BooleanField(default=False, help_text="Mark as Featured / Top profile")
+    featured_at = models.DateTimeField(null=True, blank=True)
+
     @property
     def role(self):
         return "creator"
+
+    def save(self, *args, **kwargs):
+        from django.utils import timezone
+        if self.is_featured and not self.featured_at:
+            self.featured_at = timezone.now()
+        elif not self.is_featured:
+            self.featured_at = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.username} (Creator)"

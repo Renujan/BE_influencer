@@ -495,6 +495,8 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
         niche = self.request.query_params.get("niche")
         location = self.request.query_params.get("location")
         er_min = self.request.query_params.get("er_min")
+        budget_min = self.request.query_params.get("budget_min")
+        budget_max = self.request.query_params.get("budget_max")
 
         if niche and niche.lower() != "all":
             qs = qs.filter(niches__name__iexact=niche)
@@ -505,7 +507,42 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
         if er_min:
             qs = qs.filter(user__social_accounts__engagement_rate__gte=float(er_min))
 
+        if budget_min:
+            qs = qs.filter(rates__price__gte=float(budget_min))
+
+        if budget_max:
+            qs = qs.filter(rates__price__lte=float(budget_max))
+
         return qs.distinct()
+
+    @action(detail=False, methods=["get"], permission_classes=[permissions.AllowAny])
+    def featured(self, request):
+        qs = CreatorProfile.objects.filter(is_featured=True, status="approved").order_by("-featured_at")
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, pk=None):
+        try:
+            if pk.isdigit():
+                obj = get_object_or_404(CreatorProfile, pk=pk)
+            else:
+                obj = get_object_or_404(CreatorProfile, user__username=pk)
+        except Exception:
+            obj = get_object_or_404(CreatorProfile, user__username=pk)
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data)
+
+
+class BusinessViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = BusinessProfile.objects.filter(status="approved")
+    serializer_class = BusinessProfileSerializer
+    permission_classes = [permissions.AllowAny]
+
+    @action(detail=False, methods=["get"], permission_classes=[permissions.AllowAny])
+    def featured(self, request):
+        qs = BusinessProfile.objects.filter(is_featured=True, status="approved").order_by("-featured_at")
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
 
 from rest_framework.permissions import IsAdminUser
@@ -796,4 +833,37 @@ def download_profile_pdf_view(request, profile_type, profile_id):
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
     return HttpResponse("Error generating PDF", status=500)
+
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_toggle_featured_view(request, profile_type, profile_id):
+    if profile_type == "creator":
+        profile = get_object_or_404(CreatorProfile, pk=profile_id)
+        if request.method == "POST":
+            profile.is_featured = (request.POST.get("is_featured") == "on")
+        else:
+            profile.is_featured = not profile.is_featured
+        profile.save()
+        status_msg = "featured (Top Creator)" if profile.is_featured else "removed from featured"
+        messages.success(request, f"Creator '{profile.user.username}' is now {status_msg}.")
+        redirect_url_name = "creatorprofile:inspect"
+        fallback_url = "/admin/creatorprofile/"
+    else:
+        profile = get_object_or_404(BusinessProfile, pk=profile_id)
+        if request.method == "POST":
+            profile.is_featured = (request.POST.get("is_featured") == "on")
+        else:
+            profile.is_featured = not profile.is_featured
+        profile.save()
+        status_msg = "featured (Top Business)" if profile.is_featured else "removed from featured"
+        messages.success(request, f"Business '{profile.company_name or profile.user.username}' is now {status_msg}.")
+        redirect_url_name = "businessprofile:inspect"
+        fallback_url = "/admin/businessprofile/"
+
+    try:
+        from django.urls import reverse
+        return redirect(reverse(redirect_url_name, args=[profile_id]))
+    except Exception:
+        return redirect(fallback_url)
+
 

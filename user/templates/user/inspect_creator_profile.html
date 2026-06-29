@@ -583,9 +583,20 @@
         <div>
             <h3 class="custom-section-title" style="border-bottom: 2px solid #ef4444;">Admin Moderation Controls</h3>
             <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-                <div>
-                    <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: #1e293b;">Change Account Status</h4>
-                    <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">Review the creator's profile, and choose to approve the creator to grant system access or restrict them to block access.</p>
+                <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+                    <div>
+                        <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: #1e293b;">Change Account Status</h4>
+                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">Review the creator's profile, and choose to approve the creator to grant system access or restrict them to block access.</p>
+                    </div>
+                    <div style="border-left: 1px solid #cbd5e1; padding-left: 24px; display: flex; align-items: center;">
+                        <form method="POST" action="{% url 'wagtail_toggle_featured' 'creator' instance.id %}">
+                            {% csrf_token %}
+                            <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; color: #1e293b; cursor: pointer; user-select: none; margin: 0;">
+                                <input type="checkbox" name="is_featured" {% if instance.is_featured %}checked{% endif %} onchange="this.form.submit()" style="width: 20px; height: 20px; cursor: pointer; accent-color: #06b6d4;">
+                                <span>Featured (Top Creator)</span>
+                            </label>
+                        </form>
+                    </div>
                 </div>
                 <div style="display: flex; gap: 12px;">
                     {% if instance.status != "approved" %}
