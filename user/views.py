@@ -176,17 +176,19 @@ class VerifyOTPView(APIView):
             return Response({"error": "otp_code is required"}, status=status.HTTP_400_BAD_REQUEST)
         
         user = None
+        requested_role = request.data.get("role", "influencer")
+
         if otp_method == "mobile" and phone and not email:
-            # Look up by phone
+            # Look up by phone using the role-specific profile table
             profile = None
-            role = request.data.get("role", "influencer")
-            if role == "business":
+            if requested_role == "business":
                 profile = BusinessProfile.objects.filter(phone=phone).first()
             else:
                 profile = CreatorProfile.objects.filter(phone=phone).first()
                 
             if not profile:
-                return Response({"error": "Profile not found for this mobile number"}, status=status.HTTP_404_NOT_FOUND)
+                role_label = "Business" if requested_role == "business" else "Creator"
+                return Response({"error": f"No {role_label} account found with this mobile number."}, status=status.HTTP_404_NOT_FOUND)
             user = profile.user
         else:
             if not email:
@@ -194,6 +196,15 @@ class VerifyOTPView(APIView):
             user = User.objects.filter(email=email).first()
             if not user:
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Validate role against the actual account type
+            actual_role = "business" if hasattr(user, "business_profile") else "influencer"
+            if requested_role != actual_role:
+                role_label = "Business" if requested_role == "business" else "Creator"
+                return Response(
+                    {"error": f"No {role_label} account found with these credentials. Please check your role selection."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
 
         if not profile:
@@ -222,7 +233,7 @@ class VerifyOTPView(APIView):
             })
         else:
             return Response({"error": "Invalid OTP code"}, status=status.HTTP_400_BAD_REQUEST)
-
+        
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -364,6 +375,8 @@ class LoginView(APIView):
     def post(self, request):
         username_or_email = request.data.get("username") or request.data.get("email")
         password = request.data.get("password")
+        # Role the user selected on the login screen ("business" or "influencer")
+        requested_role = request.data.get("role")
 
         if not username_or_email or not password:
             return Response({"error": "Credentials are required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -381,9 +394,20 @@ class LoginView(APIView):
         if profile and profile.status == "restricted":
             return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
 
+        # Determine the actual role of this account
+        actual_role = "business" if hasattr(user, "business_profile") else "influencer"
+
+        # If the frontend sent a role, enforce it — reject cross-role logins
+        if requested_role and requested_role != actual_role:
+            role_label = "Business" if requested_role == "business" else "Creator"
+            return Response(
+                {"error": f"No {role_label} account found with these credentials. Please check your role selection."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         token, _ = Token.objects.get_or_create(user=user)
-        
-        role = "business" if hasattr(user, "business_profile") else "influencer"
+
+        role = actual_role
         if role == "business":
             profile_data = BusinessProfileSerializer(user.business_profile).data
         else:
@@ -403,10 +427,16 @@ class MeView(APIView):
         role = "business" if hasattr(user, "business_profile") else "influencer"
         if role == "business":
             profile = user.business_profile
-            return Response(BusinessProfileSerializer(profile).data)
+            profile_data = BusinessProfileSerializer(profile).data
         else:
             profile, _ = CreatorProfile.objects.get_or_create(user=user)
-            return Response(CreatorProfileSerializer(profile).data)
+            profile_data = CreatorProfileSerializer(profile).data
+
+        # Always include role so the frontend can stay authoritative
+        return Response({
+            "role": role,
+            **profile_data,
+        })
 
     def put(self, request):
         user = request.user

@@ -30,8 +30,14 @@ class CreatorSettings(models.Model):
     currency = models.CharField(max_length=20, default="USD ($)")
     rate_card_note = models.TextField(blank=True, null=True, default="")
 
+    # Appearance
+    theme = models.CharField(max_length=20, default="Light")
+    accent_color = models.CharField(max_length=50, default="oklch(0.7 0.2 25)")
+    sidebar_layout = models.CharField(max_length=20, default="Full")
+
     def __str__(self):
         return f"{self.creator.user.username}'s Settings (Creator)"
+
 
 @register_snippet
 class CreatorPayoutMethod(models.Model):

@@ -55,6 +55,8 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
     campaign_count = serializers.SerializerMethodField()
     creators_hired_count = serializers.SerializerMethodField()
     total_spent = serializers.SerializerMethodField()
+    settings = serializers.SerializerMethodField()
+
 
     class Meta:
         model = BusinessProfile
@@ -64,7 +66,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             "facebook_url", "instagram_handle", "tiktok_handle", "youtube_url",
             "linkedin_url", "twitter_handle", "otp_verified", "status",
             "verification_documents_submitted", "business_reg_number", "business_document",
-            "campaign_count", "creators_hired_count", "total_spent",
+             "campaign_count", "creators_hired_count", "total_spent", "settings"
             "is_featured", "featured_at"
         ]
 
@@ -78,6 +80,12 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         from django.db.models import Sum
         total = instance.user.brand_campaigns.aggregate(Sum('budget'))['budget__sum']
         return float(total) if total else 0.0
+    
+    def get_settings(self, instance):
+        from Setting.models import BusinessSettings
+        from Setting.serializers import BusinessSettingsSerializer
+        settings_obj, _ = BusinessSettings.objects.get_or_create(business=instance)
+        return BusinessSettingsSerializer(settings_obj).data
 
 class CreatorProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
@@ -86,6 +94,7 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
     social_accounts = CreatorSocialAccountSerializer(source="user.social_accounts", many=True, read_only=True)
     campaign_count = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
+    settings = serializers.SerializerMethodField()
 
     class Meta:
         model = CreatorProfile
@@ -94,7 +103,7 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
             "wallet_balance", "next_payout_date", "niches", "rates",
             "social_accounts", "otp_verified", "status",
             "verification_documents_submitted", "document_type", "document_front",
-            "document_back", "other_details", "campaign_count", "followers_count",
+            "document_back", "other_details", "campaign_count", "followers_count", "settings",
             "is_featured", "featured_at"
         ]
 
@@ -105,4 +114,11 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
         accounts = instance.user.social_accounts.all()
         total = sum(parse_followers(a.followers_count) for a in accounts)
         return format_followers(total) if total > 0 else "0"
+    
+    def get_settings(self, instance):
+        from Setting.models import CreatorSettings
+        from Setting.serializers import CreatorSettingsSerializer
+        settings_obj, _ = CreatorSettings.objects.get_or_create(creator=instance)
+        return CreatorSettingsSerializer(settings_obj).data
+
 
