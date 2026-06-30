@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
-from complaint.models import Complaint
+from complaint.models import Complaint, SupportMessage
 from notifications.models import Notification
 
 @receiver(post_save, sender=Complaint)
@@ -16,7 +16,7 @@ def handle_complaint_created(sender, instance, created, **kwargs):
             message=f"Ticket #{instance.id} '{instance.subject}' was raised by {instance.user.username}.",
             category="compliance",
             icon="fas fa-exclamation-circle",
-            target_url=f"/admin/snippets/complaint/complaint/inspect/{instance.id}/"
+            target_url=f"/admin/complaint/inspect/{instance.id}/"
         )
 
 @receiver(pre_save, sender=Complaint)
@@ -34,7 +34,7 @@ def handle_complaint_reply_notification(sender, instance, **kwargs):
                     message=f"Admin replied to ticket #{instance.id} '{instance.subject}': \"{instance.admin_reply[:60]}...\"",
                     category="compliance",
                     icon="fas fa-reply",
-                    target_url=f"/admin/snippets/complaint/complaint/inspect/{instance.id}/"
+                    target_url=f"/admin/complaint/inspect/{instance.id}/"
                 )
                 if instance.user.email:
                     try:
@@ -61,4 +61,20 @@ def handle_complaint_reply_notification(sender, instance, **kwargs):
                         print(f"Error sending support ticket reply email: {e}")
         except Complaint.DoesNotExist:
             pass
+
+
+@receiver(post_save, sender=SupportMessage)
+def handle_support_message_created(sender, instance, created, **kwargs):
+    """
+    Auto-triggers a Notification in the admin panel when a user sends a support chat message.
+    """
+    if created and instance.sender_role == "user":
+        Notification.objects.create(
+            title="New Support Message",
+            message=f"New chat message from {instance.user.username}: \"{instance.message[:60]}...\"",
+            category="compliance",
+            icon="fas fa-comment",
+            target_url=f"/admin/supportmessage/inspect/{instance.id}/"
+        )
+
 
