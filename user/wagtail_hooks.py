@@ -8,8 +8,31 @@ from .models import BusinessProfile, CreatorProfile, Niche, BusinessType
 from Setting.models import CreatorSettings, BusinessSettings
 from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view, admin_approve_creator_view, admin_restrict_creator_view, admin_toggle_featured_view
 
+from wagtail.admin.ui.tables import TitleColumn
+from django.utils.translation import gettext_lazy
+
 # Custom Index View to change the "Inspect" button label to "View"
 class ProfileIndexView(IndexView):
+    def _get_title_column(self, field_name, column_class=TitleColumn, **kwargs):
+        column_class = self._get_title_column_class(column_class)
+
+        def get_url(instance):
+            # Prefer inspect_url over edit_url so clicking the user links directly opens the View (inspect) page
+            if inspect_url := self.get_inspect_url(instance):
+                return inspect_url
+            return self.get_edit_url(instance)
+
+        if not self.model:
+            return column_class(
+                "name",
+                label=gettext_lazy("Name"),
+                accessor=str,
+                get_url=get_url,
+            )
+        return self._get_custom_column(
+            field_name, column_class, get_url=get_url, **kwargs
+        )
+
     def get_list_more_buttons(self, instance):
         buttons = super().get_list_more_buttons(instance)
         
