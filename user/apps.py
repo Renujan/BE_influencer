@@ -9,7 +9,7 @@ class UserConfig(AppConfig):
 
 
 class CustomUsersAppConfig(WagtailUsersAppConfig):
-    user_viewset = "user.viewsets.CustomUserViewSet"
+    user_viewset = "user.views.CustomUserViewSet"
 
 
 

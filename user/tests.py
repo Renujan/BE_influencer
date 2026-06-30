@@ -245,4 +245,60 @@ class BusinessVerificationAPITests(APITestCase):
         self.assertEqual(response.data["error"], "Creator profile is already verified and approved.")
 
 
+class UserFilterAdminTests(APITestCase):
+    def setUp(self):
+        # 1. Staff / default user (no profile)
+        self.staff_user = User.objects.create_user(
+            username="staff_user",
+            email="staff@test.com",
+            password="password123",
+            is_staff=True
+        )
+
+        # 2. Business user (has BusinessProfile)
+        self.business_user = User.objects.create_user(
+            username="business_user",
+            email="business@test.com",
+            password="password123"
+        )
+        self.business_profile = BusinessProfile.objects.create(user=self.business_user)
+
+        # 3. Creator user (has CreatorProfile)
+        self.creator_user = User.objects.create_user(
+            username="creator_user",
+            email="creator@test.com",
+            password="password123"
+        )
+        self.creator_profile = CreatorProfile.objects.create(user=self.creator_user)
+
+    def test_custom_user_viewset_excludes_profiles(self):
+        from user.views import CustomUserViewSet
+        index_view = CustomUserViewSet.index_view_class()
+        index_view.model_fields = []  # avoid dependency on model fields checks
+        index_view.queryset = User.objects.all()
+        qs = index_view.get_base_queryset()
+        
+        # Should only contain staff_user, not business_user or creator_user
+        self.assertIn(self.staff_user, qs)
+        self.assertNotIn(self.business_user, qs)
+        self.assertNotIn(self.creator_user, qs)
+
+    def test_custom_user_admin_excludes_profiles(self):
+        from django.contrib.admin import AdminSite
+        from user.admin import CustomUserAdmin
+        
+        site = AdminSite()
+        admin_instance = CustomUserAdmin(User, site)
+        
+        from django.test import RequestFactory
+        rf = RequestFactory()
+        request = rf.get("/admin/auth/user/")
+        qs = admin_instance.get_queryset(request)
+        
+        self.assertIn(self.staff_user, qs)
+        self.assertNotIn(self.business_user, qs)
+        self.assertNotIn(self.creator_user, qs)
+
+
+
 

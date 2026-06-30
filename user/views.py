@@ -1158,3 +1158,36 @@ def admin_toggle_featured_view(request, profile_type, profile_id):
         return redirect(fallback_url)
 
 
+from wagtail.users.views.users import (
+    UserViewSet as WagtailUserViewSet,
+    IndexView as WagtailUserIndexView,
+    EditView as WagtailUserEditView,
+    DeleteView as WagtailUserDeleteView,
+)
+
+class CustomUserIndexView(WagtailUserIndexView):
+    def get_base_queryset(self):
+        qs = super().get_base_queryset()
+        # Filter out users who have an associated Business or Creator profile.
+        # This keeps the Settings > Users admin list restricted to staff, superusers, and manually-added admin accounts.
+        return qs.filter(business_profile__isnull=True, creator_profile__isnull=True)
+
+class CustomUserEditView(WagtailUserEditView):
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Filter out users who have an associated Business or Creator profile.
+        return qs.filter(business_profile__isnull=True, creator_profile__isnull=True)
+
+class CustomUserDeleteView(WagtailUserDeleteView):
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Filter out users who have an associated Business or Creator profile.
+        return qs.filter(business_profile__isnull=True, creator_profile__isnull=True)
+
+class CustomUserViewSet(WagtailUserViewSet):
+    index_view_class = CustomUserIndexView
+    edit_view_class = CustomUserEditView
+    delete_view_class = CustomUserDeleteView
+
+
+
