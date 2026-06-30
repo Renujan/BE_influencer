@@ -8,8 +8,31 @@ from django.urls import path, reverse
 from .models import Campaign, CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform
 from .views import download_campaign_pdf_view
 
+from wagtail.admin.ui.tables import TitleColumn
+from django.utils.translation import gettext_lazy
+
 # Custom Index View to customize labels and add PDF download button
 class CampaignIndexView(IndexView):
+    def _get_title_column(self, field_name, column_class=TitleColumn, **kwargs):
+        column_class = self._get_title_column_class(column_class)
+
+        def get_url(instance):
+            # Prefer inspect_url over edit_url so clicking the campaign name link directly opens the View (inspect) page
+            if inspect_url := self.get_inspect_url(instance):
+                return inspect_url
+            return self.get_edit_url(instance)
+
+        if not self.model:
+            return column_class(
+                "name",
+                label=gettext_lazy("Name"),
+                accessor=str,
+                get_url=get_url,
+            )
+        return self._get_custom_column(
+            field_name, column_class, get_url=get_url, **kwargs
+        )
+
     def get_list_more_buttons(self, instance):
         buttons = super().get_list_more_buttons(instance)
         download_url = reverse("download_campaign_pdf", args=[instance.pk])
