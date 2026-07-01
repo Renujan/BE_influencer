@@ -1,5 +1,6 @@
 from django.db.models import Sum, Count
 from django.contrib.auth.models import User
+from django.conf import settings
 from user.models import CreatorProfile, BusinessProfile, CreatorSocialAccount
 from campegin.models import Campaign, Deliverable, PaymentInstallment, AdminComplianceTicket
 from notifications.models import Notification
@@ -82,4 +83,5 @@ def dashboard_metrics(request):
         'chart_names': chart_names,
         'unread_notifications_count': unread_notifications_count,
         'recent_notifications': recent_notifications,
+        'FRONTEND_URL': getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
     }

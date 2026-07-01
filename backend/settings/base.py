@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+import os
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -189,7 +190,7 @@ WAGTAILSEARCH_BACKENDS = {
 
 # Base URL to use when referring to full URLs within the Wagtail admin backend -
 # e.g. in notification emails. Don't include '/admin' or a trailing slash
-WAGTAILADMIN_BASE_URL = "http://example.com"
+WAGTAILADMIN_BASE_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000")
 
 # Allowed file extensions for documents in the document library.
 # This can be omitted to allow all files, but note that this may present a security risk
@@ -226,7 +227,10 @@ EMAIL_HOST_PASSWORD = "rtqpgnqxjpahlbpt"
 DEFAULT_FROM_EMAIL = "Ampli Platform <atom.lift.1@gmail.com>"
 
 # Google OAuth settings
-import os
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "58882443328-44qvoqt4rbai23n9fpv75c54k72dtk0c.apps.googleusercontent.com")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000")
+
 
 
