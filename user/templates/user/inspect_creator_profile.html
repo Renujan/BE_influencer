@@ -192,6 +192,19 @@
         margin-bottom: 6px;
     }
 
+    .tag-item.enabled {
+        background-color: #dcfce7;
+        color: #166534;
+        border: none;
+    }
+
+    .tag-item.disabled {
+        background-color: #f1f5f9;
+        color: #64748b;
+        border: none;
+    }
+
+
     .custom-table-wrapper {
         border: 1px solid #e2e8f0;
         border-radius: 6px;
@@ -320,6 +333,11 @@
                 <div class="custom-form-group">
                     <label class="custom-form-label">Location</label>
                     <div class="custom-form-control-readonly">{{ instance.location|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Country</label>
+                    <div class="custom-form-control-readonly">{{ instance.country.name|default:"-" }}</div>
                 </div>
 
                 <div class="custom-form-group">
@@ -463,20 +481,20 @@
                 <div class="custom-form-group">
                     <label class="custom-form-label">Email Notifications</label>
                     <div class="custom-form-control-readonly" style="flex-wrap: wrap; gap: 8px; min-height: auto; padding: 12px;">
-                        <span class="tag-item" style="background-color: {% if settings.email_new_brand_requests %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Brand Requests: {% if settings.email_new_brand_requests %}On{% else %}Off{% endif %}</span>
-                        <span class="tag-item" style="background-color: {% if settings.email_campaign_updates %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Campaign Updates: {% if settings.email_campaign_updates %}On{% else %}Off{% endif %}</span>
-                        <span class="tag-item" style="background-color: {% if settings.email_payment_received %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Payments: {% if settings.email_payment_received %}On{% else %}Off{% endif %}</span>
-                        <span class="tag-item" style="background-color: {% if settings.email_profile_views %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Profile Views: {% if settings.email_profile_views %}On{% else %}Off{% endif %}</span>
-                        <span class="tag-item" style="background-color: {% if settings.email_platform_news %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Platform News: {% if settings.email_platform_news %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.email_new_brand_requests %}enabled{% else %}disabled{% endif %}">Brand Requests: {% if settings.email_new_brand_requests %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.email_campaign_updates %}enabled{% else %}disabled{% endif %}">Campaign Updates: {% if settings.email_campaign_updates %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.email_payment_received %}enabled{% else %}disabled{% endif %}">Payments: {% if settings.email_payment_received %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.email_profile_views %}enabled{% else %}disabled{% endif %}">Profile Views: {% if settings.email_profile_views %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.email_platform_news %}enabled{% else %}disabled{% endif %}">Platform News: {% if settings.email_platform_news %}On{% else %}Off{% endif %}</span>
                     </div>
                 </div>
 
                 <div class="custom-form-group">
                     <label class="custom-form-label">Push Notifications</label>
                     <div class="custom-form-control-readonly" style="flex-wrap: wrap; gap: 8px; min-height: auto; padding: 12px;">
-                        <span class="tag-item" style="background-color: {% if settings.push_brand_requests %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Brand Requests: {% if settings.push_brand_requests %}On{% else %}Off{% endif %}</span>
-                        <span class="tag-item" style="background-color: {% if settings.push_message_replies %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Message Replies: {% if settings.push_message_replies %}On{% else %}Off{% endif %}</span>
-                        <span class="tag-item" style="background-color: {% if settings.push_payout_completed %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Payouts: {% if settings.push_payout_completed %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.push_brand_requests %}enabled{% else %}disabled{% endif %}">Brand Requests: {% if settings.push_brand_requests %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.push_message_replies %}enabled{% else %}disabled{% endif %}">Message Replies: {% if settings.push_message_replies %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.push_payout_completed %}enabled{% else %}disabled{% endif %}">Payouts: {% if settings.push_payout_completed %}On{% else %}Off{% endif %}</span>
                     </div>
                 </div>
 

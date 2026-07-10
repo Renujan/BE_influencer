@@ -93,6 +93,8 @@ class CampaignViewSet(SnippetViewSet):
     inspect_view_enabled = True
     inspect_view_class = CampaignInspectView
     inspect_template_name = "campegin/inspect_campaign.html"
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
     @property
     def permission_policy(self):
@@ -106,7 +108,7 @@ class CampaignViewSet(SnippetViewSet):
         
         return NoAddCampaignPermissionPolicy(self.model)
     list_display = ("name", "brand", "creator", "status", "budget", "progress")
-    list_export = ("id", "name", "brand__username", "creator__username", "status", "budget", "start_date", "progress")
+    list_export = ("id", "name", "brand.username", "creator.username", "status", "budget", "start_date", "progress")
     list_filter = ("status",)
     search_fields = ("name", "brand__username", "creator__username")
 
@@ -116,6 +118,8 @@ class CampaignCategoryViewSet(SnippetViewSet):
     icon = "tag"
     add_to_admin_menu = False
     list_export = ("id", "name")
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
 class CampaignLanguageViewSet(SnippetViewSet):
     model = CampaignLanguage
@@ -123,6 +127,8 @@ class CampaignLanguageViewSet(SnippetViewSet):
     icon = "globe"
     add_to_admin_menu = False
     list_export = ("id", "name")
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
 class CampaignDeliverableViewSet(SnippetViewSet):
     model = CampaignDeliverable
@@ -130,6 +136,8 @@ class CampaignDeliverableViewSet(SnippetViewSet):
     icon = "doc-full"
     add_to_admin_menu = False
     list_export = ("id", "name")
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
 class CampaignPlatformViewSet(SnippetViewSet):
     model = CampaignPlatform
@@ -137,6 +145,8 @@ class CampaignPlatformViewSet(SnippetViewSet):
     icon = "desktop"
     add_to_admin_menu = False
     list_export = ("id", "platform_id", "name", "color", "logo")
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
 class CampaignWorkspaceGroup(SnippetViewSetGroup):
     items = (CampaignViewSet, CampaignCategoryViewSet, CampaignLanguageViewSet, CampaignDeliverableViewSet, CampaignPlatformViewSet)

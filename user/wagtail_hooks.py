@@ -4,7 +4,7 @@ from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
 from wagtail.admin.views.generic.models import InspectView, IndexView, MenuItem as GenericMenuItem
 from django.utils.translation import gettext as _
 from django.urls import reverse, path
-from .models import BusinessProfile, CreatorProfile, Niche, BusinessType
+from .models import BusinessProfile, CreatorProfile, Niche, BusinessType, Country
 from Setting.models import CreatorSettings, BusinessSettings
 from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view, admin_approve_creator_view, admin_restrict_creator_view, admin_toggle_featured_view
 
@@ -122,9 +122,11 @@ class BusinessProfileViewSet(ModelViewSet):
     inspect_view_enabled = True
     inspect_view_class = BusinessProfileInspectView
     inspect_template_name = "user/inspect_business_profile.html"
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
     
-    list_display = ("user", "company_name", "business_type", "phone", "otp_verified", "status")
-    list_export = ("id", "user__username", "user__email", "company_name", "business_type", "website", "phone", "otp_verified", "status")
+    list_display = ("user", "company_name", "business_type", "phone", "otp_verified", "status", "country")
+    list_export = ("id", "user.username", "user.email", "company_name", "business_type", "website", "phone", "otp_verified", "status", "country.name")
     list_filter = ("otp_verified", "status")
     search_fields = ("user__username", "user__email", "company_name", "phone")
 
@@ -156,9 +158,11 @@ class CreatorProfileViewSet(ModelViewSet):
     inspect_view_enabled = True
     inspect_view_class = CreatorProfileInspectView
     inspect_template_name = "user/inspect_creator_profile.html"
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
     
-    list_display = ("user", "phone", "location", "wallet_balance", "otp_verified", "status")
-    list_export = ("id", "user__username", "user__email", "phone", "location", "wallet_balance", "otp_verified", "status")
+    list_display = ("user", "phone", "location", "country", "wallet_balance", "otp_verified", "status")
+    list_export = ("id", "user.username", "user.email", "phone", "location", "country.name", "wallet_balance", "otp_verified", "status")
     list_filter = ("otp_verified", "status")
     search_fields = ("user__username", "user__email", "phone", "location")
 
@@ -185,6 +189,8 @@ class NicheViewSet(ModelViewSet):
     form_fields = ["name"]
     list_display = ("name",)
     search_fields = ("name",)
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
 # 4. Business Type Admin Viewset
 class BusinessTypeViewSet(ModelViewSet):
@@ -197,6 +203,22 @@ class BusinessTypeViewSet(ModelViewSet):
     form_fields = ["name"]
     list_display = ("name",)
     search_fields = ("name",)
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
+
+# 5. Country Admin Viewset
+class CountryViewSet(ModelViewSet):
+    model = Country
+    menu_label = "Countries"
+    icon = "globe"
+    menu_icon = "globe"
+    menu_item_name = "countries"
+    add_to_admin_menu = False
+    form_fields = ["name"]
+    list_display = ("name",)
+    search_fields = ("name",)
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
 # Register Viewsets directly (without adding to sidebar directly, as we will use custom menu items)
 @hooks.register("register_admin_viewset")
@@ -215,6 +237,10 @@ def register_niche_viewset():
 def register_business_type_viewset():
     return BusinessTypeViewSet()
 
+@hooks.register("register_admin_viewset")
+def register_country_viewset():
+    return CountryViewSet()
+
 # Register custom nested menu items
 @hooks.register("register_admin_menu_item")
 def register_custom_user_profiles_menu():
@@ -223,6 +249,7 @@ def register_custom_user_profiles_menu():
     biz_type = BusinessTypeViewSet()
     creator_prof = CreatorProfileViewSet()
     niche = NicheViewSet()
+    country_viewset = CountryViewSet()
 
     # Business Submenu Items
     business_menu = Menu(items=[
@@ -250,6 +277,7 @@ def register_custom_user_profiles_menu():
     main_menu = Menu(items=[
         business_submenu,
         creator_submenu,
+        MenuItem("Countries", country_viewset.menu_url, icon_name="globe"),
     ])
 
     return SubmenuMenuItem(

@@ -179,6 +179,11 @@
         color: #991b1b;
     }
 
+    .badge-status.not-configured {
+        background-color: #f1f5f9;
+        color: #64748b;
+    }
+
     .tag-item {
         display: inline-block;
         background-color: #f1f5f9;
@@ -191,6 +196,19 @@
         margin-right: 6px;
         margin-bottom: 6px;
     }
+
+    .tag-item.enabled {
+        background-color: #dcfce7;
+        color: #166534;
+        border: none;
+    }
+
+    .tag-item.disabled {
+        background-color: #f1f5f9;
+        color: #64748b;
+        border: none;
+    }
+
 
     .custom-footer-actions {
         display: flex;
@@ -310,6 +328,11 @@
                 <div class="custom-form-group">
                     <label class="custom-form-label">Time Zone</label>
                     <div class="custom-form-control-readonly">{{ instance.time_zone|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Country</label>
+                    <div class="custom-form-control-readonly">{{ instance.country.name|default:"-" }}</div>
                 </div>
 
                 <div class="custom-form-group">
@@ -468,7 +491,7 @@
                 <div class="custom-form-group">
                     <label class="custom-form-label">Slack Workspace</label>
                     <div class="custom-form-control-readonly">
-                        <span class="badge-status {% if settings.slack_connected %}approved{% else %}pending{% endif %}" style="background-color: {% if settings.slack_connected %}#dcfce7{% else %}#f1f5f9{% endif %}; color: {% if settings.slack_connected %}#166534{% else %}#64748b{% endif %};">
+                        <span class="badge-status {% if settings.slack_connected %}approved{% else %}not-configured{% endif %}">
                             {% if settings.slack_connected %}Connected{% else %}Not Configured{% endif %}
                         </span>
                     </div>
@@ -477,7 +500,7 @@
                 <div class="custom-form-group">
                     <label class="custom-form-label">Google Analytics 4</label>
                     <div class="custom-form-control-readonly">
-                        <span class="badge-status {% if settings.google_analytics_connected %}approved{% else %}pending{% endif %}" style="background-color: {% if settings.google_analytics_connected %}#dcfce7{% else %}#f1f5f9{% endif %}; color: {% if settings.google_analytics_connected %}#166534{% else %}#64748b{% endif %};">
+                        <span class="badge-status {% if settings.google_analytics_connected %}approved{% else %}not-configured{% endif %}">
                             {% if settings.google_analytics_connected %}Connected{% else %}Not Configured{% endif %}
                         </span>
                     </div>
@@ -486,7 +509,7 @@
                 <div class="custom-form-group">
                     <label class="custom-form-label">HubSpot CRM</label>
                     <div class="custom-form-control-readonly">
-                        <span class="badge-status {% if settings.hubspot_connected %}approved{% else %}pending{% endif %}" style="background-color: {% if settings.hubspot_connected %}#dcfce7{% else %}#f1f5f9{% endif %}; color: {% if settings.hubspot_connected %}#166534{% else %}#64748b{% endif %};">
+                        <span class="badge-status {% if settings.hubspot_connected %}approved{% else %}not-configured{% endif %}">
                             {% if settings.hubspot_connected %}Connected{% else %}Not Configured{% endif %}
                         </span>
                     </div>
@@ -495,7 +518,7 @@
                 <div class="custom-form-group">
                     <label class="custom-form-label">Notion Workspace</label>
                     <div class="custom-form-control-readonly">
-                        <span class="badge-status {% if settings.notion_connected %}approved{% else %}pending{% endif %}" style="background-color: {% if settings.notion_connected %}#dcfce7{% else %}#f1f5f9{% endif %}; color: {% if settings.notion_connected %}#166534{% else %}#64748b{% endif %};">
+                        <span class="badge-status {% if settings.notion_connected %}approved{% else %}not-configured{% endif %}">
                             {% if settings.notion_connected %}Connected{% else %}Not Configured{% endif %}
                         </span>
                     </div>
@@ -504,7 +527,7 @@
                 <div class="custom-form-group">
                     <label class="custom-form-label">Zapier Automation</label>
                     <div class="custom-form-control-readonly">
-                        <span class="badge-status {% if settings.zapier_connected %}approved{% else %}pending{% endif %}" style="background-color: {% if settings.zapier_connected %}#dcfce7{% else %}#f1f5f9{% endif %}; color: {% if settings.zapier_connected %}#166534{% else %}#64748b{% endif %};">
+                        <span class="badge-status {% if settings.zapier_connected %}approved{% else %}not-configured{% endif %}">
                             {% if settings.zapier_connected %}Connected{% else %}Not Configured{% endif %}
                         </span>
                     </div>
@@ -521,18 +544,18 @@
                 <div class="custom-form-group">
                     <label class="custom-form-label">Campaign Alerts</label>
                     <div class="custom-form-control-readonly" style="flex-wrap: wrap; gap: 8px; min-height: auto; padding: 12px;">
-                        <span class="tag-item" style="background-color: {% if settings.campaign_new_approved %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Admin Approval: {% if settings.campaign_new_approved %}On{% else %}Off{% endif %}</span>
-                        <span class="tag-item" style="background-color: {% if settings.campaign_influencer_accepts %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Influencer Accepts: {% if settings.campaign_influencer_accepts %}On{% else %}Off{% endif %}</span>
-                        <span class="tag-item" style="background-color: {% if settings.campaign_deliverable_submitted %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Deliverable Submitted: {% if settings.campaign_deliverable_submitted %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.campaign_new_approved %}enabled{% else %}disabled{% endif %}">Admin Approval: {% if settings.campaign_new_approved %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.campaign_influencer_accepts %}enabled{% else %}disabled{% endif %}">Influencer Accepts: {% if settings.campaign_influencer_accepts %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.campaign_deliverable_submitted %}enabled{% else %}disabled{% endif %}">Deliverable Submitted: {% if settings.campaign_deliverable_submitted %}On{% else %}Off{% endif %}</span>
                     </div>
                 </div>
 
                 <div class="custom-form-group">
                     <label class="custom-form-label">Payment &amp; Platform Reports</label>
                     <div class="custom-form-control-readonly" style="flex-wrap: wrap; gap: 8px; min-height: auto; padding: 12px;">
-                        <span class="tag-item" style="background-color: {% if settings.payment_released %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Payment Released: {% if settings.payment_released %}On{% else %}Off{% endif %}</span>
-                        <span class="tag-item" style="background-color: {% if settings.platform_product_updates %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Product Updates: {% if settings.platform_product_updates %}On{% else %}Off{% endif %}</span>
-                        <span class="tag-item" style="background-color: {% if settings.platform_weekly_report %}#dcfce7; color: #166534{% else %}#f1f5f9; color: #64748b{% endif %}; border: none;">Weekly digest report: {% if settings.platform_weekly_report %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.payment_released %}enabled{% else %}disabled{% endif %}">Payment Released: {% if settings.payment_released %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.platform_product_updates %}enabled{% else %}disabled{% endif %}">Product Updates: {% if settings.platform_product_updates %}On{% else %}Off{% endif %}</span>
+                        <span class="tag-item {% if settings.platform_weekly_report %}enabled{% else %}disabled{% endif %}">Weekly digest report: {% if settings.platform_weekly_report %}On{% else %}Off{% endif %}</span>
                     </div>
                 </div>
 

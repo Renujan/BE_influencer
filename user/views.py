@@ -12,10 +12,10 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from .models import (
-    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount
+    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount, Country
 )
 from .serializers import (
-    NicheSerializer, BusinessTypeSerializer, BusinessProfileSerializer, CreatorProfileSerializer
+    NicheSerializer, BusinessTypeSerializer, BusinessProfileSerializer, CreatorProfileSerializer, CountrySerializer
 )
 from notifications.models import Notification
 
@@ -317,6 +317,17 @@ class RegisterView(APIView):
             profile.time_zone = request.data.get("time_zone", "UTC+5:30")
             profile.bio = request.data.get("bio", "")
             
+            # Country
+            country_data = request.data.get("country")
+            if country_data:
+                try:
+                    country_obj = Country.objects.get(id=country_data)
+                except (ValueError, Country.DoesNotExist):
+                    country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                profile.country = country_obj
+            else:
+                profile.country = None
+            
             # Add business types (handles both string and list format)
             business_types_data = request.data.get("business_types", [])
             if isinstance(business_types_data, str):
@@ -349,6 +360,17 @@ class RegisterView(APIView):
             profile.phone = request.data.get("phone", "")
             profile.location = request.data.get("location", "")
             profile.bio = request.data.get("bio", "")
+            
+            # Country
+            country_data = request.data.get("country")
+            if country_data:
+                try:
+                    country_obj = Country.objects.get(id=country_data)
+                except (ValueError, Country.DoesNotExist):
+                    country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                profile.country = country_obj
+            else:
+                profile.country = None
             
             # Add niches for influencers (handles both string and list format)
             niches_data = request.data.get("niches", [])
@@ -496,6 +518,14 @@ class GoogleLoginView(APIView):
                     }, status=status.HTTP_200_OK)
 
                 if requested_role == "business":
+                    country_obj = None
+                    country_data = request.data.get("country")
+                    if country_data:
+                        try:
+                            country_obj = Country.objects.get(id=country_data)
+                        except (ValueError, Country.DoesNotExist):
+                            country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+
                     profile = BusinessProfile.objects.create(
                         user=user,
                         company_name=request.data.get("company_name") or f"{given_name} {family_name}".strip() or user.username,
@@ -503,7 +533,8 @@ class GoogleLoginView(APIView):
                         phone=request.data.get("phone", ""),
                         avatar_url=picture,
                         otp_verified=True,
-                        status="pending"
+                        status="pending",
+                        country=country_obj
                     )
                     business_types_data = request.data.get("business_types", [])
                     if isinstance(business_types_data, str):
@@ -513,12 +544,21 @@ class GoogleLoginView(APIView):
                         profile.business_types.add(bt_obj)
                     profile.save()
                 else:
+                    country_obj = None
+                    country_data = request.data.get("country")
+                    if country_data:
+                        try:
+                            country_obj = Country.objects.get(id=country_data)
+                        except (ValueError, Country.DoesNotExist):
+                            country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+
                     profile = CreatorProfile.objects.create(
                         user=user,
                         phone=request.data.get("phone", ""),
                         avatar_url=picture,
                         otp_verified=True,
-                        status="pending"
+                        status="pending",
+                        country=country_obj
                     )
                     niches_data = request.data.get("niches", [])
                     if isinstance(niches_data, str):
@@ -561,6 +601,15 @@ class GoogleLoginView(APIView):
                         profile.avatar_url = picture or profile.avatar_url
                         profile.otp_verified = True
                         
+                        # Country
+                        country_data = request.data.get("country")
+                        if country_data:
+                            try:
+                                country_obj = Country.objects.get(id=country_data)
+                            except (ValueError, Country.DoesNotExist):
+                                country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                            profile.country = country_obj
+                        
                         business_types_data = request.data.get("business_types", [])
                         if isinstance(business_types_data, str):
                             business_types_data = [x.strip() for x in business_types_data.split(",") if x.strip()]
@@ -573,6 +622,15 @@ class GoogleLoginView(APIView):
                         profile.avatar_url = picture or profile.avatar_url
                         profile.otp_verified = True
                         
+                        # Country
+                        country_data = request.data.get("country")
+                        if country_data:
+                            try:
+                                country_obj = Country.objects.get(id=country_data)
+                            except (ValueError, Country.DoesNotExist):
+                                country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                            profile.country = country_obj
+
                         niches_data = request.data.get("niches", [])
                         if isinstance(niches_data, str):
                             niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
@@ -632,6 +690,14 @@ class GoogleLoginView(APIView):
 
             # Create appropriate profile based on requested role and save details
             if requested_role == "business":
+                country_obj = None
+                country_data = request.data.get("country")
+                if country_data:
+                    try:
+                        country_obj = Country.objects.get(id=country_data)
+                    except (ValueError, Country.DoesNotExist):
+                        country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+
                 profile = BusinessProfile.objects.create(
                     user=user,
                     company_name=request.data.get("company_name") or f"{given_name} {family_name}".strip() or username,
@@ -639,7 +705,8 @@ class GoogleLoginView(APIView):
                     phone=request.data.get("phone", ""),
                     avatar_url=picture,
                     otp_verified=True,
-                    status="pending"
+                    status="pending",
+                    country=country_obj
                 )
                 business_types_data = request.data.get("business_types", [])
                 if isinstance(business_types_data, str):
@@ -649,12 +716,21 @@ class GoogleLoginView(APIView):
                     profile.business_types.add(bt_obj)
                 profile.save()
             else:
+                country_obj = None
+                country_data = request.data.get("country")
+                if country_data:
+                    try:
+                        country_obj = Country.objects.get(id=country_data)
+                    except (ValueError, Country.DoesNotExist):
+                        country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+
                 profile = CreatorProfile.objects.create(
                     user=user,
                     phone=request.data.get("phone", ""),
                     avatar_url=picture,
                     otp_verified=True,
-                    status="pending"
+                    status="pending",
+                    country=country_obj
                 )
                 niches_data = request.data.get("niches", [])
                 if isinstance(niches_data, str):
@@ -735,6 +811,18 @@ class MeView(APIView):
             profile.time_zone = request.data.get("time_zone", profile.time_zone)
             profile.avatar_url = request.data.get("avatar_url", profile.avatar_url)
             
+            # Country
+            if "country" in request.data:
+                country_data = request.data.get("country")
+                if country_data:
+                    try:
+                        country_obj = Country.objects.get(id=country_data)
+                    except (ValueError, Country.DoesNotExist):
+                        country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                    profile.country = country_obj
+                else:
+                    profile.country = None
+            
             # Socials
             profile.facebook_url = request.data.get("facebook_url", profile.facebook_url)
             profile.instagram_handle = request.data.get("instagram_handle", profile.instagram_handle)
@@ -752,6 +840,18 @@ class MeView(APIView):
             profile.location = request.data.get("location", profile.location)
             profile.avatar_url = request.data.get("avatar_url", profile.avatar_url)
             
+            # Country
+            if "country" in request.data:
+                country_data = request.data.get("country")
+                if country_data:
+                    try:
+                        country_obj = Country.objects.get(id=country_data)
+                    except (ValueError, Country.DoesNotExist):
+                        country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                    profile.country = country_obj
+                else:
+                    profile.country = None
+            
             # Handle niches updates
             if "niches" in request.data:
                 niches_data = request.data.get("niches", [])
@@ -765,6 +865,11 @@ class MeView(APIView):
                     
             profile.save()
             return Response(CreatorProfileSerializer(profile).data)
+
+class CountryViewSet(viewsets.ModelViewSet):
+    queryset = Country.objects.all()
+    serializer_class = CountrySerializer
+    permission_classes = [permissions.AllowAny]
 
 class NicheViewSet(viewsets.ModelViewSet):
     queryset = Niche.objects.all()

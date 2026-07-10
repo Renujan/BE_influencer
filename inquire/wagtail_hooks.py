@@ -16,6 +16,8 @@ class InquiryViewSet(ModelViewSet):
     list_filter = ("role", "status")
     search_fields = ("inquiry_id", "name", "email", "phone", "subject", "message")
     ordering = ("-created_at",)
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
     @property
     def permission_policy(self):

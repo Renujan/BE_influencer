@@ -93,9 +93,11 @@ class BusinessServiceViewSet(SnippetViewSet):
     inspect_template_name = "business_service/inspect_business_service.html"
     index_view_class = BusinessServiceIndexView
     list_display = ("service_id", "title", "provider", "category", "rate", "target_audience", "is_active", "created_at")
-    list_export = ("service_id", "title", "provider", "category__name", "rate", "speed", "description", "bullet_points", "target_audience", "is_active", "created_at", "updated_at")
+    list_export = ("service_id", "title", "provider", "category.name", "rate", "speed", "description", "bullet_points", "target_audience", "is_active", "created_at", "updated_at")
     list_filter = ("category", "target_audience", "is_active")
     search_fields = ("service_id", "title", "provider", "description")
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
 
 class ServiceCategoryViewSet(SnippetViewSet):
@@ -105,6 +107,8 @@ class ServiceCategoryViewSet(SnippetViewSet):
     add_to_admin_menu = False
     list_display = ("name",)
     search_fields = ("name",)
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
 class BusinessServiceRequestViewSet(SnippetViewSet):
     model = BusinessServiceRequest
@@ -117,9 +121,11 @@ class BusinessServiceRequestViewSet(SnippetViewSet):
     create_view_enabled = False
     inspect_template_name = "business_service/inspect_business_service_request.html"
     index_view_class = BusinessServiceRequestIndexView
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
     list_display = ("service", "user", "get_user_role", "budget", "timeline", "status", "created_at")
 
-    list_export = ("id", "service__service_id", "service__title", "user__username", "user__email", "message", "budget", "timeline", "status", "created_at", "updated_at")
+    list_export = ("id", "service.service_id", "service.title", "user.username", "user.email", "message", "budget", "timeline", "status", "created_at", "updated_at")
     list_filter = ("status", "timeline", "service")
     search_fields = ("service__title", "user__username", "message")
 

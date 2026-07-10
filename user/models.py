@@ -3,6 +3,13 @@ from django.contrib.auth.models import User
 from wagtail.snippets.models import register_snippet
 
 @register_snippet
+class Country(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+@register_snippet
 class Niche(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
@@ -23,6 +30,7 @@ class BusinessProfile(models.Model):
     business_type = models.CharField(max_length=255, blank=True, null=True)
     business_types = models.ManyToManyField(BusinessType, blank=True, related_name="businesses")
     website = models.URLField(blank=True, null=True)
+    country = models.ForeignKey("Country", on_delete=models.SET_NULL, null=True, blank=True, related_name="businesses")
     bio = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=30, blank=True, null=True)
     secondary_phone = models.CharField(max_length=30, blank=True, null=True)
@@ -76,6 +84,7 @@ class CreatorProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="creator_profile")
     phone = models.CharField(max_length=30, blank=True, null=True)
     location = models.CharField(max_length=100, blank=True, null=True)
+    country = models.ForeignKey("Country", on_delete=models.SET_NULL, null=True, blank=True, related_name="creators")
     bio = models.TextField(blank=True, null=True)
     avatar_url = models.CharField(max_length=255, blank=True, null=True)
     niches = models.ManyToManyField(Niche, blank=True, related_name="creators")

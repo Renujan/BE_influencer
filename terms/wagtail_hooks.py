@@ -50,6 +50,8 @@ class TermsAndConditionViewSet(ModelViewSet):
     list_export = ("terms_id", "title", "content", "target_audience", "is_active", "created_at", "updated_at")
     list_filter = ("target_audience", "is_active")
     search_fields = ("terms_id", "title", "content")
+    edit_template_name = "wagtailadmin/generic_edit_premium.html"
+    create_template_name = "wagtailadmin/generic_create_premium.html"
 
 @hooks.register("register_admin_viewset")
 def register_terms_and_conditions_viewset():

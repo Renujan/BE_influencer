@@ -2,13 +2,14 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     SendOTPView, VerifyOTPView, RegisterView, LoginView, GoogleLoginView, MeView,
-    NicheViewSet, BusinessTypeViewSet, CreatorViewSet, BusinessViewSet, PendingUsersView, ApproveUserView, RestrictUserView,
+    NicheViewSet, BusinessTypeViewSet, CountryViewSet, CreatorViewSet, BusinessViewSet, PendingUsersView, ApproveUserView, RestrictUserView,
     SubmitVerificationView, CreatorSubmitVerificationView
 )
 
 router = DefaultRouter()
 router.register(r"niches", NicheViewSet, basename="niche")
 router.register(r"business-types", BusinessTypeViewSet, basename="business-type")
+router.register(r"countries", CountryViewSet, basename="country")
 router.register(r"creators", CreatorViewSet, basename="creator")
 router.register(r"businesses", BusinessViewSet, basename="business")
 

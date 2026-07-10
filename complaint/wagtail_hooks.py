@@ -91,7 +91,7 @@ class ComplaintViewSet(ModelViewSet):
     index_view_class = ComplaintIndexView
     edit_view_enabled = False  # Link list table rows to inspect view instead of edit view
     list_display = ("id", "user", "category", "subject", "status", "created_at")
-    list_export = ("id", "user__username", "campaign__name", "category", "subject", "description", "status", "admin_reply", "created_at")
+    list_export = ("id", "user.username", "campaign.name", "category", "subject", "description", "status", "admin_reply", "created_at")
     list_filter = ("status", "category")
     search_fields = ("subject", "description", "user__username")
 

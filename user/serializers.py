@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
-    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount
+    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount, Country
 )
 
 class NicheSerializer(serializers.ModelSerializer):
@@ -12,6 +12,11 @@ class NicheSerializer(serializers.ModelSerializer):
 class BusinessTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusinessType
+        fields = ["id", "name"]
+
+class CountrySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Country
         fields = ["id", "name"]
 
 class CreatorRateSerializer(serializers.ModelSerializer):
@@ -52,6 +57,7 @@ def format_followers(val):
 class BusinessProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     business_types = BusinessTypeSerializer(many=True, read_only=True)
+    country = CountrySerializer(read_only=True)
     campaign_count = serializers.SerializerMethodField()
     creators_hired_count = serializers.SerializerMethodField()
     total_spent = serializers.SerializerMethodField()
@@ -62,7 +68,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         model = BusinessProfile
         fields = [
             "id", "user", "company_name", "business_type", "business_types", "website", "bio",
-            "phone", "secondary_phone", "time_zone", "avatar_url",
+            "phone", "secondary_phone", "time_zone", "avatar_url", "country",
             "facebook_url", "instagram_handle", "tiktok_handle", "youtube_url",
             "linkedin_url", "twitter_handle", "otp_verified", "status",
             "verification_documents_submitted", "business_reg_number", "business_document",
@@ -91,6 +97,7 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     niches = NicheSerializer(many=True, read_only=True)
     rates = CreatorRateSerializer(many=True, read_only=True)
+    country = CountrySerializer(read_only=True)
     social_accounts = CreatorSocialAccountSerializer(source="user.social_accounts", many=True, read_only=True)
     campaign_count = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
@@ -99,7 +106,7 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CreatorProfile
         fields = [
-            "id", "user", "phone", "location", "bio", "avatar_url",
+            "id", "user", "phone", "location", "country", "bio", "avatar_url",
             "wallet_balance", "next_payout_date", "niches", "rates",
             "social_accounts", "otp_verified", "status",
             "verification_documents_submitted", "document_type", "document_front",
