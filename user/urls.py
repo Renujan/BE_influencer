@@ -32,7 +32,8 @@ urlpatterns = [
     path("admin/approve-user/", ApproveUserView.as_view(), name="admin_approve_user"),
     path("admin/restrict-user/", RestrictUserView.as_view(), name="admin_restrict_user"),
     
+    path("creators/save-brand/", toggle_save_brand, name="toggle_save_brand"),
+    
     # Include Router viewsets
     path("", include(router.urls)),
-    path("creators/save-brand/", toggle_save_brand, name="toggle_save_brand"),
 ]
