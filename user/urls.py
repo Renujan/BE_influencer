@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     SendOTPView, VerifyOTPView, RegisterView, LoginView, GoogleLoginView, MeView,
     NicheViewSet, BusinessTypeViewSet, CountryViewSet, CreatorViewSet, BusinessViewSet, PendingUsersView, ApproveUserView, RestrictUserView,
-    SubmitVerificationView, CreatorSubmitVerificationView
+    SubmitVerificationView, CreatorSubmitVerificationView, WithdrawFundsView, toggle_save_brand
 )
 
 router = DefaultRouter()
@@ -24,6 +24,7 @@ urlpatterns = [
     path("auth/me/", MeView.as_view(), name="me"),
     path("auth/business/submit-verification/", SubmitVerificationView.as_view(), name="submit_verification"),
     path("auth/creator/submit-verification/", CreatorSubmitVerificationView.as_view(), name="creator_submit_verification"),
+    path("auth/withdraw/", WithdrawFundsView.as_view(), name="withdraw"),
 
     
     # Admin Moderation endpoints
@@ -33,4 +34,5 @@ urlpatterns = [
     
     # Include Router viewsets
     path("", include(router.urls)),
+    path("creators/save-brand/", toggle_save_brand, name="toggle_save_brand"),
 ]

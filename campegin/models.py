@@ -237,3 +237,24 @@ class CampaignPlatform(models.Model):
 
     def __str__(self):
         return self.name
+
+class Pitch(models.Model):
+    STATUS_CHOICES = (
+        ("pending", "Pending"),
+        ("accepted", "Accepted"),
+        ("declined", "Declined"),
+        ("counter_offer", "Counter Offer"),
+    )
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_pitches")
+    brand = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_pitches")
+    campaign_name = models.CharField(max_length=255)
+    budget = models.DecimalField(max_digits=12, decimal_places=2)
+    sent_date = models.CharField(max_length=100)
+    tags = models.JSONField(default=list, blank=True, null=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="pending")
+    description = models.TextField(blank=True, null=True)
+    deliverables = models.JSONField(default=list, blank=True, null=True)
+    counter_offer = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.campaign_name} - {self.status}"

@@ -117,6 +117,8 @@ class CreatorProfile(models.Model):
     is_featured = models.BooleanField(default=False, help_text="Mark as Featured / Top profile")
     featured_at = models.DateTimeField(null=True, blank=True)
 
+    saved_brands = models.ManyToManyField('BusinessProfile', blank=True, related_name="saved_by_creators")
+
     @property
     def role(self):
         return "creator"

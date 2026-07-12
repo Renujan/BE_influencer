@@ -2,7 +2,7 @@ import random
 from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
@@ -1294,5 +1294,62 @@ class CustomUserViewSet(WagtailUserViewSet):
     edit_view_class = CustomUserEditView
     delete_view_class = CustomUserDeleteView
 
+class WithdrawFundsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        amount = request.data.get("amount")
+
+        if not amount:
+            return Response({"error": "Amount is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from decimal import Decimal, InvalidOperation
+        try:
+            amount = Decimal(str(amount))
+        except InvalidOperation:
+            return Response({"error": "Invalid amount format."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if amount <= Decimal('0'):
+            return Response({"error": "Amount must be greater than zero."}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile = getattr(user, "creator_profile", None)
+        if not profile:
+            return Response({"error": "Only creators can withdraw funds."}, status=status.HTTP_403_FORBIDDEN)
+
+        if profile.wallet_balance < amount:
+            return Response({"error": "Insufficient funds."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Process the withdrawal
+        profile.wallet_balance -= amount
+        profile.save()
+
+        return Response({"message": "Withdrawal requested successfully."})
 
 
+
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def toggle_save_brand(request):
+    user = request.user
+    if not hasattr(user, 'creator_profile'):
+        return Response({"error": "Only creators can save brands"}, status=400)
+    
+    brand_id = request.data.get("brand_id")
+    if not brand_id:
+        return Response({"error": "brand_id is required"}, status=400)
+        
+    try:
+        from .models import BusinessProfile
+        brand = BusinessProfile.objects.get(id=brand_id)
+        profile = user.creator_profile
+        if profile.saved_brands.filter(id=brand_id).exists():
+            profile.saved_brands.remove(brand)
+            return Response({"status": "removed", "brand_id": brand_id})
+        else:
+            profile.saved_brands.add(brand)
+            return Response({"status": "saved", "brand_id": brand_id})
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)

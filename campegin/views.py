@@ -7,13 +7,14 @@ from django.contrib.auth.models import User
 from .models import (
     Campaign, CampaignTask, CampaignMilestone, Deliverable,
     PaymentInstallment, WorkspaceFile, WorkspaceMessage, AdminComplianceTicket,
-    CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform
+    CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform, Pitch
 )
 from .serializers import (
     CampaignSerializer, WorkspaceMessageSerializer, WorkspaceFileSerializer,
     DeliverableSerializer, AdminComplianceTicketSerializer,
     CampaignCategorySerializer, CampaignLanguageSerializer,
-    CampaignDeliverableSerializer, CampaignPlatformSerializer
+    CampaignDeliverableSerializer, CampaignPlatformSerializer,
+    PitchSerializer
 )
 
 from user.permissions import IsApprovedBusiness
@@ -431,4 +432,112 @@ class CampaignStatsView(APIView):
             "avg_engagement": avg_engagement,
         })
 
+class PitchViewSet(viewsets.ModelViewSet):
+    queryset = Pitch.objects.all()
+    serializer_class = PitchSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
+        profile = getattr(user, "profile", None)
+        if not profile:
+            return Pitch.objects.none()
+
+        if profile.role == "business":
+            return Pitch.objects.filter(brand=user)
+        else:
+            return Pitch.objects.filter(creator=user)
+
+    def perform_create(self, serializer):
+        serializer.save(creator=self.request.user)
+
+    @action(detail=True, methods=["post"])
+    def accept_counter(self, request, pk=None):
+        pitch = self.get_object()
+        pitch.status = "accepted"
+        pitch.save()
+        return Response(PitchSerializer(pitch).data)
+
+    @action(detail=True, methods=["post"])
+    def decline_counter(self, request, pk=None):
+        pitch = self.get_object()
+        pitch.status = "Declined"
+        pitch.save()
+        return Response({"status": "Counter-offer declined by creator."}, status=status.HTTP_200_OK)
+
+class CreatorEarningsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        campaigns = Campaign.objects.filter(creator=user)
+        
+        # We need to collect payments for these campaigns
+        # status: 'Released', 'In Escrow', 'Funded'
+        from .models import PaymentInstallment
+        import datetime
+        
+        total_earned = 0.0
+        in_escrow = 0.0
+        pending = 0.0
+        transactions = []
+        
+        default_months = [
+            {"m": "Jan", "v": 0}, {"m": "Feb", "v": 0}, {"m": "Mar", "v": 0},
+            {"m": "Apr", "v": 0}, {"m": "May", "v": 0}, {"m": "Jun", "v": 0},
+            {"m": "Jul", "v": 0}, {"m": "Aug", "v": 0}, {"m": "Sep", "v": 0},
+            {"m": "Oct", "v": 0}, {"m": "Nov", "v": 0}, {"m": "Dec", "v": 0},
+        ]
+        
+        for c in campaigns:
+            payments = c.payments.all()
+            for p in payments:
+                amount_val = float(p.amount)
+                
+                status_mapped = "pending"
+                type_mapped = "pending"
+                
+                if p.status == "Released":
+                    status_mapped = "paid"
+                    type_mapped = "credit"
+                    total_earned += amount_val
+                    
+                    # Parse date and add to monthly if valid
+                    if p.payment_date:
+                        try:
+                            # expecting YYYY-MM-DD
+                            parts = p.payment_date.split('-')
+                            if len(parts) == 3:
+                                m_idx = int(parts[1]) - 1
+                                if 0 <= m_idx <= 11:
+                                    default_months[m_idx]["v"] += amount_val
+                        except (ValueError, IndexError):
+                            pass
+                elif p.status == "In Escrow":
+                    status_mapped = "escrow"
+                    type_mapped = "pending"
+                    in_escrow += amount_val
+                else:
+                    pending += amount_val
+
+                transactions.append({
+                    "id": p.id + c.id * 10000,
+                    "campaign": c.name,
+                    "brand": c.brand.username if c.brand else "Brand",
+                    "amount": amount_val,
+                    "date": p.payment_date or "—",
+                    "status": status_mapped,
+                    "type": type_mapped,
+                    "period": "Monthly",
+                })
+                
+        # Sort transactions by ID desc (newest first)
+        transactions.sort(key=lambda x: x["id"], reverse=True)
+        
+        return Response({
+            "totalEarned": total_earned,
+            "inEscrow": in_escrow,
+            "pending": pending,
+            "monthly": default_months,
+            "transactions": transactions
+        })

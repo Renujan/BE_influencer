@@ -24,6 +24,8 @@ urlpatterns = [
     path("api/settings/", include("Setting.urls")),
     path("api/inquire/", include("inquire.urls")),
     path("api/portfolio/", include("portfolio.urls")),
+    path("api/notifications/", include("notifications.api_urls")),
+    path("api/analytics/", include("user.analytics_urls")),
 
 ]
 

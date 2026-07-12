@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from .models import (
     Campaign, CampaignTask, CampaignMilestone, Deliverable,
     PaymentInstallment, WorkspaceFile, WorkspaceMessage, AdminComplianceTicket,
-    CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform
+    CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform, Pitch
 )
 
 class CampaignTaskSerializer(serializers.ModelSerializer):
@@ -85,3 +85,16 @@ class CampaignPlatformSerializer(serializers.ModelSerializer):
     class Meta:
         model = CampaignPlatform
         fields = ["id", "platform_id", "name", "color", "logo"]
+
+class PitchSerializer(serializers.ModelSerializer):
+    brand_name = serializers.CharField(source="brand.username", read_only=True)
+    creator_name = serializers.CharField(source="creator.username", read_only=True)
+
+    class Meta:
+        model = Pitch
+        fields = [
+            "id", "creator", "creator_name", "brand", "brand_name",
+            "campaign_name", "budget", "sent_date", "tags", "status",
+            "description", "deliverables", "counter_offer"
+        ]
+        read_only_fields = ["creator"]
