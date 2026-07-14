@@ -956,7 +956,13 @@ class BusinessViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[permissions.AllowAny])
     def featured(self, request):
-        qs = BusinessProfile.objects.filter(is_featured=True, status="approved").order_by("-featured_at")
+        from django.db.models import Q, Count
+        qs = BusinessProfile.objects.annotate(
+            num_campaigns=Count('user__brand_campaigns', filter=Q(user__brand_campaigns__creator__isnull=True))
+        ).filter(
+            Q(is_featured=True) | Q(num_campaigns__gt=0),
+            status="approved"
+        ).order_by("-featured_at")
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 

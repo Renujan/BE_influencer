@@ -78,7 +78,14 @@ def creator_analytics(request):
         }
     }
 
-    base_followers = 1520000
+    from .models import CreatorSocialAccount
+    social_accounts = CreatorSocialAccount.objects.filter(user=user)
+    base_followers = 0
+    for sa in social_accounts:
+        base_followers += parse_metric(sa.followers_count)
+    if base_followers == 0:
+        base_followers = 1520000
+
     base_reach = total_reach if total_reach > 0 else 2800000
     growth_data = [
       { "m": "Jan", "followers": base_followers * 0.54, "reach": base_reach * 0.42 },
@@ -102,8 +109,10 @@ def creator_analytics(request):
         "baseFollowers": base_followers,
         "totalVerifiedReach": total_reach,
         "avgVerifiedEr": avg_er,
+        "avgRating": 4.9,
         "top_posts": top_posts,
         "platform_stats": platform_stats,
         "growth_data": growth_data,
         "engagement_data": engagement_data
     })
+

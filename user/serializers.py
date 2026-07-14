@@ -62,6 +62,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
     creators_hired_count = serializers.SerializerMethodField()
     total_spent = serializers.SerializerMethodField()
     settings = serializers.SerializerMethodField()
+    active_campaigns = serializers.SerializerMethodField()
 
 
     class Meta:
@@ -73,14 +74,36 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             "linkedin_url", "twitter_handle", "otp_verified", "status",
             "verification_documents_submitted", "business_reg_number", "business_document",
              "campaign_count", "creators_hired_count", "total_spent", "settings",
-             "is_featured", "featured_at"
+             "is_featured", "featured_at", "active_campaigns"
         ]
 
+    def get_settings(self, instance):
+        return {
+            "email_notifications": instance.email_notifications,
+            "sms_notifications": instance.sms_notifications,
+            "marketing_emails": instance.marketing_emails,
+            "two_factor_auth": instance.two_factor_auth,
+            "google_analytics_connected": instance.google_analytics_connected,
+        }
+
     def get_campaign_count(self, instance):
-        return instance.user.brand_campaigns.count()
+        return instance.user.brand_campaigns.filter(creator__isnull=True).count()
+        
+    def get_active_campaigns(self, instance):
+        campaigns = instance.user.brand_campaigns.filter(creator__isnull=True).order_by('-id')[:3]
+        return [
+            {
+                "id": c.id,
+                "name": c.name,
+                "budget": float(c.budget) if c.budget else 0,
+                "status": c.status,
+                "category": c.category
+            }
+            for c in campaigns
+        ]
 
     def get_creators_hired_count(self, instance):
-        return instance.user.brand_campaigns.values('creator').distinct().count()
+        return instance.user.brand_campaigns.exclude(creator__isnull=True).values('creator').distinct().count()
 
     def get_total_spent(self, instance):
         from django.db.models import Sum
