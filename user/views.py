@@ -318,12 +318,14 @@ class RegisterView(APIView):
             profile.bio = request.data.get("bio", "")
             
             # Country
-            country_data = request.data.get("country")
+            country_data = request.data.get("country") or request.data.get("location")
             if country_data:
                 try:
                     country_obj = Country.objects.get(id=country_data)
                 except (ValueError, Country.DoesNotExist):
                     country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                    if not country_obj:
+                        country_obj = Country.objects.create(name=str(country_data).strip())
                 profile.country = country_obj
             else:
                 profile.country = None
@@ -362,12 +364,14 @@ class RegisterView(APIView):
             profile.bio = request.data.get("bio", "")
             
             # Country
-            country_data = request.data.get("country")
+            country_data = request.data.get("country") or request.data.get("location")
             if country_data:
                 try:
                     country_obj = Country.objects.get(id=country_data)
                 except (ValueError, Country.DoesNotExist):
                     country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                    if not country_obj:
+                        country_obj = Country.objects.create(name=str(country_data).strip())
                 profile.country = country_obj
             else:
                 profile.country = None
@@ -519,12 +523,14 @@ class GoogleLoginView(APIView):
 
                 if requested_role == "business":
                     country_obj = None
-                    country_data = request.data.get("country")
+                    country_data = request.data.get("country") or request.data.get("location")
                     if country_data:
                         try:
                             country_obj = Country.objects.get(id=country_data)
                         except (ValueError, Country.DoesNotExist):
                             country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                            if not country_obj:
+                                country_obj = Country.objects.create(name=str(country_data).strip())
 
                     profile = BusinessProfile.objects.create(
                         user=user,
@@ -545,12 +551,14 @@ class GoogleLoginView(APIView):
                     profile.save()
                 else:
                     country_obj = None
-                    country_data = request.data.get("country")
+                    country_data = request.data.get("country") or request.data.get("location")
                     if country_data:
                         try:
                             country_obj = Country.objects.get(id=country_data)
                         except (ValueError, Country.DoesNotExist):
                             country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                            if not country_obj:
+                                country_obj = Country.objects.create(name=str(country_data).strip())
 
                     profile = CreatorProfile.objects.create(
                         user=user,
@@ -602,12 +610,14 @@ class GoogleLoginView(APIView):
                         profile.otp_verified = True
                         
                         # Country
-                        country_data = request.data.get("country")
+                        country_data = request.data.get("country") or request.data.get("location")
                         if country_data:
                             try:
                                 country_obj = Country.objects.get(id=country_data)
                             except (ValueError, Country.DoesNotExist):
                                 country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                                if not country_obj:
+                                    country_obj = Country.objects.create(name=str(country_data).strip())
                             profile.country = country_obj
                         
                         business_types_data = request.data.get("business_types", [])
@@ -623,12 +633,14 @@ class GoogleLoginView(APIView):
                         profile.otp_verified = True
                         
                         # Country
-                        country_data = request.data.get("country")
+                        country_data = request.data.get("country") or request.data.get("location")
                         if country_data:
                             try:
                                 country_obj = Country.objects.get(id=country_data)
                             except (ValueError, Country.DoesNotExist):
                                 country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                                if not country_obj:
+                                    country_obj = Country.objects.create(name=str(country_data).strip())
                             profile.country = country_obj
 
                         niches_data = request.data.get("niches", [])
@@ -691,12 +703,14 @@ class GoogleLoginView(APIView):
             # Create appropriate profile based on requested role and save details
             if requested_role == "business":
                 country_obj = None
-                country_data = request.data.get("country")
+                country_data = request.data.get("country") or request.data.get("location")
                 if country_data:
                     try:
                         country_obj = Country.objects.get(id=country_data)
                     except (ValueError, Country.DoesNotExist):
                         country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                        if not country_obj:
+                            country_obj = Country.objects.create(name=str(country_data).strip())
 
                 profile = BusinessProfile.objects.create(
                     user=user,
@@ -717,12 +731,14 @@ class GoogleLoginView(APIView):
                 profile.save()
             else:
                 country_obj = None
-                country_data = request.data.get("country")
+                country_data = request.data.get("country") or request.data.get("location")
                 if country_data:
                     try:
                         country_obj = Country.objects.get(id=country_data)
                     except (ValueError, Country.DoesNotExist):
                         country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                        if not country_obj:
+                            country_obj = Country.objects.create(name=str(country_data).strip())
 
                 profile = CreatorProfile.objects.create(
                     user=user,
@@ -813,12 +829,14 @@ class MeView(APIView):
             
             # Country
             if "country" in request.data:
-                country_data = request.data.get("country")
+                country_data = request.data.get("country") or request.data.get("location")
                 if country_data:
                     try:
                         country_obj = Country.objects.get(id=country_data)
                     except (ValueError, Country.DoesNotExist):
                         country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                        if not country_obj:
+                            country_obj = Country.objects.create(name=str(country_data).strip())
                     profile.country = country_obj
                 else:
                     profile.country = None
@@ -842,12 +860,14 @@ class MeView(APIView):
             
             # Country
             if "country" in request.data:
-                country_data = request.data.get("country")
+                country_data = request.data.get("country") or request.data.get("location")
                 if country_data:
                     try:
                         country_obj = Country.objects.get(id=country_data)
                     except (ValueError, Country.DoesNotExist):
                         country_obj = Country.objects.filter(name__iexact=str(country_data).strip()).first()
+                        if not country_obj:
+                            country_obj = Country.objects.create(name=str(country_data).strip())
                     profile.country = country_obj
                 else:
                     profile.country = None

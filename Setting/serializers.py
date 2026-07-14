@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from user.models import CreatorProfile, BusinessProfile, Niche, CreatorRate, CreatorSocialAccount
+from user.models import CreatorProfile, BusinessProfile, Niche, CreatorRate, CreatorSocialAccount, Country
 from user.serializers import CreatorRateSerializer, CreatorSocialAccountSerializer
 from .models import CreatorSettings, CreatorPayoutMethod, BusinessSettings
 
@@ -23,6 +23,7 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
     # Profile fields
     phone = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     location = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    country = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     bio = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     avatar_url = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     wallet_balance = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
@@ -74,6 +75,15 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
         instance.location = validated_data.get("location", instance.location)
         instance.bio = validated_data.get("bio", instance.bio)
         instance.avatar_url = validated_data.get("avatar_url", instance.avatar_url)
+        
+        if "country" in validated_data:
+            country_name = validated_data["country"]
+            if country_name:
+                country_obj, _ = Country.objects.get_or_create(name=country_name.strip())
+                instance.country = country_obj
+            else:
+                instance.country = None
+                
         instance.save()
         
         # Update niches
@@ -144,6 +154,7 @@ class BusinessFullSettingsSerializer(serializers.Serializer):
     phone = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     secondary_phone = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     time_zone = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    country = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     avatar_url = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     
     # Social links
@@ -190,6 +201,14 @@ class BusinessFullSettingsSerializer(serializers.Serializer):
         instance.secondary_phone = validated_data.get("secondary_phone", instance.secondary_phone)
         instance.time_zone = validated_data.get("time_zone", instance.time_zone)
         instance.avatar_url = validated_data.get("avatar_url", instance.avatar_url)
+        
+        if "country" in validated_data:
+            country_name = validated_data["country"]
+            if country_name:
+                country_obj, _ = Country.objects.get_or_create(name=country_name.strip())
+                instance.country = country_obj
+            else:
+                instance.country = None
         
         # Update business types as comma-separated string
         if "business_types" in validated_data:
