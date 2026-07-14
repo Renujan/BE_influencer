@@ -231,6 +231,36 @@ class CampaignViewSet(viewsets.ModelViewSet):
         return Response(WorkspaceMessageSerializer(message).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
+    def edit_message(self, request, pk=None):
+        campaign = self.get_object()
+        message_id = request.data.get("message_id")
+        text = request.data.get("text")
+        if not message_id or not text:
+            return Response({"error": "message_id and text are required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            message = WorkspaceMessage.objects.get(id=message_id, campaign=campaign, sender=request.user)
+            message.text = text
+            message.save()
+            return Response(WorkspaceMessageSerializer(message).data)
+        except WorkspaceMessage.DoesNotExist:
+            return Response({"error": "Message not found or you don't have permission to edit it"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=["post"])
+    def delete_message(self, request, pk=None):
+        campaign = self.get_object()
+        message_id = request.data.get("message_id")
+        if not message_id:
+            return Response({"error": "message_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            message = WorkspaceMessage.objects.get(id=message_id, campaign=campaign, sender=request.user)
+            message.delete()
+            return Response({"status": "deleted"}, status=status.HTTP_200_OK)
+        except WorkspaceMessage.DoesNotExist:
+            return Response({"error": "Message not found or you don't have permission to delete it"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=["post"])
     def upload_file(self, request, pk=None):
         campaign = self.get_object()
         file_name = request.data.get("name")
@@ -257,18 +287,42 @@ class CampaignViewSet(viewsets.ModelViewSet):
     def submit_deliverable(self, request, pk=None):
         campaign = self.get_object()
         del_id = request.data.get("deliverable_id")
+        
+        # Determine if this is a final post or a draft
         link = request.data.get("link")
-        screenshot_name = request.data.get("screenshot_name", "analytics_screenshot.png")
+        screenshot_name = request.data.get("screenshot_name", "")
+        assetDriveLink = request.data.get("assetDriveLink")
+        assetFileName = request.data.get("assetFileName", "")
+        views = request.data.get("views")
+        reach = request.data.get("reach")
+        er = request.data.get("er")
 
-        if not del_id or not link:
-            return Response({"error": "deliverable_id and link are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not del_id:
+            return Response({"error": "deliverable_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         deliverable = get_object_or_404(Deliverable, campaign=campaign, id=del_id)
-        deliverable.link = link
-        deliverable.screenshot_name = screenshot_name
-        deliverable.status = "Published"
-        deliverable.save()
+        
+        if link or screenshot_name:
+            if link:
+                deliverable.link = link
+            if screenshot_name:
+                deliverable.screenshot_name = screenshot_name
+            deliverable.status = "Published"
+        elif assetDriveLink or assetFileName:
+            if assetDriveLink:
+                deliverable.assetDriveLink = assetDriveLink
+            if assetFileName:
+                deliverable.assetFileName = assetFileName
+            deliverable.status = "Pending Review"
 
+        if views is not None:
+            deliverable.views = views
+        if reach is not None:
+            deliverable.reach = reach
+        if er is not None:
+            deliverable.er = er
+            
+        deliverable.save()
         return Response(DeliverableSerializer(deliverable).data)
 
     @action(detail=True, methods=["post"])
@@ -425,11 +479,64 @@ class CampaignStatsView(APIView):
         # Scale progress % to a realistic engagement rate range (3–12%)
         avg_engagement = round(3.0 + (avg_progress / 100) * 9.0, 1)
 
+        # Generate realistic metrics based on budget
+        # Assume approx $1 = 1000 reach, 2500 impressions
+        total_reach = int(total_budget * 1000)
+        total_impressions = int(total_budget * 2500)
+        # ROI proxy
+        total_roi = 4.1 if total_budget > 0 else 0.0
+
         return Response({
             "total_campaigns": total_campaigns,
             "live_now": live_now,
             "total_budget": total_budget,
             "avg_engagement": avg_engagement,
+            "total_reach": total_reach,
+            "total_impressions": total_impressions,
+            "total_roi": total_roi,
+        })
+
+class BusinessAnalyticsView(APIView):
+    """Return aggregated business analytics and top campaigns."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Sum, Avg
+        user = request.user
+        qs = Campaign.objects.filter(brand=user)
+
+        total_budget = float(qs.aggregate(total=Sum("budget"))["total"] or 0)
+        avg_progress = float(qs.aggregate(avg=Avg("progress"))["avg"] or 0)
+        avg_engagement = round(3.0 + (avg_progress / 100) * 9.0, 1)
+
+        total_reach = int(total_budget * 1000)
+        total_impressions = int(total_budget * 2500)
+        total_roi = 4.1 if total_budget > 0 else 0.0
+
+        # Top campaigns by engagement/progress
+        top_campaigns_qs = qs.exclude(status="Pending").order_by("-progress")[:5]
+        top_campaigns = []
+        for c in top_campaigns_qs:
+            er = round(3.0 + (c.progress / 100) * 9.0, 1) if c.progress else 6.5
+            spend = float(c.budget or 0)
+            reach_val = f"{round(spend/1000, 1)}M"
+            top_campaigns.append({
+                "name": c.name,
+                "er": er,
+                "reach": reach_val,
+                "roi": "4.1x" if spend > 0 else "0x",
+                "spend": spend,
+                "trend": "up"
+            })
+
+        return Response({
+            "stats": {
+                "total_reach": total_reach,
+                "total_impressions": total_impressions,
+                "avg_engagement": avg_engagement,
+                "total_roi": total_roi,
+            },
+            "top_campaigns": top_campaigns
         })
 
 class PitchViewSet(viewsets.ModelViewSet):

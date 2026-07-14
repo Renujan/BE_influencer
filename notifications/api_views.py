@@ -12,15 +12,44 @@ def get_notifications(request):
         data = []
         for n in qs:
             # Map to suitable creator frontend routes instead of backend admin URLs
-            front_url = "/creator"
-            if n.category == "campaign":
-                front_url = "/creator/campaigns"
-            elif n.category == "payment":
-                front_url = "/creator/earnings"
-            elif n.category == "compliance":
-                front_url = "/creator/support"
-            elif n.category == "signup":
-                front_url = "/creator/profile"
+            is_business = False
+            req_user = request.user
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Token "):
+                try:
+                    from rest_framework.authtoken.models import Token
+                    token_key = auth_header.split(" ")[1]
+                    req_user = Token.objects.get(key=token_key).user
+                except:
+                    pass
+
+            if hasattr(req_user, "is_authenticated") and req_user.is_authenticated:
+                is_business = hasattr(req_user, "business_profile") or (hasattr(req_user, "profile") and req_user.profile.role == "business")
+
+            if is_business:
+                front_url = "/dashboard"
+                if n.category == "campaign":
+                    front_url = "/dashboard/campaigns"
+                elif n.category == "payment":
+                    front_url = "/dashboard/payments"
+                elif n.category == "compliance":
+                    front_url = "/dashboard/support"
+                elif n.category == "signup":
+                    front_url = "/dashboard/settings"
+                
+                # specific override for requests
+                if "request" in n.title.lower() or "request" in n.message.lower():
+                    front_url = "/dashboard/requests"
+            else:
+                front_url = "/creator"
+                if n.category == "campaign":
+                    front_url = "/creator/campaigns"
+                elif n.category == "payment":
+                    front_url = "/creator/earnings"
+                elif n.category == "compliance":
+                    front_url = "/creator/support"
+                elif n.category == "signup":
+                    front_url = "/creator/profile"
 
             data.append({
                 "id": n.id,

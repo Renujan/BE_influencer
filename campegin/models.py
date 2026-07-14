@@ -20,9 +20,9 @@ class Campaign(models.Model):
     brief = models.TextField(blank=True, null=True)
     category = models.CharField(max_length=100, blank=True, null=True)
     delivery_language = models.CharField(max_length=100, blank=True, null=True)
-    voice_brief = models.CharField(max_length=255, blank=True, null=True)
-    screenshare_brief = models.CharField(max_length=255, blank=True, null=True)
-    video_brief = models.CharField(max_length=255, blank=True, null=True)
+    voice_brief = models.FileField(upload_to="brief_media/", blank=True, null=True)
+    screenshare_brief = models.FileField(upload_to="brief_media/", blank=True, null=True)
+    video_brief = models.FileField(upload_to="brief_media/", blank=True, null=True)
     admin_review = models.TextField(blank=True, null=True, help_text="Provide review/rejection comments to the business if rejected.")
 
     panels = [
@@ -99,6 +99,7 @@ class CampaignMilestone(models.Model):
 class Deliverable(models.Model):
     STATUS_CHOICES = (
         ("Revision Requested", "Revision Requested"),
+        ("Pending Review", "Pending Review"),
         ("Approved", "Approved"),
         ("Published", "Published"),
     )
@@ -108,8 +109,13 @@ class Deliverable(models.Model):
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Revision Requested")
     deadline = models.CharField(max_length=100, blank=True, null=True) # e.g. "May 14"
     brief = models.TextField(blank=True, null=True)
+    views = models.CharField(max_length=100, blank=True, null=True)
+    reach = models.CharField(max_length=100, blank=True, null=True)
+    er = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    assetDriveLink = models.URLField(blank=True, default="")
+    assetFileName = models.FileField(upload_to="deliverables/", blank=True, null=True)
     link = models.URLField(blank=True, default="")
-    screenshot_name = models.CharField(max_length=255, blank=True, default="")
+    screenshot_name = models.FileField(upload_to="deliverables/", blank=True, null=True)
 
     def __str__(self):
         return f"{self.campaign.name} - {self.name} ({self.status})"
