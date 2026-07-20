@@ -9,21 +9,29 @@ class Campaign(models.Model):
         ("Live", "Live"),
         ("Completed", "Completed"),
         ("Rejected", "Rejected"),
+        ("Countered", "Countered"),
+        ("Under_Review", "Under Review"),
     )
     name = models.CharField(max_length=255)
     brand = models.ForeignKey(User, on_delete=models.CASCADE, related_name="brand_campaigns")
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name="creator_campaigns", null=True, blank=True)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="Pending")
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="Under_Review")
     budget = models.DecimalField(max_digits=12, decimal_places=2)
     start_date = models.CharField(max_length=100, blank=True, null=True) # e.g. "May 12"
     progress = models.IntegerField(default=0)
     brief = models.TextField(blank=True, null=True)
     category = models.CharField(max_length=100, blank=True, null=True)
     delivery_language = models.CharField(max_length=100, blank=True, null=True)
+    country = models.CharField(max_length=255, blank=True, null=True)
+    province = models.CharField(max_length=255, blank=True, null=True)
+    district = models.CharField(max_length=255, blank=True, null=True)
+    medium = models.CharField(max_length=255, blank=True, null=True)
     voice_brief = models.FileField(upload_to="brief_media/", blank=True, null=True)
     screenshare_brief = models.FileField(upload_to="brief_media/", blank=True, null=True)
     video_brief = models.FileField(upload_to="brief_media/", blank=True, null=True)
     admin_review = models.TextField(blank=True, null=True, help_text="Provide review/rejection comments to the business if rejected.")
+    counter_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    counter_note = models.TextField(blank=True, null=True)
 
     panels = [
         FieldPanel('name'),
@@ -36,6 +44,10 @@ class Campaign(models.Model):
         FieldPanel('brief'),
         FieldPanel('category'),
         FieldPanel('delivery_language'),
+        FieldPanel('country'),
+        FieldPanel('province'),
+        FieldPanel('district'),
+        FieldPanel('medium'),
         FieldPanel('voice_brief'),
         FieldPanel('screenshare_brief'),
         FieldPanel('video_brief'),
@@ -85,6 +97,16 @@ class CampaignTask(models.Model):
 
     def __str__(self):
         return f"{self.campaign.name} - {self.title} ({'Done' if self.is_done else 'Pending'})"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Calculate progress
+        total_tasks = self.campaign.tasks.count()
+        if total_tasks > 0:
+            completed_tasks = self.campaign.tasks.filter(is_done=True).count()
+            progress_percentage = int((completed_tasks / total_tasks) * 100)
+            self.campaign.progress = progress_percentage
+            self.campaign.save(update_fields=['progress'])
 
 @register_snippet
 class CampaignMilestone(models.Model):
@@ -154,6 +176,13 @@ class WorkspaceMessage(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE)
     text = models.TextField()
     file_attachment = models.CharField(max_length=255, blank=True, default="")
+    MESSAGE_TYPE_CHOICES = (
+        ('main', 'Main Chat'),
+        ('admin_note', 'Admin Private Note'),
+        ('admin_business', 'Admin-Business Chat'),
+        ('admin_creator', 'Admin-Creator Chat'),
+    )
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPE_CHOICES, default='main')
     time = models.CharField(max_length=50) # e.g. "10:24"
 
     def __str__(self):

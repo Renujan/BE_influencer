@@ -2,9 +2,63 @@ from django.db import models
 from django.contrib.auth.models import User
 from wagtail.snippets.models import register_snippet
 
+from modelcluster.models import ClusterableModel
+from modelcluster.fields import ParentalKey
+from wagtail.admin.panels import FieldPanel, InlinePanel
+from wagtail.models import Orderable
+
 @register_snippet
-class Country(models.Model):
+class Country(ClusterableModel):
     name = models.CharField(max_length=100, unique=True)
+    currency = models.CharField(max_length=50, blank=True, null=True)
+    country_code = models.CharField(max_length=10, blank=True, null=True)
+    
+    class Meta:
+        verbose_name_plural = "Countries"
+
+    panels = [
+        FieldPanel("name"),
+        FieldPanel("currency"),
+        FieldPanel("country_code"),
+        InlinePanel("mediums", label="Mediums", heading="Mediums"),
+        InlinePanel("provinces", label="Provinces", heading="Provinces"),
+        InlinePanel("districts", label="Districts", heading="Districts (Select Province)"),
+    ]
+
+    def __str__(self):
+        return self.name
+
+class Province(Orderable):
+    country = ParentalKey(Country, on_delete=models.CASCADE, related_name="provinces")
+    name = models.CharField(max_length=100)
+    
+    panels = [
+        FieldPanel("name"),
+    ]
+
+    def __str__(self):
+        return self.name
+
+class Medium(Orderable):
+    country = ParentalKey(Country, on_delete=models.CASCADE, related_name="mediums")
+    name = models.CharField(max_length=100)
+
+    panels = [
+        FieldPanel("name"),
+    ]
+
+    def __str__(self):
+        return self.name
+
+class District(Orderable):
+    country = ParentalKey(Country, on_delete=models.CASCADE, related_name="districts")
+    province = models.ForeignKey("Province", on_delete=models.CASCADE, related_name="districts_list")
+    name = models.CharField(max_length=100)
+    
+    panels = [
+        FieldPanel("province"),
+        FieldPanel("name"),
+    ]
 
     def __str__(self):
         return self.name
@@ -29,8 +83,11 @@ class BusinessProfile(models.Model):
     company_name = models.CharField(max_length=255, blank=True, null=True)
     business_type = models.CharField(max_length=255, blank=True, null=True)
     business_types = models.ManyToManyField(BusinessType, blank=True, related_name="businesses")
+    mediums = models.ManyToManyField("Medium", blank=True, related_name="businesses")
     website = models.URLField(blank=True, null=True)
     country = models.ForeignKey("Country", on_delete=models.SET_NULL, null=True, blank=True, related_name="businesses")
+    province = models.ForeignKey("Province", on_delete=models.SET_NULL, null=True, blank=True, related_name="businesses")
+    district = models.ForeignKey("District", on_delete=models.SET_NULL, null=True, blank=True, related_name="businesses")
     bio = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=30, blank=True, null=True)
     secondary_phone = models.CharField(max_length=30, blank=True, null=True)
@@ -86,8 +143,11 @@ class CreatorProfile(models.Model):
     location = models.CharField(max_length=100, blank=True, null=True)
     country = models.ForeignKey("Country", on_delete=models.SET_NULL, null=True, blank=True, related_name="creators")
     bio = models.TextField(blank=True, null=True)
+    province = models.ForeignKey(Province, on_delete=models.SET_NULL, null=True, blank=True, related_name="creators")
+    district = models.ForeignKey("District", on_delete=models.SET_NULL, null=True, blank=True, related_name="creators")
     avatar_url = models.CharField(max_length=255, blank=True, null=True)
     niches = models.ManyToManyField(Niche, blank=True, related_name="creators")
+    mediums = models.ManyToManyField(Medium, blank=True, related_name="creators")
     wallet_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
     next_payout_date = models.CharField(max_length=100, blank=True, null=True)
 

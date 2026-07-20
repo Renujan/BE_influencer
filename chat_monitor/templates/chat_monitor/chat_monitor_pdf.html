@@ -447,9 +447,9 @@
     <!-- ══════════════════════════════════
          SECTION 4: CHAT HISTORY
     ══════════════════════════════════ -->
-    <div class="section-title">Chat History ({{ messages|length }} messages)</div>
+    <div class="section-title">Chat History ({{ chat_messages|length }} messages)</div>
     {% if messages %}
-        {% for msg in messages %}
+        {% for msg in chat_messages %}
         <div class="chat-msg {% if msg.sender == campaign.brand %}chat-brand{% else %}chat-creator{% endif %}">
             <table style="width:100%;border:none;">
                 <tr>

@@ -234,3 +234,4 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000")
 
 
 
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'

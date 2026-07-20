@@ -44,7 +44,7 @@ def chat_monitor_detail_view(request, campaign_id):
 
     context = {
         "campaign": campaign,
-        "messages": messages,
+        "chat_messages": messages,
         "reviews": reviews,
         "business_profile": business_profile,
         "business_social_accounts": business_social_accounts,
@@ -85,7 +85,7 @@ def chat_monitor_download_pdf_view(request, campaign_id):
 
     context = {
         "campaign": campaign,
-        "messages": messages,
+        "chat_messages": messages,
         "reviews": reviews,
         "business_profile": business_profile,
         "business_social_accounts": business_social_accounts,
@@ -178,7 +178,7 @@ def chat_monitor_view_chat_view(request, campaign_id):
     messages = campaign.messages.all().order_by("id")
     context = {
         "campaign": campaign,
-        "messages": messages,
+        "chat_messages": messages,
     }
     return render(request, "chat_monitor/view_chat.html", context)
 

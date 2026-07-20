@@ -12,10 +12,10 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from .models import (
-    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount, Country
+    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount, Country, Medium, Province, District
 )
 from .serializers import (
-    NicheSerializer, BusinessTypeSerializer, BusinessProfileSerializer, CreatorProfileSerializer, CountrySerializer
+    NicheSerializer, BusinessTypeSerializer, BusinessProfileSerializer, CreatorProfileSerializer, CountrySerializer, MediumSerializer
 )
 from notifications.models import Notification
 
@@ -101,6 +101,14 @@ class SendOTPView(APIView):
                     profile = CreatorProfile.objects.create(user=user, phone=phone if phone else "")
             else:
                 profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+                if profile:
+                    actual_role = "business" if hasattr(user, "business_profile") else "influencer"
+                    if role != actual_role:
+                        role_label = "Business" if role == "business" else "Creator"
+                        return Response(
+                            {"error": f"This email is already registered as a {'Creator' if actual_role == 'influencer' else 'Business'}. Please use a different email or log in with the correct role."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
                 if not profile:
                     if role == "business":
                         profile = BusinessProfile.objects.create(user=user)
@@ -200,9 +208,8 @@ class VerifyOTPView(APIView):
             # Validate role against the actual account type
             actual_role = "business" if hasattr(user, "business_profile") else "influencer"
             if requested_role != actual_role:
-                role_label = "Business" if requested_role == "business" else "Creator"
                 return Response(
-                    {"error": f"No {role_label} account found with these credentials. Please check your role selection."},
+                    {"error": f"This email is already registered as a {'Creator' if actual_role == 'influencer' else 'Business'}. Please use a different email or log in with the correct role."},
                     status=status.HTTP_403_FORBIDDEN
                 )
             profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
@@ -330,6 +337,26 @@ class RegisterView(APIView):
             else:
                 profile.country = None
             
+            # Province
+            province_data = request.data.get("province")
+            if province_data:
+                try:
+                    profile.province = Province.objects.get(id=province_data)
+                except (ValueError, Province.DoesNotExist):
+                    profile.province = Province.objects.filter(name__iexact=str(province_data).strip()).first()
+            else:
+                profile.province = None
+            # District
+            district_data = request.data.get("district")
+            if district_data:
+                try:
+                    profile.district = District.objects.get(id=district_data)
+                except (ValueError, District.DoesNotExist):
+                    profile.district = District.objects.filter(name__iexact=str(district_data).strip()).first()
+            else:
+                profile.district = None
+
+            
             # Add business types (handles both string and list format)
             business_types_data = request.data.get("business_types", [])
             if isinstance(business_types_data, str):
@@ -376,6 +403,26 @@ class RegisterView(APIView):
             else:
                 profile.country = None
             
+            # Province
+            province_data = request.data.get("province")
+            if province_data:
+                try:
+                    profile.province = Province.objects.get(id=province_data)
+                except (ValueError, Province.DoesNotExist):
+                    profile.province = Province.objects.filter(name__iexact=str(province_data).strip()).first()
+            else:
+                profile.province = None
+            # District
+            district_data = request.data.get("district")
+            if district_data:
+                try:
+                    profile.district = District.objects.get(id=district_data)
+                except (ValueError, District.DoesNotExist):
+                    profile.district = District.objects.filter(name__iexact=str(district_data).strip()).first()
+            else:
+                profile.district = None
+
+            
             # Add niches for influencers (handles both string and list format)
             niches_data = request.data.get("niches", [])
             if isinstance(niches_data, str):
@@ -385,6 +432,19 @@ class RegisterView(APIView):
             for niche_name in niches_data:
                 niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
                 profile.niches.add(niche_obj)
+                
+            # Add mediums
+            mediums_data = request.data.get("mediums", [])
+            if isinstance(mediums_data, str):
+                mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
+            profile.mediums.clear()
+            for medium_name in mediums_data:
+                medium_obj = Medium.objects.filter(name__iexact=medium_name).first()
+                if not medium_obj and medium_name.isdigit():
+                    medium_obj = Medium.objects.filter(id=medium_name).first()
+                if medium_obj:
+                    profile.mediums.add(medium_obj)
+                    
             profile.save()
             profile_data = CreatorProfileSerializer(profile).data
 
@@ -425,9 +485,8 @@ class LoginView(APIView):
 
         # If the frontend sent a role, enforce it — reject cross-role logins
         if requested_role and requested_role != actual_role:
-            role_label = "Business" if requested_role == "business" else "Creator"
             return Response(
-                {"error": f"No {role_label} account found with these credentials. Please check your role selection."},
+                {"error": f"This email is registered as a {'Creator' if actual_role == 'influencer' else 'Business'}. Please log in with the correct role selection."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -889,6 +948,11 @@ class MeView(APIView):
 class CountryViewSet(viewsets.ModelViewSet):
     queryset = Country.objects.all()
     serializer_class = CountrySerializer
+    permission_classes = [permissions.AllowAny]
+
+class MediumViewSet(viewsets.ModelViewSet):
+    queryset = Medium.objects.all()
+    serializer_class = MediumSerializer
     permission_classes = [permissions.AllowAny]
 
 class NicheViewSet(viewsets.ModelViewSet):

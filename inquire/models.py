@@ -8,6 +8,7 @@ class Inquiry(models.Model):
         ("brand", "Brand / Brand Representative"),
         ("creator", "Creator / Influencer"),
         ("agency", "Agency Partner"),
+        ("service_provider", "Service Provider"),
         ("other", "Other Inquiry"),
     )
     
@@ -24,8 +25,8 @@ class Inquiry(models.Model):
         help_text="Unique Inquiry identifier (automatically generated).",
     )
     name = models.CharField(max_length=255)
-    email = models.EmailField()
-    phone = models.CharField(max_length=50)
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="brand")
     subject = models.CharField(max_length=255)
     message = models.TextField()
@@ -58,6 +59,7 @@ class Inquiry(models.Model):
             "brand": "-BR",
             "creator": "-CR",
             "agency": "-AG",
+            "service_provider": "-SP",
             "other": "-OT"
         }
         suffix = suffix_map.get(self.role, "-OT")
@@ -74,6 +76,7 @@ class Inquiry(models.Model):
                     "brand": "-BR",
                     "creator": "-CR",
                     "agency": "-AG",
+                    "service_provider": "-SP",
                     "other": "-OT"
                 }
                 suffix = suffix_map.get(self.role, "-OT")

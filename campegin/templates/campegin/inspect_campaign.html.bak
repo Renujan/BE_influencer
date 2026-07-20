@@ -1,0 +1,927 @@
+{% extends "wagtailadmin/base.html" %}
+
+{% block titletag %}Campaign Details - {{ instance.name }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    .custom-inspect-wrapper {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 24px;
+        background-color: #f8fafc;
+        min-height: 100vh;
+    }
+
+    .custom-header-bar {
+        background-color: #1e293b; /* Dark slate */
+        padding: 24px 32px;
+        color: #ffffff;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .custom-header-title h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+    }
+
+    .custom-header-title p {
+        font-size: 14px;
+        color: #cbd5e1;
+        margin: 6px 0 0 0;
+    }
+
+    .custom-header-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-header-secondary {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-header-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-header-primary {
+        background-color: #06b6d4; /* Teal/Cyan */
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-header-primary:hover {
+        background-color: #0891b2;
+    }
+
+    .custom-body-card {
+        background: #ffffff;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        border-left: 1px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 32px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 36px;
+    }
+
+    .custom-section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 20px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e2e8f0;
+        text-transform: none;
+        letter-spacing: -0.01em;
+    }
+
+    .custom-form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px 24px;
+    }
+
+    @media (min-width: 768px) {
+        .custom-form-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .custom-form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .custom-form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .custom-form-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+
+    .custom-form-control-readonly {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 14px;
+        color: #334155;
+        min-height: 45px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        word-break: break-all;
+    }
+
+    .custom-form-control-readonly.textarea {
+        align-items: flex-start;
+        line-height: 1.5;
+        min-height: 90px;
+        white-space: pre-wrap;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+
+    .badge-status.live {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-status.pending {
+        background-color: #fef9c3;
+        color: #854d0e;
+    }
+
+    .badge-status.completed {
+        background-color: #e0f2fe;
+        color: #0369a1;
+    }
+
+    .badge-status.rejected {
+        background-color: #ffe4e6;
+        color: #991b1b;
+    }
+
+    .progress-bar-container {
+        width: 100%;
+        background-color: #e2e8f0;
+        border-radius: 9999px;
+        height: 10px;
+        overflow: hidden;
+        margin-top: 6px;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background-color: #06b6d4;
+        border-radius: 9999px;
+    }
+
+    .tag-item {
+        display: inline-block;
+        background-color: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 4px 10px;
+        border-radius: 4px;
+        margin-right: 6px;
+        margin-bottom: 6px;
+    }
+
+    .custom-table-wrapper {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        overflow: hidden;
+        margin-top: 10px;
+    }
+
+    .custom-data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        text-align: left;
+    }
+
+    .custom-data-table th {
+        background-color: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .custom-data-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        color: #334155;
+    }
+
+    .custom-data-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .custom-footer-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e2e8f0;
+        margin-top: 12px;
+    }
+
+    .btn-footer-back {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155 !important;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .btn-footer-back:hover {
+        background-color: #f8fafc;
+    }
+
+    .btn-footer-edit {
+        background-color: #1e293b;
+        color: #ffffff !important;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .btn-footer-edit:hover {
+        background-color: #0f172a;
+    }
+
+    .custom-select {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 10px 16px;
+        font-size: 14px;
+        color: #334155;
+        width: 100%;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        height: 45px;
+        font-family: inherit;
+    }
+    .custom-select:focus {
+        border-color: #06b6d4;
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+    }
+    .custom-textarea {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 14px;
+        color: #334155;
+        width: 100%;
+        min-height: 120px;
+        box-sizing: border-box;
+        outline: none;
+        resize: vertical;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        font-family: inherit;
+    }
+    .custom-textarea:focus {
+        border-color: #06b6d4;
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+    }
+    .btn-footer-submit {
+        background-color: #06b6d4;
+        color: #ffffff !important;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+    }
+    .btn-footer-submit:hover {
+        background-color: #0891b2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="custom-inspect-wrapper">
+    <!-- Header Bar -->
+    <div class="custom-header-bar">
+        <div class="custom-header-title">
+            <h1>Campaign Details</h1>
+            <p>{{ instance.name }} &middot; Brand: {{ instance.brand.username }} &middot; Creator: {{ instance.creator.username|default:"Not Assigned" }}</p>
+        </div>
+        <div class="custom-header-actions">
+            <a href="{% url 'download_campaign_pdf' instance.pk %}" class="btn-header-secondary">Download PDF</a>
+            {% if view.get_edit_url %}
+                <a href="{{ view.get_edit_url }}" class="btn-header-secondary">Edit Campaign</a>
+            {% endif %}
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-header-primary">View Campaigns List</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Body Content with Form Field Cards -->
+    <form method="POST" action="" class="custom-body-card">
+        {% csrf_token %}
+        
+        <!-- General Campaign Information -->
+        <div>
+            <h3 class="custom-section-title">General Campaign Information</h3>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Campaign Name</label>
+                    <div class="custom-form-control-readonly"><strong>{{ instance.name }}</strong></div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Category</label>
+                    <div class="custom-form-control-readonly">{{ instance.category|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Brand Owner (User)</label>
+                    <div class="custom-form-control-readonly">{{ instance.brand.username }} ({{ instance.brand.email }})</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Assigned Creator (User)</label>
+                    <div class="custom-form-control-readonly">
+                        {% if instance.creator %}
+                            {{ instance.creator.username }} ({{ instance.creator.email }})
+                        {% else %}
+                            <span style="color: #94a3b8;">Not Assigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Budget</label>
+                    <div class="custom-form-control-readonly"><strong>${{ instance.budget }}</strong></div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Start Date</label>
+                    <div class="custom-form-control-readonly">{{ instance.start_date|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Status</label>
+                    <div class="custom-form-control-readonly">
+                        <span class="badge-status {{ instance.status|lower }}">{{ instance.status }}</span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Delivery Language</label>
+                    <div class="custom-form-control-readonly">{{ instance.delivery_language|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group full-width">
+                    <label class="custom-form-label">Campaign Progress ({{ instance.progress }}%)</label>
+                    <div class="custom-form-control-readonly" style="display: block; min-height: auto; padding: 16px 20px;">
+                        <strong>{{ instance.progress }}% Complete</strong>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {{ instance.progress }}%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="custom-form-group full-width">
+                    <label class="custom-form-label">Brief Description</label>
+                    <div class="custom-form-control-readonly textarea">{{ instance.brief|default:"-" }}</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Audio/Video Deliverable Brief Assets -->
+        <div>
+            <h3 class="custom-section-title">Reference / Audio / Video Brief Links</h3>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Voice Brief Attachment</label>
+                    <div class="custom-form-control-readonly">
+                        {% if instance.voice_brief %}
+                            <a href="{% if 'media' in instance.voice_brief or 'http' in instance.voice_brief %}{{ instance.voice_brief }}{% else %}/media/{{ instance.voice_brief }}{% endif %}" target="_blank" style="color: #0284c7; text-decoration: none;">View Voice Brief URL</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Screenshare Brief Attachment</label>
+                    <div class="custom-form-control-readonly">
+                        {% if instance.screenshare_brief %}
+                            <a href="{% if 'media' in instance.screenshare_brief or 'http' in instance.screenshare_brief %}{{ instance.screenshare_brief }}{% else %}/media/{{ instance.screenshare_brief }}{% endif %}" target="_blank" style="color: #0284c7; text-decoration: none;">View Screenshare Brief URL</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Video Brief Attachment</label>
+                    <div class="custom-form-control-readonly">
+                        {% if instance.video_brief %}
+                            <a href="{% if 'media' in instance.video_brief or 'http' in instance.video_brief %}{{ instance.video_brief }}{% else %}/media/{{ instance.video_brief }}{% endif %}" target="_blank" style="color: #0284c7; text-decoration: none;">View Video Brief URL</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Campaign Milestones & Tasks -->
+        <div>
+            <h3 class="custom-section-title">Milestones &amp; Tasks</h3>
+            <div style="margin-bottom: 16px;">
+                <strong>Current Campaign Status:</strong>
+                <span class="badge-status {% if instance.status == 'Live' %}live{% elif instance.status == 'Pending' or instance.status == 'Under_Review' %}pending{% elif instance.status == 'Rejected' %}inactive{% else %}pending{% endif %}">
+                    {{ instance.get_status_display }}
+                </span>
+            </div>
+            <div class="custom-form-grid">
+                
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Campaign Milestones</label>
+                    <div class="custom-table-wrapper">
+                        <table class="custom-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Milestone Title</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for milestone in milestones %}
+                                    <tr>
+                                        <td><strong>{{ milestone.title }}</strong></td>
+                                        <td>
+                                            <span class="badge-status {% if milestone.is_done %}live{% else %}pending{% endif %}">
+                                                {% if milestone.is_done %}Done{% else %}Pending{% endif %}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="2" style="text-align: center; color: #94a3b8;">No milestones defined for this campaign</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Campaign Tasks List</label>
+                    <div class="custom-table-wrapper">
+                        <table class="custom-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Task Title</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                    <tr>
+                                        <td><strong>{{ task.title }}</strong></td>
+                                        <td>{{ task.due_date|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge-status {% if task.is_done %}live{% else %}pending{% endif %}">
+                                                {% if task.is_done %}Done{% else %}Pending{% endif %}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="3" style="text-align: center; color: #94a3b8;">No tasks configured for this campaign</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Deliverables list -->
+        <div>
+            <h3 class="custom-section-title">Deliverables</h3>
+            <div class="custom-table-wrapper">
+                <table class="custom-data-table">
+                    <thead>
+                        <tr>
+                            <th>Deliverable Name</th>
+                            <th>Type</th>
+                            <th>Deadline</th>
+                            <th>Link</th>
+                            <th>Status</th>
+                            <th>Brief Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for del in deliverables %}
+                            <tr>
+                                <td><strong>{{ del.name }}</strong></td>
+                                <td><span class="tag-item" style="margin: 0;">{{ del.type }}</span></td>
+                                <td>{{ del.deadline|default:"-" }}</td>
+                                <td>
+                                    {% if del.link %}
+                                        <a href="{{ del.link }}" target="_blank" style="color: #0284c7; text-decoration: none;">View link</a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge-status {% if del.status == 'Approved' or del.status == 'Published' %}live{% else %}pending{% endif %}">
+                                        {{ del.status }}
+                                    </span>
+                                </td>
+                                <td><span style="color: #64748b;">{{ del.brief|default:"-" }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">No deliverables recorded for this campaign</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Payment Installments -->
+        <div>
+            <h3 class="custom-section-title">Payment Installments</h3>
+            <div class="custom-table-wrapper">
+                <table class="custom-data-table">
+                    <thead>
+                        <tr>
+                            <th>Milestone Name</th>
+                            <th>Amount</th>
+                            <th>Payment Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pay in payments %}
+                            <tr>
+                                <td><strong>{{ pay.milestone_name }}</strong></td>
+                                <td><strong>${{ pay.amount }}</strong></td>
+                                <td>{{ pay.payment_date|default:"-" }}</td>
+                                <td>
+                                    <span class="badge-status {% if pay.status == 'Released' %}live{% elif pay.status == 'In Escrow' %}pending{% else %}completed{% endif %}">
+                                        {{ pay.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">No payment installments found for this campaign</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Workspace Files -->
+        <div>
+            <h3 class="custom-section-title">Workspace Files</h3>
+            <div class="custom-table-wrapper">
+                <table class="custom-data-table">
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>Size</th>
+                            <th>Sender</th>
+                            <th>Date &amp; Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in files %}
+                            <tr>
+                                <td><strong>{{ file.name }}</strong></td>
+                                <td>{{ file.size }}</td>
+                                <td>{{ file.sender.username }}</td>
+                                <td>{{ file.date }} at {{ file.time }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">No files uploaded in this workspace</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Compliance Tickets -->
+        <div>
+            <h3 class="custom-section-title">Compliance Tickets</h3>
+            <div class="custom-table-wrapper">
+                <table class="custom-data-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Ticket Message</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Reply Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in tickets %}
+                            <tr>
+                                <td><strong>{{ ticket.category }}</strong></td>
+                                <td>{{ ticket.message }}</td>
+                                <td>{{ ticket.date }}</td>
+                                <td>
+                                    <span class="badge-status {% if ticket.status == 'Resolved' or ticket.status == 'Approved' %}live{% else %}pending{% endif %}">
+                                        {{ ticket.status }}
+                                    </span>
+                                </td>
+                                <td><span style="color: #475569;">{{ ticket.reply|default:"-" }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">No compliance tickets raised for this campaign</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Admin Workspace Console -->
+        <div style="margin-top: 36px; margin-bottom: 24px;">
+            <h3 class="custom-section-title" style="border-bottom: 2px solid #8b5cf6;">Admin Workspace Console</h3>
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;">
+                
+                <div style="display: flex; background: #e2e8f0; border-bottom: 1px solid #cbd5e1;">
+                    <button type="button" class="admin-tab-btn active" data-tab="main" style="padding: 12px 20px; font-weight: 600; border: none; background: #fff; cursor: pointer;">Main Chat (Read-Only)</button>
+                    <button type="button" class="admin-tab-btn" data-tab="admin_note" style="padding: 12px 20px; font-weight: 600; border: none; background: transparent; cursor: pointer;">Private Notes</button>
+                    <button type="button" class="admin-tab-btn" data-tab="admin_business" style="padding: 12px 20px; font-weight: 600; border: none; background: transparent; cursor: pointer;">Chat w/ Business</button>
+                    <button type="button" class="admin-tab-btn" data-tab="admin_creator" style="padding: 12px 20px; font-weight: 600; border: none; background: transparent; cursor: pointer;">Chat w/ Creator</button>
+                </div>
+                
+                <div id="admin-chat-messages" style="height: 350px; overflow-y: auto; padding: 20px; background: #fff; display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Messages will be rendered here by JS -->
+                    <div style="text-align: center; color: #94a3b8; font-size: 14px; margin-top: 40px;">Loading workspace messages...</div>
+                </div>
+
+                <div id="admin-chat-input-area" style="padding: 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: none;">
+                    <div style="display: flex; gap: 12px;">
+                        <input type="text" id="admin-chat-input" placeholder="Type a message..." style="flex: 1; padding: 10px 16px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-size: 14px;">
+                        <button type="button" id="admin-chat-send" style="background: #8b5cf6; color: white; border: none; padding: 0 24px; border-radius: 6px; font-weight: 600; cursor: pointer;">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const campaignId = "{{ instance.id }}";
+                let activeTab = "main";
+                let allMessages = [];
+                
+                const messagesContainer = document.getElementById("admin-chat-messages");
+                const inputArea = document.getElementById("admin-chat-input-area");
+                const chatInput = document.getElementById("admin-chat-input");
+                const sendBtn = document.getElementById("admin-chat-send");
+                const tabBtns = document.querySelectorAll(".admin-tab-btn");
+
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+                const csrftoken = getCookie('csrftoken');
+
+                function renderMessages() {
+                    messagesContainer.innerHTML = "";
+                    const filtered = allMessages.filter(m => m.message_type === activeTab);
+                    
+                    if (filtered.length === 0) {
+                        messagesContainer.innerHTML = `<div style="text-align: center; color: #94a3b8; font-size: 14px; margin-top: 40px;">No messages in this channel yet.</div>`;
+                        return;
+                    }
+
+                    filtered.forEach(m => {
+                        const isMe = m.sender_name === "{{ request.user.username }}";
+                        const div = document.createElement("div");
+                        div.style.display = "flex";
+                        div.style.flexDirection = "column";
+                        div.style.alignItems = isMe ? "flex-end" : "flex-start";
+                        
+                        div.innerHTML = `
+                            <span style="font-size: 11px; color: #64748b; margin-bottom: 2px;">${m.sender_name} - ${m.time}</span>
+                            <div style="background: ${isMe ? '#8b5cf6' : '#e2e8f0'}; color: ${isMe ? 'white' : '#1e293b'}; padding: 8px 14px; border-radius: 8px; max-width: 75%; font-size: 14px;">
+                                ${m.text}
+                            </div>
+                        `;
+                        messagesContainer.appendChild(div);
+                    });
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+
+                function loadMessages() {
+                    // Use standard django view if API requires session, but Wagtail is usually same-origin
+                    fetch(`/api/campegins/campaigns/${campaignId}/`, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.messages) {
+                            allMessages = data.messages;
+                            renderMessages();
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error loading messages", err);
+                        messagesContainer.innerHTML = `<div style="text-align: center; color: #ef4444; font-size: 14px; margin-top: 40px;">Failed to load messages.</div>`;
+                    });
+                }
+
+                function sendMessage() {
+                    const text = chatInput.value.trim();
+                    if (!text) return;
+                    
+                    fetch(`/api/campegins/campaigns/${campaignId}/send_message/`, {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: JSON.stringify({
+                            text: text,
+                            message_type: activeTab
+                        })
+                    })
+                    .then(res => {
+                        if (res.ok) return res.json();
+                        throw new Error("Failed");
+                    })
+                    .then(msg => {
+                        chatInput.value = "";
+                        allMessages.push(msg);
+                        renderMessages();
+                    })
+                    .catch(err => alert("Error sending message"));
+                }
+
+                tabBtns.forEach(btn => {
+                    btn.addEventListener("click", (e) => {
+                        tabBtns.forEach(b => {
+                            b.style.background = "transparent";
+                            b.classList.remove("active");
+                        });
+                        e.target.style.background = "#fff";
+                        e.target.classList.add("active");
+                        
+                        activeTab = e.target.getAttribute("data-tab");
+                        
+                        if (activeTab === "main") {
+                            inputArea.style.display = "none";
+                        } else {
+                            inputArea.style.display = "block";
+                        }
+                        renderMessages();
+                    });
+                });
+
+                sendBtn.addEventListener("click", sendMessage);
+                chatInput.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") sendMessage();
+                });
+
+                loadMessages();
+            });
+        </script>
+        <!-- Admin Moderation Section -->
+        <div style="margin-top: 36px; margin-bottom: 24px;">
+            <h3 class="custom-section-title" style="border-bottom: 2px solid #ef4444;">Admin Moderation Controls</h3>
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; width: 100%;">
+                    <div>
+                        <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: #1e293b;">Change Campaign Status</h4>
+                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">Review the campaign and choose to approve/publish, reject, or mark it as completed.</p>
+                    </div>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        {% if instance.status == "Under_Review" or instance.status == "Rejected" %}
+                            <button type="submit" name="status" value="Live" class="btn-header-primary" style="background-color: #16a34a; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                Approve &amp; Publish Campaign
+                            </button>
+                        {% endif %}
+                        
+                        {% if instance.status == "Countered" %}
+                            <button type="submit" name="status" value="Live_Countered" class="btn-header-primary" style="background-color: #16a34a; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Accept counter offer price of ${{ instance.counter_price }}?');">
+                                <i class="fas fa-handshake"></i> Accept Counter Offer
+                            </button>
+                        {% endif %}
+
+                        {% if instance.status != "Rejected" %}
+                            <button type="submit" name="status" value="Rejected" class="btn-header-primary" style="background-color: #dc2626; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Are you sure you want to reject this campaign?');">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                Reject Campaign
+                            </button>
+                        {% endif %}
+
+                        {% if instance.status == "Live" %}
+                            <button type="submit" name="status" value="Completed" class="btn-header-primary" style="background-color: #2563eb; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Mark Completed
+                            </button>
+                        {% endif %}
+
+                        {% if instance.status == "Live" or instance.status == "Rejected" or instance.status == "Completed" %}
+                            <button type="submit" name="status" value="Pending" class="btn-header-primary" style="background-color: #475569; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89H18.25"></path></svg>
+                                Reset to Pending
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group" style="width: 100%;">
+                    <label class="custom-form-label">Admin Review / Rejection Comments (Sent to brand if rejected)</label>
+                    <textarea name="admin_review" class="custom-textarea" placeholder="Provide review comments, notes, or reasons for rejection here...">{{ instance.admin_review|default:"" }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Actions -->
+        <div class="custom-footer-actions">
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-footer-back">Back</a>
+            {% endif %}
+            <a href="{% url 'download_campaign_pdf' instance.pk %}" class="btn-footer-back">Download PDF</a>
+            {% if view.get_edit_url %}
+                <a href="{{ view.get_edit_url }}" class="btn-footer-edit">Edit Campaign</a>
+            {% endif %}
+            <button type="submit" class="btn-footer-submit">Save Review Comments</button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

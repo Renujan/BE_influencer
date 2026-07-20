@@ -4,7 +4,7 @@ from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
 from wagtail.admin.views.generic.models import InspectView, IndexView, MenuItem as GenericMenuItem
 from django.utils.translation import gettext as _
 from django.urls import reverse, path
-from .models import BusinessProfile, CreatorProfile, Niche, BusinessType, Country
+from .models import BusinessProfile, CreatorProfile, Niche, BusinessType, Country, Medium
 from Setting.models import CreatorSettings, BusinessSettings
 from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view, admin_approve_creator_view, admin_restrict_creator_view, admin_toggle_featured_view
 
@@ -79,6 +79,7 @@ class BusinessProfileInspectView(InspectView):
             # handle both comma and space separation
             business_types = [t.strip() for t in business_profile.business_type.replace(",", " ").split() if t.strip()]
         context["business_types"] = business_types
+        context["payout_methods"] = business_profile.payout_methods.all()
         return context
 
 class CreatorProfileInspectView(InspectView):
@@ -214,6 +215,17 @@ class CountryViewSet(ModelViewSet):
     menu_icon = "globe"
     menu_item_name = "countries"
     add_to_admin_menu = False
+    list_display = ("name",)
+    search_fields = ("name",)
+
+# 6. Medium Admin Viewset
+class MediumViewSet(ModelViewSet):
+    model = Medium
+    menu_label = "Mediums"
+    icon = "tag"
+    menu_icon = "tag"
+    menu_item_name = "mediums"
+    add_to_admin_menu = False
     form_fields = ["name"]
     list_display = ("name",)
     search_fields = ("name",)
@@ -241,6 +253,10 @@ def register_business_type_viewset():
 def register_country_viewset():
     return CountryViewSet()
 
+@hooks.register("register_admin_viewset")
+def register_medium_viewset():
+    return MediumViewSet()
+
 # Register custom nested menu items
 @hooks.register("register_admin_menu_item")
 def register_custom_user_profiles_menu():
@@ -248,6 +264,9 @@ def register_custom_user_profiles_menu():
     biz_prof = BusinessProfileViewSet()
     biz_type = BusinessTypeViewSet()
     creator_prof = CreatorProfileViewSet()
+    niche_view = NicheViewSet()
+    country_view = CountryViewSet()
+    medium_view = MediumViewSet()
     niche = NicheViewSet()
     country_viewset = CountryViewSet()
 

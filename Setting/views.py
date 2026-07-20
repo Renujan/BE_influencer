@@ -108,3 +108,30 @@ class UploadAvatarView(APIView):
         profile.save()
         
         return Response({"avatar_url": avatar_url}, status=status.HTTP_200_OK)
+
+class UploadBankBookView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        file_obj = request.FILES.get("bank_book") or request.FILES.get("file")
+        if not file_obj:
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf']:
+            return Response({"error": "Invalid file type. Only image files and PDFs are allowed."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = request.user
+        role = "business" if hasattr(user, "business_profile") else "influencer"
+        
+        file_name = f"bank_books/{role}_{user.id}_{file_obj.name}"
+        if default_storage.exists(file_name):
+            default_storage.delete(file_name)
+            
+        saved_path = default_storage.save(file_name, file_obj)
+        file_url = default_storage.url(saved_path)
+        
+        if not file_url.startswith('http') and not file_url.startswith('/'):
+            file_url = '/' + file_url
+            
+        return Response({"bank_book_url": file_url}, status=status.HTTP_200_OK)

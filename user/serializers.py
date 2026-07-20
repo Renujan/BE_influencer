@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
-    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount, Country
+    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount, Country, Medium, Province, District
 )
 
 class NicheSerializer(serializers.ModelSerializer):
@@ -14,10 +14,30 @@ class BusinessTypeSerializer(serializers.ModelSerializer):
         model = BusinessType
         fields = ["id", "name"]
 
+class DistrictSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = District
+        fields = ["id", "name", "province"]
+
+class ProvinceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Province
+        fields = ["id", "name"]
+
+class MediumSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Medium
+        fields = ["id", "name"]
+
 class CountrySerializer(serializers.ModelSerializer):
+    provinces = ProvinceSerializer(many=True, read_only=True)
+    mediums = MediumSerializer(many=True, read_only=True)
+    districts = DistrictSerializer(many=True, read_only=True)
+
     class Meta:
         model = Country
-        fields = ["id", "name"]
+        fields = ["id", "name", "currency", "country_code", "provinces", "mediums", "districts"]
+
 
 class CreatorRateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -58,6 +78,8 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     business_types = BusinessTypeSerializer(many=True, read_only=True)
     country = CountrySerializer(read_only=True)
+    province = ProvinceSerializer(read_only=True)
+    district = DistrictSerializer(read_only=True)
     campaign_count = serializers.SerializerMethodField()
     creators_hired_count = serializers.SerializerMethodField()
     total_spent = serializers.SerializerMethodField()
@@ -69,7 +91,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         model = BusinessProfile
         fields = [
             "id", "user", "company_name", "business_type", "business_types", "website", "bio",
-            "phone", "secondary_phone", "time_zone", "avatar_url", "country",
+            "phone", "secondary_phone", "time_zone", "avatar_url", "country", "province", "district",
             "facebook_url", "instagram_handle", "tiktok_handle", "youtube_url",
             "linkedin_url", "twitter_handle", "otp_verified", "status",
             "verification_documents_submitted", "business_reg_number", "business_document",
@@ -121,6 +143,9 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
     niches = NicheSerializer(many=True, read_only=True)
     rates = CreatorRateSerializer(many=True, read_only=True)
     country = CountrySerializer(read_only=True)
+    province = ProvinceSerializer(read_only=True)
+    district = DistrictSerializer(read_only=True)
+    mediums = MediumSerializer(many=True, read_only=True)
     social_accounts = CreatorSocialAccountSerializer(source="user.social_accounts", many=True, read_only=True)
     campaign_count = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
@@ -130,7 +155,8 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
         model = CreatorProfile
         fields = [
             "id", "user", "phone", "location", "country", "bio", "avatar_url",
-            "wallet_balance", "next_payout_date", "niches", "rates",
+            "wallet_balance", "next_payout_date", "niches", "mediums", "rates",
+            "province", "district", 
             "social_accounts", "otp_verified", "status",
             "verification_documents_submitted", "document_type", "document_front",
             "document_back", "other_details", "campaign_count", "followers_count", "settings",

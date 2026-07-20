@@ -451,25 +451,33 @@
         <div>
             <h3 class="custom-section-title">Payout Methods</h3>
             <div class="custom-form-grid">
-                {% for pm in payout_methods %}
-                    <div class="custom-form-group">
-                        <label class="custom-form-label">{{ pm.method_type }} {% if pm.is_primary %}(Primary){% endif %}</label>
-                        <div class="custom-form-control-readonly" style="justify-content: space-between;">
-                            <span>{{ pm.details }}</span>
+                {% if payout_methods %}
+                    {% for pm in payout_methods %}
+                    <div class="custom-form-group" style="grid-column: 1 / -1;">
+                        <label class="custom-form-label">{% if pm.is_primary %}(Primary){% else %}(Backup){% endif %}</label>
+                        <div class="custom-form-control-readonly" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600;">{{ pm.bank_name }} - {{ pm.account_number }}</div>
+                                <div style="font-size: 12px; color: #64748b;">Account Holder: {{ pm.full_name }}</div>
+                                {% if pm.bank_book_photo_url %}
+                                <div style="margin-top: 4px;">
+                                    <a href="{{ pm.bank_book_photo_url }}" target="_blank" style="font-size: 12px; color: #06b6d4; text-decoration: none; font-weight: 500;">View Bank Book Photo &rarr;</a>
+                                </div>
+                                {% endif %}
+                            </div>
                             {% if pm.is_primary %}
-                                <span class="badge-status approved" style="font-size: 10px;">Primary</span>
-                            {% else %}
-                                <span class="badge-status" style="font-size: 10px; background-color: #f1f5f9; color: #475569;">Backup</span>
+                            <span class="tag-item enabled">Primary</span>
                             {% endif %}
                         </div>
                     </div>
-                {% empty %}
-                    <div class="custom-form-group full-width">
-                        <div class="custom-form-control-readonly" style="color: #94a3b8; justify-content: center; padding: 20px;">
+                    {% endfor %}
+                {% else %}
+                    <div class="custom-form-group" style="grid-column: 1 / -1;">
+                        <div class="custom-form-control-readonly" style="justify-content: center; color: #94a3b8; font-style: italic; padding: 20px;">
                             No payout methods configured in settings
                         </div>
                     </div>
-                {% endfor %}
+                {% endif %}
             </div>
         </div>
 
@@ -618,10 +626,17 @@
                 </div>
                 <div style="display: flex; gap: 12px;">
                     {% if instance.status != "approved" %}
-                        <a href="{% url 'wagtail_approve_creator' instance.id %}" class="btn-header-primary" style="background-color: #16a34a; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            Approve Creator
-                        </a>
+                        {% if instance.verification_documents_submitted %}
+                            <a href="{% url 'wagtail_approve_creator' instance.id %}" class="btn-header-primary" style="background-color: #16a34a; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                Approve Creator
+                            </a>
+                        {% else %}
+                            <span class="btn-header-primary" style="background-color: #16a34a; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s; opacity: 0.5; cursor: not-allowed; pointer-events: none;" title="Creator must submit verification documents first">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                Approve Creator
+                            </span>
+                        {% endif %}
                     {% endif %}
                     
                     {% if instance.status != "restricted" %}

@@ -480,6 +480,12 @@
         <!-- Campaign Milestones & Tasks -->
         <div>
             <h3 class="custom-section-title">Milestones &amp; Tasks</h3>
+            <div style="margin-bottom: 16px;">
+                <strong>Current Campaign Status:</strong>
+                <span class="badge-status {% if instance.status == 'Live' %}live{% elif instance.status == 'Pending' or instance.status == 'Under_Review' %}pending{% elif instance.status == 'Rejected' %}inactive{% else %}pending{% endif %}">
+                    {{ instance.get_status_display }}
+                </span>
+            </div>
             <div class="custom-form-grid">
                 
                 <div class="custom-form-group">
@@ -658,6 +664,48 @@
             </div>
         </div>
 
+        <!-- Negotiation History Section -->
+        <div style="margin-bottom: 24px;">
+            <h3 class="custom-section-title">Negotiation &amp; Counter Offers</h3>
+            <div class="custom-table-wrapper">
+                <table class="custom-data-table">
+                    <thead>
+                        <tr>
+                            <th>Current Status</th>
+                            <th>Original Budget</th>
+                            <th>Counter Price</th>
+                            <th>Counter Note</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <span class="badge-status {% if instance.status == 'Countered' or instance.status == 'Business_Countered' %}pending{% elif instance.status == 'Live' %}live{% else %}draft{% endif %}">
+                                    {{ instance.get_status_display|default:instance.status }}
+                                </span>
+                            </td>
+                            <td>${{ instance.budget|default:"0.00" }}</td>
+                            <td>{% if instance.counter_price %}${{ instance.counter_price }}{% else %}-{% endif %}</td>
+                            <td>{{ instance.counter_note|default:"-" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            {% if instance.status == 'Countered' %}
+            <div style="margin-top: 10px; font-size: 13px; color: #64748b; background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                <i class="fas fa-info-circle text-primary" style="color: #3b82f6;"></i> <strong>Waiting on Business:</strong> The creator has sent a counter offer. The business must accept, decline, or reply with another counter offer.
+            </div>
+            {% elif instance.status == 'Business_Countered' %}
+            <div style="margin-top: 10px; font-size: 13px; color: #64748b; background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                <i class="fas fa-info-circle text-primary" style="color: #3b82f6;"></i> <strong>Waiting on Creator:</strong> The business has replied with a counter offer. The creator must accept, decline, or reply with another counter offer.
+            </div>
+            {% elif instance.status == 'Live' and instance.counter_price %}
+            <div style="margin-top: 10px; font-size: 13px; color: #16a34a; background-color: #f0fdf4; padding: 12px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                <i class="fas fa-check-circle text-green-600" style="color: #16a34a;"></i> <strong>Negotiation Complete:</strong> The counter offer was accepted and the campaign is now live with the final budget of ${{ instance.budget }}.
+            </div>
+            {% endif %}
+        </div>
+
         <!-- Compliance Tickets -->
         <div>
             <h3 class="custom-section-title">Compliance Tickets</h3>
@@ -705,13 +753,19 @@
                         <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">Review the campaign and choose to approve/publish, reject, or mark it as completed.</p>
                     </div>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        {% if instance.status != "Live" %}
+                        {% if instance.status == "Under_Review" or instance.status == "Rejected" %}
                             <button type="submit" name="status" value="Live" class="btn-header-primary" style="background-color: #16a34a; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                 Approve &amp; Publish Campaign
                             </button>
                         {% endif %}
                         
+                        {% if instance.status == "Countered" %}
+                            <button type="submit" name="status" value="Live_Countered" class="btn-header-primary" style="background-color: #16a34a; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Accept counter offer price of ${{ instance.counter_price }}?');">
+                                <i class="fas fa-handshake"></i> Accept Counter Offer
+                            </button>
+                        {% endif %}
+
                         {% if instance.status != "Rejected" %}
                             <button type="submit" name="status" value="Rejected" class="btn-header-primary" style="background-color: #dc2626; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Are you sure you want to reject this campaign?');">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>

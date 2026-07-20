@@ -169,33 +169,160 @@
         </div>
     </div>
 
-    <div class="chat-timeline">
-        {% for msg in messages %}
-            <div class="msg-group {% if msg.sender == campaign.brand %}brand{% else %}creator{% endif %}">
-                <div class="avatar {% if msg.sender == campaign.brand %}brand{% else %}creator{% endif %}">
-                    {{ msg.sender.username|slice:":1"|upper }}
-                </div>
-                <div class="msg-content">
-                    <span class="sender-name">{{ msg.sender.username }}</span>
-                    <div class="bubble">
-                        {{ msg.text }}
-                        {% if msg.file_attachment %}
-                            <br/>
-                            <span class="attachment">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                                {{ msg.file_attachment }}
-                            </span>
-                        {% endif %}
-                    </div>
-                    <span class="msg-timestamp">{{ msg.time }}</span>
-                </div>
+<!-- Admin Workspace Console -->
+<div style="margin-top: 24px; margin-bottom: 24px;">
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;">
+        
+        <div style="display: flex; background: #e2e8f0; border-bottom: 1px solid #cbd5e1;">
+            <button type="button" class="admin-tab-btn active" data-tab="main" style="padding: 12px 20px; font-weight: 600; border: none; background: #fff; cursor: pointer;">Main Chat (Read-Only)</button>
+            <button type="button" class="admin-tab-btn" data-tab="admin_note" style="padding: 12px 20px; font-weight: 600; border: none; background: transparent; cursor: pointer;">Private Notes</button>
+            <button type="button" class="admin-tab-btn" data-tab="admin_business" style="padding: 12px 20px; font-weight: 600; border: none; background: transparent; cursor: pointer;">Chat w/ Business</button>
+            <button type="button" class="admin-tab-btn" data-tab="admin_creator" style="padding: 12px 20px; font-weight: 600; border: none; background: transparent; cursor: pointer;">Chat w/ Creator</button>
+        </div>
+        
+        <div id="admin-chat-messages" style="height: 450px; overflow-y: auto; padding: 20px; background: #fff; display: flex; flex-direction: column; gap: 12px;">
+            <!-- Messages will be rendered here by JS -->
+            <div style="text-align: center; color: #94a3b8; font-size: 14px; margin-top: 40px;">Loading workspace messages...</div>
+        </div>
+
+        <div id="admin-chat-input-area" style="padding: 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: none;">
+            <div style="display: flex; gap: 12px;">
+                <input type="text" id="admin-chat-input" placeholder="Type a message..." style="flex: 1; padding: 10px 16px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-size: 14px;">
+                <button type="button" id="admin-chat-send" style="background: #8b5cf6; color: white; border: none; padding: 0 24px; border-radius: 6px; font-weight: 600; cursor: pointer;">Send</button>
             </div>
-        {% empty %}
-            <div class="empty-state">
-                <p>No chat history available for this workspace.</p>
-            </div>
-        {% endfor %}
+        </div>
     </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const campaignId = "{{ campaign.id }}";
+        let activeTab = "main";
+        let allMessages = [];
+        
+        const messagesContainer = document.getElementById("admin-chat-messages");
+        const inputArea = document.getElementById("admin-chat-input-area");
+        const chatInput = document.getElementById("admin-chat-input");
+        const sendBtn = document.getElementById("admin-chat-send");
+        const tabBtns = document.querySelectorAll(".admin-tab-btn");
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        function renderMessages() {
+            messagesContainer.innerHTML = "";
+            const filtered = allMessages.filter(m => (m.message_type || 'main') === activeTab);
+            
+            if (filtered.length === 0) {
+                messagesContainer.innerHTML = `<div style="text-align: center; color: #94a3b8; font-size: 14px; margin-top: 40px;">No messages in this channel yet.</div>`;
+                return;
+            }
+
+            filtered.forEach(m => {
+                const isMe = m.sender_name === "{{ request.user.username }}";
+                const div = document.createElement("div");
+                div.style.display = "flex";
+                div.style.flexDirection = "column";
+                div.style.alignItems = isMe ? "flex-end" : "flex-start";
+                
+                div.innerHTML = `
+                    <span style="font-size: 11px; color: #64748b; margin-bottom: 2px;">${m.sender_name} - ${m.time}</span>
+                    <div style="background: ${isMe ? '#8b5cf6' : '#e2e8f0'}; color: ${isMe ? 'white' : '#1e293b'}; padding: 8px 14px; border-radius: 8px; max-width: 75%; font-size: 14px;">
+                        ${m.text}
+                    </div>
+                `;
+                messagesContainer.appendChild(div);
+            });
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function loadMessages() {
+            fetch(`/api/campegins/campaigns/${campaignId}/`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.messages) {
+                    allMessages = data.messages;
+                    renderMessages();
+                }
+            })
+            .catch(err => {
+                console.error("Error loading messages", err);
+                messagesContainer.innerHTML = `<div style="text-align: center; color: #ef4444; font-size: 14px; margin-top: 40px;">Failed to load messages.</div>`;
+            });
+        }
+
+        function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            fetch(`/api/campegins/campaigns/${campaignId}/send_message/`, {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    text: text,
+                    message_type: activeTab
+                })
+            })
+            .then(res => {
+                if (res.ok) return res.json();
+                throw new Error("Failed");
+            })
+            .then(msg => {
+                chatInput.value = "";
+                allMessages.push(msg);
+                renderMessages();
+            })
+            .catch(err => alert("Error sending message"));
+        }
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                tabBtns.forEach(b => {
+                    b.style.background = "transparent";
+                    b.classList.remove("active");
+                });
+                e.target.style.background = "#fff";
+                e.target.classList.add("active");
+                
+                activeTab = e.target.getAttribute("data-tab");
+                
+                if (activeTab === "main") {
+                    inputArea.style.display = "none";
+                } else {
+                    inputArea.style.display = "block";
+                }
+                renderMessages();
+            });
+        });
+
+        sendBtn.addEventListener("click", sendMessage);
+        chatInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") sendMessage();
+        });
+
+        loadMessages();
+    });
+</script>
 
     <div style="text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
         <a href="{% url 'wagtailsnippets_campegin_campaign:inspect' campaign.id %}" class="button button-secondary" style="background-color: #06b6d4; color: white !important;">View Campaign</a>

@@ -528,11 +528,11 @@
         <div class="icon icon-chat">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         </div>
-        <h2>Chat History ({{ messages|length }} messages)</h2>
+        <h2>Chat History ({{ chat_messages|length }} messages)</h2>
       </div>
       <div class="cm-card-body" style="padding:14px;">
         <div class="chat-timeline">
-          {% for msg in messages %}
+          {% for msg in chat_messages %}
             <div class="msg-group {% if msg.sender == campaign.brand %}brand{% else %}creator{% endif %}">
               <div class="avatar-sm {% if msg.sender == campaign.brand %}brand{% else %}creator{% endif %}">
                 {{ msg.sender.username|slice:":1"|upper }}

@@ -16,6 +16,7 @@ from .serializers import (
     CampaignDeliverableSerializer, CampaignPlatformSerializer,
     PitchSerializer
 )
+from notifications.models import Notification
 
 from user.permissions import IsApprovedBusiness
 
@@ -188,8 +189,11 @@ class CampaignViewSet(viewsets.ModelViewSet):
         #     return Response({"error": "Admin privileges required."}, status=status.HTTP_403_FORBIDDEN)
         
         campaign = self.get_object()
-        campaign.status = "Live"
-        campaign.progress = 62  # mock starting progress
+        if campaign.creator:
+            campaign.status = "Pending"
+        else:
+            campaign.status = "Live"
+            campaign.progress = 62  # mock starting progress
         campaign.admin_review = ""  # clear any previous rejection comments
         campaign.save()
         return Response(CampaignSerializer(campaign).data)
@@ -215,8 +219,21 @@ class CampaignViewSet(viewsets.ModelViewSet):
     def send_message(self, request, pk=None):
         campaign = self.get_object()
         text = request.data.get("text")
+        message_type = request.data.get("message_type", "main")
+        
         if not text:
             return Response({"error": "Text is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user = request.user
+        
+        # Enforce message type rules
+        if not (user.is_staff or user.is_superuser):
+            profile = getattr(user, "profile", None)
+            if profile:
+                if profile.role == "influencer" and message_type not in ["main", "admin_creator"]:
+                    message_type = "main"
+                elif profile.role == "business" and message_type not in ["main", "admin_business"]:
+                    message_type = "main"
         
         import datetime
         now = datetime.datetime.now()
@@ -224,8 +241,9 @@ class CampaignViewSet(viewsets.ModelViewSet):
         
         message = WorkspaceMessage.objects.create(
             campaign=campaign,
-            sender=request.user,
+            sender=user,
             text=text,
+            message_type=message_type,
             time=time_str
         )
         return Response(WorkspaceMessageSerializer(message).data, status=status.HTTP_201_CREATED)
@@ -377,13 +395,15 @@ class RequestViewSet(viewsets.ModelViewSet):
             return Campaign.objects.none()
 
         if profile.role == "business":
-            return Campaign.objects.filter(brand=user, status="Pending")
+            return Campaign.objects.filter(brand=user, status__in=["Pending", "Countered", "Business_Countered"])
         else:
-            return Campaign.objects.filter(creator=user, status="Pending")
+            return Campaign.objects.filter(creator=user, status__in=["Pending", "Countered", "Business_Countered"])
 
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):
         campaign = self.get_object()
+        if campaign.status == "Business_Countered" and campaign.counter_price:
+            campaign.budget = campaign.counter_price
         campaign.status = "Live"
         campaign.progress = 62 # set to default mockup progression
         campaign.save()
@@ -394,6 +414,77 @@ class RequestViewSet(viewsets.ModelViewSet):
         campaign = self.get_object()
         campaign.delete()
         return Response({"message": "Request successfully declined"})
+
+    @action(detail=True, methods=["post"])
+    def counter(self, request, pk=None):
+        campaign = self.get_object()
+        counter_price = request.data.get("price")
+        counter_note = request.data.get("note")
+        campaign.counter_price = counter_price
+        campaign.counter_note = counter_note
+        campaign.status = "Countered"
+        campaign.save()
+        
+        Notification.objects.create(
+            title="Campaign Counter Offer",
+            message=f"A counter offer was submitted for campaign '{campaign.name}'.",
+            category="campaign",
+            icon="fas fa-handshake",
+            target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
+        )
+        return Response(CampaignSerializer(campaign).data)
+
+    @action(detail=True, methods=["post"])
+    def accept_counter(self, request, pk=None):
+        campaign = self.get_object()
+        if campaign.counter_price:
+            campaign.budget = campaign.counter_price
+        campaign.status = "Live"
+        campaign.progress = 62
+        campaign.save()
+        
+        Notification.objects.create(
+            title="Campaign Counter Accepted",
+            message=f"The counter offer for campaign '{campaign.name}' was accepted. Campaign is now Live.",
+            category="campaign",
+            icon="fas fa-check-circle",
+            target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
+        )
+        return Response(CampaignSerializer(campaign).data)
+
+    @action(detail=True, methods=["post"])
+    def decline_counter(self, request, pk=None):
+        campaign = self.get_object()
+        campaign.status = "Rejected"
+        campaign.save()
+        
+        Notification.objects.create(
+            title="Campaign Counter Declined",
+            message=f"The counter offer for campaign '{campaign.name}' was declined. Campaign is Rejected.",
+            category="campaign",
+            icon="fas fa-times-circle",
+            target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
+        )
+        return Response({"message": "Counter offer declined"})
+
+    @action(detail=True, methods=["post"])
+    def counter_reply(self, request, pk=None):
+        campaign = self.get_object()
+        counter_price = request.data.get("price")
+        counter_note = request.data.get("note")
+        campaign.counter_price = counter_price
+        campaign.counter_note = counter_note
+        campaign.status = "Business_Countered"
+        campaign.save()
+        
+        Notification.objects.create(
+            title="Campaign Counter Reply",
+            message=f"A reply to a counter offer was sent for campaign '{campaign.name}'.",
+            category="campaign",
+            icon="fas fa-exchange-alt",
+            target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
+        )
+        return Response(CampaignSerializer(campaign).data)
 
 class CampaignSettingsView(APIView):
     permission_classes = [permissions.AllowAny]

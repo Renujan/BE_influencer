@@ -30,6 +30,12 @@ class PortfolioItem(models.Model):
         null=True,
         help_text="Upload a thumbnail image or screenshot for this post."
     )
+    proof_screenshot = models.ImageField(
+        upload_to="portfolio/proofs/",
+        blank=True,
+        null=True,
+        help_text="Upload a screenshot of insights to verify views/engagement."
+    )
     is_featured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

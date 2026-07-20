@@ -38,7 +38,7 @@ class WorkspaceMessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WorkspaceMessage
-        fields = ["id", "sender", "sender_name", "text", "file_attachment", "time"]
+        fields = ["id", "sender", "sender_name", "text", "file_attachment", "time", "message_type"]
 
 class AdminComplianceTicketSerializer(serializers.ModelSerializer):
     class Meta:
@@ -53,15 +53,39 @@ class CampaignSerializer(serializers.ModelSerializer):
     deliverables = DeliverableSerializer(many=True, read_only=True)
     payments = PaymentInstallmentSerializer(many=True, read_only=True)
     files = WorkspaceFileSerializer(many=True, read_only=True)
-    messages = WorkspaceMessageSerializer(many=True, read_only=True)
+    messages = serializers.SerializerMethodField()
     tickets = AdminComplianceTicketSerializer(many=True, read_only=True)
+
+    def get_messages(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user:
+            # Fallback if no request context is provided
+            return WorkspaceMessageSerializer(obj.messages.all(), many=True).data
+
+        user = request.user
+        if user.is_staff or user.is_superuser:
+            # Admin sees all messages
+            msgs = obj.messages.all()
+        else:
+            profile = getattr(user, "profile", None)
+            if profile:
+                if profile.role == "business":
+                    msgs = obj.messages.filter(message_type__in=['main', 'admin_business'])
+                elif profile.role == "influencer":
+                    msgs = obj.messages.filter(message_type__in=['main', 'admin_creator'])
+                else:
+                    msgs = obj.messages.filter(message_type='main')
+            else:
+                msgs = obj.messages.filter(message_type='main')
+        return WorkspaceMessageSerializer(msgs, many=True).data
 
     class Meta:
         model = Campaign
         fields = [
             "id", "name", "brand", "brand_name", "creator", "creator_name",
             "status", "budget", "start_date", "progress", "brief", "admin_review",
-            "category", "delivery_language", "voice_brief", "screenshare_brief", "video_brief",
+            "category", "delivery_language", "country", "province", "district", "medium", "voice_brief", "screenshare_brief", "video_brief",
+            "counter_price", "counter_note",
             "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets"
         ]
         read_only_fields = ["brand"]

@@ -42,12 +42,14 @@ class CreatorSettings(models.Model):
 @register_snippet
 class CreatorPayoutMethod(models.Model):
     creator = models.ForeignKey(CreatorProfile, on_delete=models.CASCADE, related_name="payout_methods")
-    method_type = models.CharField(max_length=50) # e.g. "Bank Account", "PayPal"
-    details = models.CharField(max_length=255) # e.g. "**9820 · Chase Checking", "maya@example.com"
+    full_name = models.CharField(max_length=255, blank=True, null=True)
+    bank_name = models.CharField(max_length=255, blank=True, null=True)
+    account_number = models.CharField(max_length=100, blank=True, null=True)
+    bank_book_photo_url = models.CharField(max_length=500, blank=True, null=True)
     is_primary = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.creator.user.username} - {self.method_type} ({'Primary' if self.is_primary else 'Backup'})"
+        return f"{self.creator.user.username} - {self.bank_name} ({'Primary' if self.is_primary else 'Backup'})"
 
 @register_snippet
 class BusinessSettings(models.Model):
@@ -87,3 +89,15 @@ class BusinessSettings(models.Model):
 
     def __str__(self):
         return f"{self.business.company_name or self.business.user.username}'s Settings (Business)"
+
+@register_snippet
+class BusinessPayoutMethod(models.Model):
+    business = models.ForeignKey(BusinessProfile, on_delete=models.CASCADE, related_name="payout_methods")
+    full_name = models.CharField(max_length=255, blank=True, null=True)
+    bank_name = models.CharField(max_length=255, blank=True, null=True)
+    account_number = models.CharField(max_length=100, blank=True, null=True)
+    bank_book_photo_url = models.CharField(max_length=500, blank=True, null=True)
+    is_primary = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.business.company_name or self.business.user.username} - {self.bank_name} ({'Primary' if self.is_primary else 'Backup'})"

@@ -69,8 +69,16 @@ class CampaignInspectView(InspectView):
         status = request.POST.get("status")
         admin_review = request.POST.get("admin_review")
 
-        if status in [choice[0] for choice in self.object.STATUS_CHOICES]:
-            self.object.status = status
+        if status == "Live_Countered":
+            if self.object.counter_price:
+                self.object.budget = self.object.counter_price
+            self.object.status = "Live"
+            self.object.progress = 62
+        elif status in [choice[0] for choice in self.object.STATUS_CHOICES]:
+            if status == "Live" and self.object.creator:
+                self.object.status = "Pending"
+            else:
+                self.object.status = status
 
         self.object.admin_review = admin_review or ""
         self.object.save()

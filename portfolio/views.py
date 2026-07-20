@@ -29,9 +29,22 @@ def build_thumbnail_url(request, item):
     return ""
 
 
+def build_proof_screenshot_url(request, item):
+    """Return the full absolute URL for the proof screenshot, or empty string."""
+    if item.proof_screenshot:
+        try:
+            return request.build_absolute_uri(item.proof_screenshot.url)
+        except Exception:
+            return ""
+    return ""
+
+
 def serialize_item(item, request=None):
     thumbnail_url = build_thumbnail_url(request, item) if request else (
         item.thumbnail.url if item.thumbnail else ""
+    )
+    proof_screenshot_url = build_proof_screenshot_url(request, item) if request else (
+        item.proof_screenshot.url if item.proof_screenshot else ""
     )
     return {
         "id": item.id,
@@ -45,6 +58,7 @@ def serialize_item(item, request=None):
         "brand": item.brand or "—",
         "post_link": item.post_link or "",
         "thumbnail_url": thumbnail_url,
+        "proof_screenshot_url": proof_screenshot_url,
         "is_featured": item.is_featured,
         "created_at": item.created_at.isoformat(),
         "updated_at": item.updated_at.isoformat(),
@@ -130,6 +144,9 @@ def portfolio_items_view(request):
             if not title:
                 return JsonResponse({"error": "title is required"}, status=400)
 
+            if not is_multipart or "proof_screenshot" not in request.FILES:
+                return JsonResponse({"error": "proof_screenshot is required"}, status=400)
+
             item = PortfolioItem(
                 creator=user,
                 title=title,
@@ -145,6 +162,8 @@ def portfolio_items_view(request):
             # Handle image upload
             if is_multipart and "thumbnail" in request.FILES:
                 item.thumbnail = request.FILES["thumbnail"]
+            if is_multipart and "proof_screenshot" in request.FILES:
+                item.proof_screenshot = request.FILES["proof_screenshot"]
 
             item.save()
             return JsonResponse({"item": serialize_item(item, request)}, status=201)
@@ -212,6 +231,15 @@ def portfolio_item_detail_view(request, item_id):
                         pass
                 item.thumbnail = request.FILES["thumbnail"]
 
+            if is_multipart and "proof_screenshot" in request.FILES:
+                # Delete old proof screenshot if exists
+                if item.proof_screenshot:
+                    try:
+                        item.proof_screenshot.delete(save=False)
+                    except Exception:
+                        pass
+                item.proof_screenshot = request.FILES["proof_screenshot"]
+
             item.save()
             return JsonResponse({"item": serialize_item(item, request)}, status=200)
 
@@ -223,6 +251,12 @@ def portfolio_item_detail_view(request, item_id):
         if item.thumbnail:
             try:
                 item.thumbnail.delete(save=False)
+            except Exception:
+                pass
+        # Delete proof screenshot file from disk
+        if item.proof_screenshot:
+            try:
+                item.proof_screenshot.delete(save=False)
             except Exception:
                 pass
         item.delete()
