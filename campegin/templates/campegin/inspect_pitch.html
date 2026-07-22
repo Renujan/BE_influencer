@@ -1,0 +1,686 @@
+{% extends "wagtailadmin/base.html" %}
+
+{% block titletag %}Pitch Details - {{ instance.campaign_name }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    .custom-inspect-wrapper {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 24px;
+        background-color: #f8fafc;
+        min-height: 100vh;
+    }
+
+    .custom-header-bar {
+        background-color: #1e293b;
+        padding: 24px 32px;
+        color: #ffffff;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .custom-header-title h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+    }
+
+    .custom-header-title p {
+        font-size: 14px;
+        color: #cbd5e1;
+        margin: 6px 0 0 0;
+    }
+
+    .custom-header-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-header-secondary {
+        background-color: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        display: inline-flex;
+        align-items: center;
+    }
+    .btn-header-secondary:hover { background-color: rgba(255,255,255,0.2); }
+
+    .btn-header-primary {
+        background-color: #06b6d4;
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        display: inline-flex;
+        align-items: center;
+        border: none;
+        cursor: pointer;
+    }
+    .btn-header-primary:hover { background-color: #0891b2; }
+
+    .custom-body-card {
+        background: #ffffff;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        border-left: 1px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 32px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 36px;
+    }
+
+    .custom-section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 20px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e2e8f0;
+        letter-spacing: -0.01em;
+    }
+
+    .custom-form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px 24px;
+    }
+    @media (min-width: 768px) {
+        .custom-form-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .custom-form-group { display: flex; flex-direction: column; }
+    .custom-form-group.full-width { grid-column: 1 / -1; }
+
+    .custom-form-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+
+    .custom-form-control-readonly {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 14px;
+        color: #334155;
+        min-height: 45px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        word-break: break-all;
+    }
+    .custom-form-control-readonly.textarea {
+        align-items: flex-start;
+        line-height: 1.5;
+        min-height: 90px;
+        white-space: pre-wrap;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+    .badge-status.pending_admin { background-color: #fef3c7; color: #b45309; }
+    .badge-status.pending       { background-color: #fef9c3; color: #854d0e; }
+    .badge-status.accepted      { background-color: #dcfce7; color: #166534; }
+    .badge-status.declined      { background-color: #ffe4e6; color: #991b1b; }
+    .badge-status.counter_offer { background-color: #fef3c7; color: #b45309; }
+    .badge-status.pitch_counter_pending { background-color: #ede9fe; color: #7c3aed; }
+    .badge-status.pitch_countered       { background-color: #ddd6fe; color: #5b21b6; }
+    .badge-status.biz_counter_pending   { background-color: #dbeafe; color: #1d4ed8; }
+    .badge-status.biz_countered         { background-color: #bfdbfe; color: #1e40af; }
+
+    .tag-item {
+        display: inline-block;
+        background-color: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 4px 10px;
+        border-radius: 4px;
+        margin-right: 6px;
+        margin-bottom: 6px;
+    }
+
+    /* Flow timeline */
+    .flow-timeline {
+        display: flex;
+        align-items: flex-start;
+        gap: 0;
+        overflow-x: auto;
+        padding: 16px 0;
+    }
+    .flow-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 110px;
+        position: relative;
+    }
+    .flow-step + .flow-step::before {
+        content: '';
+        position: absolute;
+        left: -50%;
+        top: 19px;
+        width: 100%;
+        height: 2px;
+        background-color: #e2e8f0;
+        z-index: 0;
+    }
+    .flow-step.done + .flow-step::before { background-color: #06b6d4; }
+    .flow-dot {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background-color: #e2e8f0;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: 700;
+        border: 3px solid #e2e8f0;
+        z-index: 1;
+        position: relative;
+        flex-shrink: 0;
+    }
+    .flow-step.done .flow-dot {
+        background-color: #06b6d4;
+        border-color: #06b6d4;
+        color: #ffffff;
+    }
+    .flow-step.active .flow-dot {
+        background-color: #f59e0b;
+        border-color: #f59e0b;
+        color: #ffffff;
+        animation: pulse-ring 1.5s infinite;
+    }
+    @keyframes pulse-ring {
+        0%   { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+        70%  { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+        100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+    }
+    .flow-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #64748b;
+        text-align: center;
+        margin-top: 8px;
+        max-width: 90px;
+        line-height: 1.3;
+    }
+    .flow-step.done .flow-label { color: #0369a1; }
+    .flow-step.active .flow-label { color: #b45309; }
+
+    /* Negotiation table */
+    .custom-table-wrapper {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        overflow: hidden;
+        margin-top: 10px;
+    }
+    .custom-data-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    .custom-data-table th { background-color: #f8fafc; color: #475569; font-weight: 600; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; }
+    .custom-data-table td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #334155; }
+    .custom-data-table tr:last-child td { border-bottom: none; }
+
+    /* Moderation section */
+    .moderation-box {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .custom-textarea {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 14px;
+        color: #334155;
+        width: 100%;
+        min-height: 110px;
+        box-sizing: border-box;
+        outline: none;
+        resize: vertical;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        font-family: inherit;
+    }
+    .custom-textarea:focus { border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.15); }
+
+    .action-btn {
+        border: none;
+        font-weight: 600;
+        padding: 11px 22px;
+        border-radius: 6px;
+        color: white !important;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        transition: opacity 0.2s, transform 0.1s;
+        font-size: 13px;
+    }
+    .action-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .action-btn:active { transform: translateY(0); }
+    .action-btn.green   { background-color: #16a34a; }
+    .action-btn.blue    { background-color: #2563eb; }
+    .action-btn.orange  { background-color: #d97706; }
+    .action-btn.red     { background-color: #dc2626; }
+    .action-btn.slate   { background-color: #475569; }
+
+    .custom-footer-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e2e8f0;
+    }
+    .btn-footer-back {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155 !important;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+    .btn-footer-submit {
+        background-color: #06b6d4;
+        color: #ffffff !important;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .btn-footer-submit:hover { background-color: #0891b2; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% with instance=instance|default:object status=pitch_status|default:status|default:object.status|lower %}
+<div class="custom-inspect-wrapper">
+
+    <!-- Header -->
+    <div class="custom-header-bar">
+        <div class="custom-header-title">
+            <h1>Pitch Details</h1>
+            <p>{{ instance.campaign_name }} &middot; Creator: {{ instance.creator.username }} &rarr; Brand: {{ instance.brand.username }}</p>
+        </div>
+        <div class="custom-header-actions">
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-header-secondary">Back to Pitches</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="POST" action="" class="custom-body-card">
+        {% csrf_token %}
+
+        <!-- ── Flow Status Timeline ─────────────────────────────────────── -->
+        <div>
+            <h3 class="custom-section-title">Pitch Flow Progress</h3>
+            <div class="flow-timeline">
+
+                <!-- Step 1: Creator Sent Pitch — always done -->
+                <div class="flow-step done">
+                    <div class="flow-dot">✓</div>
+                    <div class="flow-label">Creator Sent Pitch</div>
+                </div>
+
+                <!-- Step 2: Admin Approval (initial) -->
+                {% if status == 'pending_admin' or 'pending_admin' in status or 'pending admin' in status %}
+                <div class="flow-step active">
+                    <div class="flow-dot">⏳</div>
+                    <div class="flow-label">Admin Approval</div>
+                </div>
+                {% elif status == 'pending' or status == 'accepted_by_business' or status == 'accepted' or status == 'counter_offer' or status == 'pitch_counter_pending' or status == 'pitch_countered' or status == 'biz_counter_pending' or status == 'biz_countered' or status == 'declined' %}
+                <div class="flow-step done">
+                    <div class="flow-dot">✓</div>
+                    <div class="flow-label">Admin Approval</div>
+                </div>
+                {% else %}
+                <div class="flow-step active">
+                    <div class="flow-dot">⏳</div>
+                    <div class="flow-label">Admin Approval</div>
+                </div>
+                {% endif %}
+
+                <!-- Step 3: Business Reviews -->
+                {% if status == 'pending' %}
+                <div class="flow-step active">
+                    <div class="flow-dot">⏳</div>
+                    <div class="flow-label">Business Reviews</div>
+                </div>
+                {% elif status == 'accepted' or status == 'declined' or status == 'counter_offer' or status == 'pitch_counter_pending' or status == 'pitch_countered' or status == 'biz_counter_pending' or status == 'biz_countered' %}
+                <div class="flow-step done">
+                    <div class="flow-dot">✓</div>
+                    <div class="flow-label">Business Reviews</div>
+                </div>
+                {% else %}
+                <div class="flow-step">
+                    <div class="flow-dot">3</div>
+                    <div class="flow-label">Business Reviews</div>
+                </div>
+                {% endif %}
+
+                <!-- Step 4: Negotiation -->
+                {% if status == 'accepted' %}
+                <div class="flow-step done">
+                    <div class="flow-dot">✓</div>
+                    <div class="flow-label">Negotiation</div>
+                </div>
+                {% elif status == 'counter_offer' or status == 'pitch_counter_pending' or status == 'pitch_countered' or status == 'biz_counter_pending' or status == 'biz_countered' %}
+                <div class="flow-step active">
+                    <div class="flow-dot">⚡</div>
+                    <div class="flow-label">Negotiation</div>
+                </div>
+                {% else %}
+                <div class="flow-step">
+                    <div class="flow-dot">4</div>
+                    <div class="flow-label">Negotiation</div>
+                </div>
+                {% endif %}
+
+                <!-- Step 5: Accepted → Campaign -->
+                {% if status == 'accepted' %}
+                <div class="flow-step done">
+                    <div class="flow-dot">✓</div>
+                    <div class="flow-label">Accepted → Campaign</div>
+                </div>
+                {% else %}
+                <div class="flow-step">
+                    <div class="flow-dot">5</div>
+                    <div class="flow-label">Accepted → Campaign</div>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <!-- Current status banner -->
+            <div style="margin-top: 12px; padding: 12px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+                {% if status == 'pending_admin' %}background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a;
+                {% elif status == 'pending' %}background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;
+                {% elif status == 'accepted_by_business' %}background-color: #d1fae5; color: #047857; border: 1px solid #a7f3d0;
+                {% elif status == 'accepted' %}background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;
+                {% elif status == 'declined' %}background-color: #ffe4e6; color: #991b1b; border: 1px solid #fecaca;
+                {% elif status == 'counter_offer' %}background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a;
+                {% elif status == 'pitch_counter_pending' or status == 'biz_counter_pending' %}background-color: #ede9fe; color: #7c3aed; border: 1px solid #ddd6fe;
+                {% elif status == 'pitch_countered' or status == 'biz_countered' %}background-color: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe;
+                {% else %}background-color: #f8fafc; color: #475569; border: 1px solid #e2e8f0;
+                {% endif %}">
+                Current Status:&nbsp;
+                {% if status == 'pending_admin' %}⏳ Pending Admin Approval – Creator's pitch is awaiting your approval before being forwarded to the brand.
+                {% elif status == 'pending' %}📤 Forwarded to Business – The pitch is visible to the brand. Awaiting their decision (Accept / Decline / Counter Offer).
+                {% elif status == 'accepted_by_business' %}🎉 Accepted by Brand – Brand has accepted this pitch proposal! Click "Accept &amp; Convert to Campaign" below to make it a Live Campaign.
+                {% elif status == 'accepted' %}🎉 Accepted &amp; Converted – The brand accepted the pitch. A live campaign has been created.
+                {% elif status == 'declined' %}❌ Declined – This pitch has been declined.
+                {% elif status == 'counter_offer' %}💬 Business Sent Counter Offer – The brand countered the pitch. Awaiting creator's response or admin action.
+                {% elif status == 'pitch_counter_pending' %}⏳ Creator Counter Pending Admin – Creator replied with a counter offer. Approve below to forward it to the brand.
+                {% elif status == 'pitch_countered' %}📤 Creator Counter Forwarded – Creator counter approved &amp; forwarded to the brand. Awaiting brand's response.
+                {% elif status == 'biz_counter_pending' %}⏳ Business Counter Pending Admin – Brand replied with a counter offer. Approve below to forward it to the creator.
+                {% elif status == 'biz_countered' %}📤 Business Counter Forwarded – Business counter approved &amp; forwarded to the creator. Awaiting creator's response.
+                {% else %}ℹ️ Current Status: {{ status|title }}
+                {% endif %}
+            </div>
+        </div>
+
+
+        <!-- ── General Pitch Information ─────────────────────────────────── -->
+        <div>
+            <h3 class="custom-section-title">General Pitch Information</h3>
+            <div class="custom-form-grid">
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Campaign / Pitch Title</label>
+                    <div class="custom-form-control-readonly"><strong>{{ instance.campaign_name }}</strong></div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Status</label>
+                    <div class="custom-form-control-readonly">
+                        <span class="badge-status {{ status }}">{{ instance.get_status_display }}</span>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Creator (Sender)</label>
+                    <div class="custom-form-control-readonly">{{ instance.creator.username }} ({{ instance.creator.email }})</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Target Brand (Receiver)</label>
+                    <div class="custom-form-control-readonly">{{ instance.brand.username }} ({{ instance.brand.email }})</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Proposed Budget</label>
+                    <div class="custom-form-control-readonly" style="color: #0284c7; font-weight: 700;">
+                        ${{ instance.budget }}
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Sent Date</label>
+                    <div class="custom-form-control-readonly">{{ instance.sent_date|default:"–" }}</div>
+                </div>
+
+                {% if instance.attachment %}
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Attachment</label>
+                    <div class="custom-form-control-readonly">
+                        <a href="{{ instance.attachment.url }}" target="_blank" style="color: #0284c7; font-weight: 600;">View Attached File</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if instance.tags %}
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Tags</label>
+                    <div class="custom-form-control-readonly" style="display: block; min-height: auto;">
+                        {% for tag in instance.tags %}<span class="tag-item">{{ tag }}</span>{% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if instance.description %}
+                <div class="custom-form-group full-width">
+                    <label class="custom-form-label">Pitch Description &amp; Proposal</label>
+                    <div class="custom-form-control-readonly textarea">{{ instance.description }}</div>
+                </div>
+                {% endif %}
+
+                {% if instance.deliverables %}
+                <div class="custom-form-group full-width">
+                    <label class="custom-form-label">Deliverables</label>
+                    <div class="custom-form-control-readonly" style="display: block; min-height: auto; padding: 12px 16px;">
+                        {% for d in instance.deliverables %}<span class="tag-item">{{ d }}</span>{% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+
+        <!-- ── Negotiation & Counter Offer History ───────────────────────── -->
+        <div>
+            <h3 class="custom-section-title">Negotiation &amp; Counter Offers</h3>
+            <div class="custom-table-wrapper">
+                <table class="custom-data-table">
+                    <thead>
+                        <tr>
+                            <th>Current Status</th>
+                            <th>Original Budget</th>
+                            <th>Counter Offer Price</th>
+                            <th>Counter Note</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <span class="badge-status {{ status }}">{{ instance.get_status_display }}</span>
+                            </td>
+                            <td><strong>${{ instance.budget }}</strong></td>
+                            <td>
+                                {% if instance.counter_offer %}
+                                    <strong style="color: #d97706;">${{ instance.counter_offer }}</strong>
+                                {% else %}–{% endif %}
+                            </td>
+                            <td style="color: #64748b;">{{ instance.counter_note|default:"–" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {% if instance.counter_offer %}
+            <div style="margin-top: 10px; font-size: 13px; background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; color: #64748b;">
+                {% if status == 'counter_offer' %}
+                    <strong>Waiting on Creator:</strong> The business sent a counter offer of <strong>${{ instance.counter_offer }}</strong>. Creator must respond.
+                {% elif status == 'pitch_counter_pending' %}
+                    <strong>Waiting on Admin:</strong> The creator sent a counter of <strong>${{ instance.counter_offer }}</strong>. Approve below to forward it to the business.
+                {% elif status == 'pitch_countered' %}
+                    <strong>Waiting on Business:</strong> Creator counter of <strong>${{ instance.counter_offer }}</strong> forwarded to the brand.
+                {% elif status == 'biz_counter_pending' %}
+                    <strong>Waiting on Admin:</strong> The business sent a counter of <strong>${{ instance.counter_offer }}</strong>. Approve below to forward it to the creator.
+                {% elif status == 'biz_countered' %}
+                    <strong>Waiting on Creator:</strong> Business counter of <strong>${{ instance.counter_offer }}</strong> forwarded to the creator.
+                {% elif status == 'accepted' and instance.counter_offer %}
+                    <strong style="color:#166534;">Negotiation Complete:</strong> Counter offer was accepted. Final budget: <strong>${{ instance.budget }}</strong>.
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ── Decline Reason ────────────────────────────────────────────── -->
+        {% if instance.decline_reason %}
+        <div>
+            <h3 class="custom-section-title" style="border-bottom-color: #ef4444;">Decline / Rejection Reason</h3>
+            <div style="background-color: #fef2f2; border: 1px solid #fca5a5; padding: 14px 16px; border-radius: 6px; color: #991b1b; font-size: 13px; line-height: 1.6;">
+                {{ instance.decline_reason }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ── Admin Moderation Controls ─────────────────────────────────── -->
+        <div>
+            <h3 class="custom-section-title" style="border-bottom: 2px solid #ef4444;">Admin Moderation Controls</h3>
+            <div class="moderation-box">
+
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                    <div>
+                        <h4 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1e293b;">Pitch Actions</h4>
+                        <p style="margin: 0; font-size: 13px; color: #64748b;">
+                            Use these buttons to manage the pitch lifecycle. All actions are logged.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+
+                        {% if status == 'pending_admin' or 'pending_admin' in status or 'pending admin' in status %}
+                            <!-- Stage 2: Initial admin approval to forward to brand -->
+                            <button type="submit" name="action" value="approve_pitch" class="action-btn green">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                Approve Pitch &amp; Forward to Brand
+                            </button>
+                        {% endif %}
+
+                        {% if status == 'accepted_by_business' %}
+                            <!-- Stage 5: Business accepted pitch → Admin converts to Live Campaign -->
+                            <button type="submit" name="action" value="accept_pitch" class="action-btn blue" onclick="return confirm('Accept this pitch and convert to a Live Campaign?');">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Accept &amp; Convert to Campaign
+                            </button>
+                        {% endif %}
+
+                        {% if status == 'pitch_counter_pending' %}
+                            <!-- Creator's counter is waiting for admin approval -->
+                            <button type="submit" name="action" value="approve_creator_counter" class="action-btn green">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                Approve Creator Counter (${{ instance.counter_offer }})
+                            </button>
+                        {% endif %}
+
+                        {% if status == 'biz_counter_pending' %}
+                            <!-- Business counter is waiting for admin approval -->
+                            <button type="submit" name="action" value="approve_biz_counter" class="action-btn blue">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                Approve Business Counter (${{ instance.counter_offer }})
+                            </button>
+                        {% endif %}
+
+                        {% if status != 'declined' and status != 'accepted' %}
+                            <button type="submit" name="action" value="reject_pitch" class="action-btn red" onclick="return confirm('Reject this pitch?');">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                Reject Pitch
+                            </button>
+                        {% endif %}
+
+                        {% if status == 'accepted' or status == 'declined' %}
+                            <button type="submit" name="status" value="pending_admin" class="action-btn slate">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89H18.25"/></svg>
+                                Reset to Pending Admin
+                            </button>
+                        {% endif %}
+
+                    </div>
+                </div>
+
+                <!-- Admin notes textarea -->
+                <div>
+                    <label class="custom-form-label">Admin Notes / Comments</label>
+                    <textarea name="admin_review" class="custom-textarea" placeholder="Provide notes or a rejection reason here..."></textarea>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="custom-footer-actions">
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-footer-back">Back to Pitches</a>
+            {% endif %}
+            <button type="submit" name="action" value="save_notes" class="btn-footer-submit">Save Notes</button>
+        </div>
+
+    </form>
+</div>
+{% endwith %}
+{% endblock %}

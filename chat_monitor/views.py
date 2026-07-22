@@ -185,9 +185,24 @@ def chat_monitor_view_chat_view(request, campaign_id):
 @staff_member_required
 def chat_monitor_review_view(request, campaign_id):
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    reviews = campaign.chat_reviews.all().order_by("-id")
 
     if request.method == "POST":
+        action = request.POST.get("action", "create")
+        review_id = request.POST.get("review_id")
+
+        if action == "delete" and review_id:
+            ChatReview.objects.filter(id=review_id, campaign=campaign).delete()
+            return redirect(reverse("chat_monitor_review", args=[campaign.id]))
+
+        if action == "edit" and review_id:
+            rev = ChatReview.objects.filter(id=review_id, campaign=campaign).first()
+            if rev:
+                rev.review_text = request.POST.get("review_text", rev.review_text)
+                rev.category = request.POST.get("category", rev.category)
+                rev.target_audience = request.POST.get("target_audience", rev.target_audience)
+                rev.save()
+            return redirect(reverse("chat_monitor_review", args=[campaign.id]))
+
         category = request.POST.get("category", "Safety / Guidelines")
         target_audience = request.POST.get("target_audience", "both")
         review_text = request.POST.get("review_text", "")
@@ -201,6 +216,7 @@ def chat_monitor_review_view(request, campaign_id):
             )
             return redirect(reverse("chat_monitor_review", args=[campaign.id]))
 
+    reviews = campaign.chat_reviews.all().order_by("-id")
     context = {
         "campaign": campaign,
         "reviews": reviews,

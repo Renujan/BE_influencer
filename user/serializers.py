@@ -42,7 +42,7 @@ class CountrySerializer(serializers.ModelSerializer):
 class CreatorRateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CreatorRate
-        fields = ["id", "content_type", "platforms", "price", "notes"]
+        fields = ["id", "content_type", "platforms", "price", "min_price", "max_price", "notes"]
 
 class CreatorSocialAccountSerializer(serializers.ModelSerializer):
     class Meta:

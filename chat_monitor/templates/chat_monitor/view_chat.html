@@ -237,11 +237,22 @@
                 div.style.display = "flex";
                 div.style.flexDirection = "column";
                 div.style.alignItems = isMe ? "flex-end" : "flex-start";
+                div.style.marginBottom = "10px";
                 
+                const escapedText = (m.text || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+                const adminActionButtons = isMe ? `
+                    <div style="display: flex; gap: 8px; margin-top: 4px; font-size: 10px; opacity: 0.85; justify-content: flex-end;">
+                        <button onclick="editMessage(${m.id}, '${escapedText}')" style="background:none;border:none;color:#e9d5ff;cursor:pointer;padding:0;font-weight:600;">✏️ Edit</button>
+                        <button onclick="deleteMessage(${m.id})" style="background:none;border:none;color:#fca5a5;cursor:pointer;padding:0;font-weight:600;">🗑️ Delete</button>
+                    </div>
+                ` : '';
+
                 div.innerHTML = `
                     <span style="font-size: 11px; color: #64748b; margin-bottom: 2px;">${m.sender_name} - ${m.time}</span>
-                    <div style="background: ${isMe ? '#8b5cf6' : '#e2e8f0'}; color: ${isMe ? 'white' : '#1e293b'}; padding: 8px 14px; border-radius: 8px; max-width: 75%; font-size: 14px;">
-                        ${m.text}
+                    <div style="background: ${isMe ? '#8b5cf6' : '#e2e8f0'}; color: ${isMe ? 'white' : '#1e293b'}; padding: 8px 14px; border-radius: 8px; max-width: 75%; font-size: 14px; position: relative;">
+                        <div>${m.text}</div>
+                        ${adminActionButtons}
                     </div>
                 `;
                 messagesContainer.appendChild(div);
@@ -249,6 +260,60 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
+        window.editMessage = function(msgId, currentText) {
+            const newText = prompt("Edit Message:", currentText);
+            if (!newText || newText === currentText) return;
+
+            fetch(`/api/campegins/campaigns/${campaignId}/edit_message/`, {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    message_id: msgId,
+                    text: newText
+                })
+            })
+            .then(res => {
+                if (res.ok) return res.json();
+                throw new Error("Failed to edit");
+            })
+            .then(updatedMsg => {
+                const idx = allMessages.findIndex(m => m.id === msgId);
+                if (idx !== -1) {
+                    allMessages[idx].text = updatedMsg.text;
+                    renderMessages();
+                }
+            })
+            .catch(err => alert("Error editing message"));
+        };
+
+        window.deleteMessage = function(msgId) {
+            if (!confirm("Are you sure you want to delete this message?")) return;
+
+            fetch(`/api/campegins/campaigns/${campaignId}/delete_message/`, {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    message_id: msgId
+                })
+            })
+            .then(res => {
+                if (res.ok) {
+                    allMessages = allMessages.filter(m => m.id !== msgId);
+                    renderMessages();
+                } else {
+                    throw new Error("Failed to delete");
+                }
+            })
+            .catch(err => alert("Error deleting message"));
+        };
+
+        let isInitialLoad = true;
         function loadMessages() {
             fetch(`/api/campegins/campaigns/${campaignId}/`, {
                 headers: {
@@ -258,13 +323,22 @@
             .then(res => res.json())
             .then(data => {
                 if (data && data.messages) {
+                    const prevCount = allMessages.length;
+                    const prevLastId = prevCount > 0 ? allMessages[prevCount - 1].id : null;
+                    const newLastId = data.messages.length > 0 ? data.messages[data.messages.length - 1].id : null;
+
                     allMessages = data.messages;
-                    renderMessages();
+                    if (isInitialLoad || prevCount !== allMessages.length || prevLastId !== newLastId) {
+                        isInitialLoad = false;
+                        renderMessages();
+                    }
                 }
             })
             .catch(err => {
                 console.error("Error loading messages", err);
-                messagesContainer.innerHTML = `<div style="text-align: center; color: #ef4444; font-size: 14px; margin-top: 40px;">Failed to load messages.</div>`;
+                if (isInitialLoad) {
+                    messagesContainer.innerHTML = `<div style="text-align: center; color: #ef4444; font-size: 14px; margin-top: 40px;">Failed to load messages.</div>`;
+                }
             });
         }
 
@@ -321,6 +395,8 @@
         });
 
         loadMessages();
+        // Auto-poll every 3 seconds to render new messages in real-time without page refresh
+        setInterval(loadMessages, 3000);
     });
 </script>
 

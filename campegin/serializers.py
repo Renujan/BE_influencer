@@ -67,14 +67,10 @@ class CampaignSerializer(serializers.ModelSerializer):
             # Admin sees all messages
             msgs = obj.messages.all()
         else:
-            profile = getattr(user, "profile", None)
-            if profile:
-                if profile.role == "business":
-                    msgs = obj.messages.filter(message_type__in=['main', 'admin_business'])
-                elif profile.role == "influencer":
-                    msgs = obj.messages.filter(message_type__in=['main', 'admin_creator'])
-                else:
-                    msgs = obj.messages.filter(message_type='main')
+            if hasattr(user, "business_profile"):
+                msgs = obj.messages.filter(message_type__in=['main', 'admin_business'])
+            elif hasattr(user, "creator_profile"):
+                msgs = obj.messages.filter(message_type__in=['main', 'admin_creator'])
             else:
                 msgs = obj.messages.filter(message_type='main')
         return WorkspaceMessageSerializer(msgs, many=True).data
@@ -83,9 +79,9 @@ class CampaignSerializer(serializers.ModelSerializer):
         model = Campaign
         fields = [
             "id", "name", "brand", "brand_name", "creator", "creator_name",
-            "status", "budget", "start_date", "progress", "brief", "admin_review",
+            "status", "budget", "start_date", "end_date", "progress", "brief", "admin_review",
             "category", "delivery_language", "country", "province", "district", "medium", "voice_brief", "screenshare_brief", "video_brief",
-            "counter_price", "counter_note",
+            "counter_price", "counter_note", "counter_round", "decline_reason", "created_via",
             "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets"
         ]
         read_only_fields = ["brand"]
@@ -119,6 +115,6 @@ class PitchSerializer(serializers.ModelSerializer):
         fields = [
             "id", "creator", "creator_name", "brand", "brand_name",
             "campaign_name", "budget", "sent_date", "tags", "status",
-            "description", "deliverables", "counter_offer"
+            "description", "deliverables", "counter_offer", "counter_note", "counter_count", "attachment", "decline_reason"
         ]
         read_only_fields = ["creator"]

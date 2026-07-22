@@ -206,17 +206,60 @@
     <div>
         <h3 style="font-weight: 700; font-size: 1rem; color: #0f172a; margin-bottom: 16px;">Previous Review Directives ({{ reviews|length }})</h3>
         {% for review in reviews %}
-            <div class="directive-item approved">
+            <div class="directive-item approved" id="directive-{{ review.id }}">
                 <div class="directive-header">
                     <span>Directive: {{ review.category }}</span>
-                    <span style="font-weight: 500; font-size: 0.75rem;">{{ review.created_at|date:"M d, Y · H:i" }}</span>
+                    <div style="display: flex; items-center; gap: 10px;">
+                        <span style="font-weight: 500; font-size: 0.75rem;">{{ review.created_at|date:"M d, Y · H:i" }}</span>
+                        <button type="button" onclick="toggleEditDirective({{ review.id }})" style="background:none;border:none;color:#4f46e5;font-weight:600;cursor:pointer;font-size:0.75rem;">✏️ Edit</button>
+                        <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this review directive note?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="review_id" value="{{ review.id }}">
+                            <button type="submit" style="background:none;border:none;color:#ef4444;font-weight:600;cursor:pointer;font-size:0.75rem;">🗑️ Delete</button>
+                        </form>
+                    </div>
                 </div>
                 <div style="margin-bottom: 8px;">
                     <span class="directive-badge">Target: {{ review.get_target_audience_display }}</span>
                 </div>
-                <div class="directive-content">
+                <div class="directive-content" id="directive-text-{{ review.id }}">
                     {{ review.review_text }}
                 </div>
+
+                <!-- Inline Edit Form -->
+                <form method="POST" action="" id="edit-form-{{ review.id }}" style="display:none; margin-top:12px; background:#fff; padding:16px; border-radius:8px; border:1px solid #cbd5e1;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="review_id" value="{{ review.id }}">
+                    <div class="form-group-grid" style="margin-bottom:12px;">
+                        <div class="form-field">
+                            <label>Category</label>
+                            <select name="category" class="form-select">
+                                <option value="Safety / Guidelines" {% if review.category == "Safety / Guidelines" %}selected{% endif %}>Safety / Guidelines</option>
+                                <option value="Escrow Protection" {% if review.category == "Escrow Protection" %}selected{% endif %}>Escrow Protection</option>
+                                <option value="Contract Scope Dispute" {% if review.category == "Contract Scope Dispute" %}selected{% endif %}>Contract Scope Dispute</option>
+                                <option value="Deliverable Audit" {% if review.category == "Deliverable Audit" %}selected{% endif %}>Deliverable Audit</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Target Audience</label>
+                            <select name="target_audience" class="form-select">
+                                <option value="both" {% if review.target_audience == "both" %}selected{% endif %}>Both (Business & Creator)</option>
+                                <option value="business" {% if review.target_audience == "business" %}selected{% endif %}>Business Only</option>
+                                <option value="creator" {% if review.target_audience == "creator" %}selected{% endif %}>Creator Only</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#475569; display:block; margin-bottom:4px;">Directive Note Message</label>
+                        <textarea name="review_text" class="form-textarea" style="height:70px;" required>{{ review.review_text }}</textarea>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:8px;">
+                        <button type="button" onclick="toggleEditDirective({{ review.id }})" class="button button-secondary" style="padding:6px 12px; font-size:0.8rem;">Cancel</button>
+                        <button type="submit" class="submit-btn" style="padding:6px 16px; font-size:0.8rem;">Save Changes</button>
+                    </div>
+                </form>
             </div>
         {% empty %}
             <div class="empty-list">
@@ -225,4 +268,18 @@
         {% endfor %}
     </div>
 </div>
+
+<script>
+function toggleEditDirective(id) {
+    const f = document.getElementById('edit-form-' + id);
+    const t = document.getElementById('directive-text-' + id);
+    if (f.style.display === 'none') {
+        f.style.display = 'block';
+        t.style.display = 'none';
+    } else {
+        f.style.display = 'none';
+        t.style.display = 'block';
+    }
+}
+</script>
 {% endblock %}

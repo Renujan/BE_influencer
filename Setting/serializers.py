@@ -197,6 +197,8 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
                     content_type=rate_item.get("content_type"),
                     platforms=rate_item.get("platforms"),
                     price=rate_item.get("price"),
+                    min_price=rate_item.get("min_price"),
+                    max_price=rate_item.get("max_price"),
                     notes=rate_item.get("notes")
                 )
                 

@@ -364,7 +364,132 @@
     <!-- Body Content with Form Field Cards -->
     <form method="POST" action="" class="custom-body-card">
         {% csrf_token %}
-        
+
+        <!-- Campaign Flow Progress Timeline -->
+        <div>
+            <h3 class="custom-section-title">Campaign Flow Progress</h3>
+
+            <!-- Flow CSS (scoped to this section) -->
+            <style>
+                .flow-timeline { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; padding: 16px 0; }
+                .flow-step { display: flex; flex-direction: column; align-items: center; min-width: 120px; position: relative; }
+                .flow-step + .flow-step::before {
+                    content: ''; position: absolute; left: -50%; top: 19px;
+                    width: 100%; height: 2px; background-color: #e2e8f0; z-index: 0;
+                }
+                .flow-step.done + .flow-step::before { background-color: #06b6d4; }
+                .flow-dot {
+                    width: 38px; height: 38px; border-radius: 50%; background-color: #e2e8f0;
+                    color: #94a3b8; display: flex; align-items: center; justify-content: center;
+                    font-size: 15px; font-weight: 700; border: 3px solid #e2e8f0;
+                    z-index: 1; position: relative; flex-shrink: 0;
+                }
+                .flow-step.done .flow-dot { background-color: #06b6d4; border-color: #06b6d4; color: #fff; }
+                .flow-step.active .flow-dot {
+                    background-color: #f59e0b; border-color: #f59e0b; color: #fff;
+                    animation: camp-pulse 1.5s infinite;
+                }
+                @keyframes camp-pulse {
+                    0%   { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+                    70%  { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+                    100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+                }
+                .flow-label { font-size: 11px; font-weight: 600; color: #64748b; text-align: center; margin-top: 8px; max-width: 100px; line-height: 1.3; }
+                .flow-step.done .flow-label { color: #0369a1; }
+                .flow-step.active .flow-label { color: #b45309; }
+            </style>
+
+            <div class="flow-timeline">
+
+                <!-- Step 1: Campaign Created -->
+                <div class="flow-step done">
+                    <div class="flow-dot">✓</div>
+                    <div class="flow-label">
+                        {% if instance.created_via == "pitch" %}Pitch Accepted{% else %}Campaign Created{% endif %}
+                    </div>
+                </div>
+
+                <!-- Step 2: Admin Review -->
+                <div class="flow-step
+                    {% if instance.status == 'Under_Review' %}active
+                    {% elif instance.status != 'Under_Review' %}done{% endif %}">
+                    <div class="flow-dot">
+                        {% if instance.status == 'Under_Review' %}⏳{% else %}✓{% endif %}
+                    </div>
+                    <div class="flow-label">Admin Review</div>
+                </div>
+
+                <!-- Step 3: Creator Accepts (Live) -->
+                <div class="flow-step
+                    {% if instance.status == 'Pending' %}active
+                    {% elif instance.status in 'Countered,Countered_Pending,Business_Counter_Pending,Business_Countered,Live,Completed' %}done{% endif %}">
+                    <div class="flow-dot">
+                        {% if instance.status == 'Pending' %}⏳
+                        {% elif instance.status in 'Countered,Countered_Pending,Business_Counter_Pending,Business_Countered,Live,Completed' %}✓
+                        {% else %}3{% endif %}
+                    </div>
+                    <div class="flow-label">Creator Reviews</div>
+                </div>
+
+                <!-- Step 4: Negotiation (counter offers) -->
+                <div class="flow-step
+                    {% if instance.status == 'Live' or instance.status == 'Completed' %}done
+                    {% elif instance.status in 'Countered,Countered_Pending,Business_Counter_Pending,Business_Countered' %}active{% endif %}">
+                    <div class="flow-dot">
+                        {% if instance.status == 'Live' or instance.status == 'Completed' %}✓
+                        {% elif instance.status in 'Countered,Countered_Pending,Business_Counter_Pending,Business_Countered' %}⚡
+                        {% else %}4{% endif %}
+                    </div>
+                    <div class="flow-label">Negotiation</div>
+                </div>
+
+                <!-- Step 5: Live Campaign -->
+                <div class="flow-step
+                    {% if instance.status == 'Live' or instance.status == 'Completed' %}done{% endif %}">
+                    <div class="flow-dot">
+                        {% if instance.status == 'Live' or instance.status == 'Completed' %}✓{% else %}5{% endif %}
+                    </div>
+                    <div class="flow-label">Live Campaign</div>
+                </div>
+
+                <!-- Step 6: Completed -->
+                <div class="flow-step {% if instance.status == 'Completed' %}done{% endif %}">
+                    <div class="flow-dot">{% if instance.status == 'Completed' %}✓{% else %}6{% endif %}</div>
+                    <div class="flow-label">Completed</div>
+                </div>
+
+            </div>
+
+            <!-- Current status banner -->
+            <div style="margin-top: 12px; padding: 12px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+                {% if instance.status == 'Under_Review' %}background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a;
+                {% elif instance.status == 'Pending' %}background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;
+                {% elif instance.status == 'Live' %}background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;
+                {% elif instance.status == 'Rejected' %}background-color: #ffe4e6; color: #991b1b; border: 1px solid #fecaca;
+                {% elif instance.status == 'Completed' %}background-color: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe;
+                {% elif instance.status in 'Countered,Countered_Pending' %}background-color: #ede9fe; color: #7c3aed; border: 1px solid #ddd6fe;
+                {% elif instance.status in 'Business_Counter_Pending,Business_Countered' %}background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a;
+                {% endif %}">
+                Current Status:&nbsp;
+                {% if instance.status == 'Under_Review' %}⏳ Under Review — Campaign is pending admin approval before being forwarded to the creator.
+                {% elif instance.status == 'Pending' %}📤 Pending Creator Review — Campaign is visible to the creator. Awaiting their decision.
+                {% elif instance.status == 'Countered_Pending' %}⏳ Creator Counter Pending Admin — Creator sent a counter offer. Awaiting your approval.
+                {% elif instance.status == 'Countered' %}📤 Creator Counter Forwarded — Creator counter approved and visible to the business.
+                {% elif instance.status == 'Business_Counter_Pending' %}⏳ Business Counter Pending Admin — Business replied with a counter. Awaiting your approval.
+                {% elif instance.status == 'Business_Countered' %}📤 Business Counter Forwarded — Business counter approved and visible to the creator.
+                {% elif instance.status == 'Live' %}🟢 Live — Campaign is active and running.
+                {% elif instance.status == 'Rejected' %}❌ Rejected — This campaign has been rejected.
+                {% elif instance.status == 'Completed' %}🎉 Completed — Campaign has finished successfully.
+                {% else %}ℹ️ Status: {{ instance.status }}
+                {% endif %}
+                {% if instance.created_via == "pitch" %}
+                    <span style="margin-left: 10px; font-size: 11px; font-weight: 700; background-color: #ede9fe; color: #7c3aed; padding: 2px 8px; border-radius: 9999px;">
+                        ✦ Created via Creator Pitch
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- General Campaign Information -->
         <div>
             <h3 class="custom-section-title">General Campaign Information</h3>
@@ -398,8 +523,27 @@
 
                 <div class="custom-form-group">
                     <label class="custom-form-label">Budget</label>
-                    <div class="custom-form-control-readonly"><strong>${{ instance.budget }}</strong></div>
+                    <div class="custom-form-control-readonly">
+                        <strong>${{ instance.budget }}</strong>
+                        {% if instance.counter_price %}
+                            <span style="margin-left: 8px; font-size: 12px; font-weight: 600; color: #d97706; background-color: #fef3c7; padding: 2px 8px; border-radius: 9999px;">
+                                Counter: ${{ instance.counter_price }}
+                            </span>
+                        {% endif %}
+                    </div>
                 </div>
+
+                {% if instance.counter_price %}
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Counter Offer Price</label>
+                    <div class="custom-form-control-readonly" style="color: #d97706; font-weight: 700;">
+                        <strong>${{ instance.counter_price }}</strong>
+                        {% if instance.counter_note %}
+                            <span style="font-size: 12px; color: #64748b; font-weight: normal; margin-left: 6px;">({{ instance.counter_note }})</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
 
                 <div class="custom-form-group">
                     <label class="custom-form-label">Start Date</label>
@@ -753,6 +897,27 @@
                         <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">Review the campaign and choose to approve/publish, reject, or mark it as completed.</p>
                     </div>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        {% if instance.status == "Countered_Pending" or instance.status == "Countered" %}
+                            <button type="submit" name="status" value="Approve_Creator_Counter" class="btn-header-primary" style="background-color: #16a34a; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                Approve Creator Counter (${{ instance.counter_price }})
+                            </button>
+                        {% endif %}
+
+                        {% if instance.status == "Business_Counter_Pending" or instance.status == "Business_Countered" %}
+                            <button type="submit" name="status" value="Approve_Business_Counter" class="btn-header-primary" style="background-color: #2563eb; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                Approve Business Counter (${{ instance.counter_price }})
+                            </button>
+                        {% endif %}
+
+                        {% if instance.status == "Countered_Pending" or instance.status == "Business_Counter_Pending" or instance.status == "Countered" or instance.status == "Business_Countered" %}
+                            <button type="submit" name="status" value="Reject_Counter" class="btn-header-primary" style="background-color: #dc2626; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Reject this counter offer?');">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                Reject Counter Offer
+                            </button>
+                        {% endif %}
+
                         {% if instance.status == "Under_Review" or instance.status == "Rejected" %}
                             <button type="submit" name="status" value="Live" class="btn-header-primary" style="background-color: #16a34a; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
@@ -760,9 +925,9 @@
                             </button>
                         {% endif %}
                         
-                        {% if instance.status == "Countered" %}
-                            <button type="submit" name="status" value="Live_Countered" class="btn-header-primary" style="background-color: #16a34a; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Accept counter offer price of ${{ instance.counter_price }}?');">
-                                <i class="fas fa-handshake"></i> Accept Counter Offer
+                        {% if instance.status == "Countered" or instance.status == "Business_Countered" %}
+                            <button type="submit" name="status" value="Live_Countered" class="btn-header-primary" style="background-color: #059669; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Accept counter offer price of ${{ instance.counter_price }}?');">
+                                <i class="fas fa-handshake"></i> Accept Counter Offer (${{ instance.counter_price }})
                             </button>
                         {% endif %}
 
@@ -788,6 +953,15 @@
                         {% endif %}
                     </div>
                 </div>
+
+                {% if instance.decline_reason %}
+                <div class="custom-form-group" style="width: 100%;">
+                    <label class="custom-form-label" style="color: #dc2626; font-weight: 700;">Decline Reason (Submitted by Creator/Business)</label>
+                    <div style="background-color: #fef2f2; border: 1px solid #fca5a5; padding: 12px; border-radius: 6px; color: #991b1b; font-size: 13px;">
+                        {{ instance.decline_reason }}
+                    </div>
+                </div>
+                {% endif %}
 
                 <div class="custom-form-group" style="width: 100%;">
                     <label class="custom-form-label">Admin Review / Rejection Comments (Sent to brand if rejected)</label>

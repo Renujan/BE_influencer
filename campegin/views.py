@@ -36,13 +36,12 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if user.is_staff or user.is_superuser:
             qs = Campaign.objects.all()
         else:
-            profile = getattr(user, "profile", None)
-            if not profile:
-                return Campaign.objects.none()
-            if profile.role == "business":
+            if hasattr(user, "business_profile"):
                 qs = Campaign.objects.filter(brand=user)
+            elif hasattr(user, "creator_profile"):
+                qs = Campaign.objects.filter(creator=user).exclude(status="Under_Review")
             else:
-                qs = Campaign.objects.filter(creator=user)
+                qs = Campaign.objects.none()
 
         # Allow query-param filtering by status
         status_param = self.request.query_params.get("status")
@@ -123,6 +122,21 @@ class CampaignViewSet(viewsets.ModelViewSet):
         PaymentInstallment.objects.create(campaign=campaign, milestone_name="Drafts approved", amount=1500.0, status="Released", payment_date="May 10")
         PaymentInstallment.objects.create(campaign=campaign, milestone_name="Final delivery", amount=max(budget_val - 2500.0, 0.0), status="In Escrow")
 
+        import json
+        deliverables_json = self.request.data.get("deliverables")
+        if deliverables_json:
+            try:
+                deliverables_list = json.loads(deliverables_json)
+                for item in deliverables_list:
+                    Deliverable.objects.create(
+                        campaign=campaign,
+                        name=item.get("text", "Deliverable")[:255],
+                        type="post",
+                        brief=item.get("brief", "")
+                    )
+            except Exception as e:
+                print("Error parsing deliverables:", e)
+
     def perform_update(self, serializer):
         voice_file = self.request.FILES.get("voice_brief")
         screenshare_file = self.request.FILES.get("screenshare_brief")
@@ -142,7 +156,23 @@ class CampaignViewSet(viewsets.ModelViewSet):
             path = default_storage.save(os.path.join('campaign_briefs', video_file.name), video_file)
             kwargs["video_brief"] = default_storage.url(path)
 
-        serializer.save(**kwargs)
+        campaign = serializer.save(**kwargs)
+
+        import json
+        deliverables_json = self.request.data.get("deliverables")
+        if deliverables_json:
+            try:
+                deliverables_list = json.loads(deliverables_json)
+                campaign.deliverables.all().delete()
+                for item in deliverables_list:
+                    Deliverable.objects.create(
+                        campaign=campaign,
+                        name=item.get("text", "Deliverable")[:255],
+                        type="post",
+                        brief=item.get("brief", "")
+                    )
+            except Exception as e:
+                print("Error parsing deliverables:", e)
 
     @action(detail=True, methods=["get"])
     def download_pdf(self, request, pk=None):
@@ -228,12 +258,10 @@ class CampaignViewSet(viewsets.ModelViewSet):
         
         # Enforce message type rules
         if not (user.is_staff or user.is_superuser):
-            profile = getattr(user, "profile", None)
-            if profile:
-                if profile.role == "influencer" and message_type not in ["main", "admin_creator"]:
-                    message_type = "main"
-                elif profile.role == "business" and message_type not in ["main", "admin_business"]:
-                    message_type = "main"
+            if hasattr(user, "creator_profile") and message_type not in ["main", "admin_creator"]:
+                message_type = "main"
+            elif hasattr(user, "business_profile") and message_type not in ["main", "admin_business"]:
+                message_type = "main"
         
         import datetime
         now = datetime.datetime.now()
@@ -384,20 +412,25 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
 
 class RequestViewSet(viewsets.ModelViewSet):
-    queryset = Campaign.objects.filter(status="Pending")
+    queryset = Campaign.objects.all()
     serializer_class = CampaignSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        profile = getattr(user, "profile", None)
-        if not profile:
-            return Campaign.objects.none()
+        status_param = self.request.query_params.get("status")
 
-        if profile.role == "business":
-            return Campaign.objects.filter(brand=user, status__in=["Pending", "Countered", "Business_Countered"])
-        else:
-            return Campaign.objects.filter(creator=user, status__in=["Pending", "Countered", "Business_Countered"])
+        if user.is_staff or user.is_superuser:
+            if status_param:
+                statuses = [s.strip() for s in status_param.split(",")]
+                return Campaign.objects.filter(status__in=statuses)
+            return Campaign.objects.all()
+
+        if hasattr(user, "business_profile"):
+            return Campaign.objects.filter(brand=user, status__in=["Pending", "Countered", "Business_Countered", "Business_Counter_Pending"])
+        elif hasattr(user, "creator_profile"):
+            return Campaign.objects.filter(creator=user, status__in=["Pending", "Countered", "Countered_Pending", "Business_Countered"])
+        return Campaign.objects.none()
 
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):
@@ -412,8 +445,31 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def decline(self, request, pk=None):
         campaign = self.get_object()
-        campaign.delete()
-        return Response({"message": "Request successfully declined"})
+        reason = request.data.get("reason") or request.data.get("note") or request.data.get("message") or "Campaign request declined."
+        campaign.status = "Rejected"
+        campaign.decline_reason = reason
+        campaign.save()
+
+        import datetime
+        now = datetime.datetime.now()
+        time_str = now.strftime("%H:%M")
+        
+        WorkspaceMessage.objects.create(
+            campaign=campaign,
+            sender=request.user,
+            text=f"Declined: {reason}",
+            message_type="main",
+            time=time_str
+        )
+
+        Notification.objects.create(
+            title="Campaign Request Declined",
+            message=f"Campaign '{campaign.name}' was declined. Reason: {reason}",
+            category="campaign",
+            icon="fas fa-times-circle",
+            target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
+        )
+        return Response({"message": "Request successfully declined", "status": "Rejected", "decline_reason": reason})
 
     @action(detail=True, methods=["post"])
     def counter(self, request, pk=None):
@@ -422,12 +478,13 @@ class RequestViewSet(viewsets.ModelViewSet):
         counter_note = request.data.get("note")
         campaign.counter_price = counter_price
         campaign.counter_note = counter_note
-        campaign.status = "Countered"
+        campaign.counter_round = (campaign.counter_round or 0) + 1
+        campaign.status = "Countered_Pending"
         campaign.save()
         
         Notification.objects.create(
             title="Campaign Counter Offer",
-            message=f"A counter offer was submitted for campaign '{campaign.name}'.",
+            message=f"A creator counter offer was submitted for campaign '{campaign.name}'. Requires Admin Approval.",
             category="campaign",
             icon="fas fa-handshake",
             target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
@@ -455,17 +512,31 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def decline_counter(self, request, pk=None):
         campaign = self.get_object()
+        reason = request.data.get("reason") or request.data.get("note") or request.data.get("message") or "Counter offer declined."
         campaign.status = "Rejected"
+        campaign.decline_reason = reason
         campaign.save()
+
+        import datetime
+        now = datetime.datetime.now()
+        time_str = now.strftime("%H:%M")
+        
+        WorkspaceMessage.objects.create(
+            campaign=campaign,
+            sender=request.user,
+            text=f"Declined Counter Offer: {reason}",
+            message_type="main",
+            time=time_str
+        )
         
         Notification.objects.create(
             title="Campaign Counter Declined",
-            message=f"The counter offer for campaign '{campaign.name}' was declined. Campaign is Rejected.",
+            message=f"The counter offer for campaign '{campaign.name}' was declined. Reason: {reason}",
             category="campaign",
             icon="fas fa-times-circle",
             target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
         )
-        return Response({"message": "Counter offer declined"})
+        return Response({"message": "Counter offer declined", "status": "Rejected", "decline_reason": reason})
 
     @action(detail=True, methods=["post"])
     def counter_reply(self, request, pk=None):
@@ -474,17 +545,39 @@ class RequestViewSet(viewsets.ModelViewSet):
         counter_note = request.data.get("note")
         campaign.counter_price = counter_price
         campaign.counter_note = counter_note
-        campaign.status = "Business_Countered"
+        campaign.status = "Business_Counter_Pending"
         campaign.save()
         
         Notification.objects.create(
             title="Campaign Counter Reply",
-            message=f"A reply to a counter offer was sent for campaign '{campaign.name}'.",
+            message=f"A business reply counter offer was sent for campaign '{campaign.name}'. Requires Admin Approval.",
             category="campaign",
             icon="fas fa-exchange-alt",
             target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
         )
         return Response(CampaignSerializer(campaign).data)
+
+    @action(detail=True, methods=["post"])
+    def admin_approve_counter(self, request, pk=None):
+        campaign = self.get_object()
+        if campaign.status in ["Countered_Pending", "Countered"]:
+            campaign.status = "Countered"
+        elif campaign.status in ["Business_Counter_Pending", "Business_Countered"]:
+            campaign.status = "Business_Countered"
+        else:
+            campaign.status = "Countered"
+        campaign.save()
+        return Response(CampaignSerializer(campaign).data)
+
+    @action(detail=True, methods=["post"])
+    def admin_reject_counter(self, request, pk=None):
+        campaign = self.get_object()
+        reason = request.data.get("reason") or request.data.get("note") or "Counter offer rejected by admin."
+        campaign.status = "Rejected"
+        campaign.decline_reason = reason
+        campaign.save()
+        return Response({"message": "Counter offer rejected", "status": "Rejected", "decline_reason": reason})
+
 
 class CampaignSettingsView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -492,7 +585,7 @@ class CampaignSettingsView(APIView):
     def get(self, request):
         categories = CampaignCategory.objects.all()
         languages = CampaignLanguage.objects.all()
-        deliverables = CampaignDeliverable.objects.all()
+        deliverables = Deliverable.objects.all()
         platforms = CampaignPlatform.objects.all()
 
         return Response({
@@ -637,31 +730,139 @@ class PitchViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        profile = getattr(user, "profile", None)
-        if not profile:
-            return Pitch.objects.none()
+        status_param = self.request.query_params.get("status")
 
-        if profile.role == "business":
-            return Pitch.objects.filter(brand=user)
-        else:
+        if user.is_staff or user.is_superuser:
+            if status_param:
+                statuses = [s.strip() for s in status_param.split(",")]
+                return Pitch.objects.filter(status__in=statuses)
+            return Pitch.objects.all()
+
+        if hasattr(user, "business_profile"):
+            # Business ONLY sees pitches that are admin-approved and visible to them:
+            return Pitch.objects.filter(
+                brand=user,
+                status__in=["pending", "pitch_countered", "biz_counter_pending", "biz_countered", "accepted_by_business", "accepted", "declined"]
+            )
+        elif hasattr(user, "creator_profile"):
+            # Creator sees their sent pitches (all statuses)
             return Pitch.objects.filter(creator=user)
+        return Pitch.objects.filter(models.Q(brand=user) | models.Q(creator=user))
 
     def perform_create(self, serializer):
-        serializer.save(creator=self.request.user)
+        attachment = self.request.FILES.get("attachment")
+        if attachment:
+            serializer.save(creator=self.request.user, attachment=attachment, status="pending_admin")
+        else:
+            serializer.save(creator=self.request.user, status="pending_admin")
+
+    @action(detail=True, methods=["post"])
+    def admin_approve(self, request, pk=None):
+        """Admin approves initial pitch → forward to business (status: pending)"""
+        pitch = self.get_object()
+        pitch.status = "pending"
+        pitch.save()
+        return Response(PitchSerializer(pitch).data)
+
+    @action(detail=True, methods=["post"])
+    def admin_reject(self, request, pk=None):
+        """Admin rejects a pitch"""
+        pitch = self.get_object()
+        pitch.status = "declined"
+        pitch.decline_reason = request.data.get("reason") or request.data.get("decline_reason") or "Pitch proposal rejected by admin."
+        pitch.save()
+        return Response(PitchSerializer(pitch).data)
+
+    @action(detail=True, methods=["post"])
+    def accept(self, request, pk=None):
+        """Business accepts pitch → status becomes accepted_by_business (pending admin conversion)"""
+        pitch = self.get_object()
+        pitch.status = "accepted_by_business"
+        pitch.save()
+        return Response(PitchSerializer(pitch).data)
+
+    @action(detail=True, methods=["post"])
+    def decline(self, request, pk=None):
+        """Decline pitch or counter offer with message"""
+        pitch = self.get_object()
+        pitch.status = "declined"
+        pitch.decline_reason = request.data.get("reason") or request.data.get("decline_reason") or "Pitch proposal declined."
+        pitch.save()
+        return Response(PitchSerializer(pitch).data)
+
+    @action(detail=True, methods=["post"])
+    def business_counter(self, request, pk=None):
+        """Business sends counter offer → goes to biz_counter_pending (needs admin approval), max 2 rounds"""
+        pitch = self.get_object()
+        if pitch.counter_count >= 2:
+            return Response({"error": "Counter offer limit reached. Maximum 2 counter offer rounds allowed."}, status=400)
+        pitch.counter_count += 1
+        pitch.status = "biz_counter_pending"
+        pitch.counter_offer = request.data.get("counter_offer") or request.data.get("counter_price")
+        pitch.counter_note = request.data.get("note") or request.data.get("counter_note") or ""
+        pitch.save()
+        return Response(PitchSerializer(pitch).data)
+
+    @action(detail=True, methods=["post"])
+    def creator_counter(self, request, pk=None):
+        """Creator sends counter offer → goes to pitch_counter_pending (needs admin approval), max 2 rounds"""
+        pitch = self.get_object()
+        if pitch.counter_count >= 2:
+            return Response({"error": "Counter offer limit reached. Maximum 2 counter offer rounds allowed."}, status=400)
+        pitch.counter_count += 1
+        pitch.status = "pitch_counter_pending"
+        pitch.counter_offer = request.data.get("counter_offer") or request.data.get("counter_price")
+        pitch.counter_note = request.data.get("note") or request.data.get("counter_note") or ""
+        pitch.save()
+        return Response(PitchSerializer(pitch).data)
+
+    @action(detail=True, methods=["post"])
+    def convert_to_campaign(self, request, pk=None):
+        """Business accepts pitch → create Live campaign with created_via=pitch"""
+        pitch = self.get_object()
+        pitch.status = "accepted"
+        pitch.save()
+
+        # Create Campaign created via pitch
+        campaign = Campaign.objects.create(
+            name=request.data.get("name") or pitch.campaign_name,
+            brand=pitch.brand,
+            creator=pitch.creator,
+            budget=request.data.get("budget") or pitch.budget,
+            brief=request.data.get("brief") or pitch.description or f"Campaign proposal based on pitch: {pitch.campaign_name}",
+            status="Live",
+            progress=62,
+            start_date=request.data.get("start_date") or pitch.sent_date or "2026-08-01",
+            created_via="pitch",
+        )
+        return Response({
+            "message": "Pitch accepted and campaign created.",
+            "pitch": PitchSerializer(pitch).data,
+            "campaign_id": campaign.id
+        })
 
     @action(detail=True, methods=["post"])
     def accept_counter(self, request, pk=None):
         pitch = self.get_object()
-        pitch.status = "accepted"
+        pitch.status = "accepted_by_business"
         pitch.save()
         return Response(PitchSerializer(pitch).data)
 
     @action(detail=True, methods=["post"])
     def decline_counter(self, request, pk=None):
         pitch = self.get_object()
-        pitch.status = "Declined"
+        pitch.status = "declined"
+        pitch.decline_reason = request.data.get("reason") or request.data.get("decline_reason") or "Counter offer declined."
         pitch.save()
-        return Response({"status": "Counter-offer declined by creator."}, status=status.HTTP_200_OK)
+        return Response(PitchSerializer(pitch).data)
+
+    @action(detail=True, methods=["post"])
+    def decline_counter(self, request, pk=None):
+        pitch = self.get_object()
+        pitch.status = "declined"
+        pitch.decline_reason = request.data.get("reason", "")
+        pitch.save()
+        return Response({"status": "Counter-offer declined."}, status=status.HTTP_200_OK)
 
 class CreatorEarningsView(APIView):
     permission_classes = [permissions.IsAuthenticated]

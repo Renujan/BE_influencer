@@ -201,6 +201,8 @@ class CreatorRate(models.Model):
     content_type = models.CharField(max_length=255)
     platforms = models.CharField(max_length=255, help_text="Comma-separated or JSON list of platforms, e.g. 'Instagram,TikTok'")
     price = models.DecimalField(max_digits=12, decimal_places=2)
+    min_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, default=0)
+    max_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, default=0)
     notes = models.TextField(blank=True, null=True)
 
     def __str__(self):

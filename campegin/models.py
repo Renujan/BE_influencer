@@ -9,15 +9,19 @@ class Campaign(models.Model):
         ("Live", "Live"),
         ("Completed", "Completed"),
         ("Rejected", "Rejected"),
+        ("Countered_Pending", "Creator Counter Pending Approval"),
         ("Countered", "Countered"),
+        ("Business_Counter_Pending", "Business Counter Pending Approval"),
+        ("Business_Countered", "Business Countered"),
         ("Under_Review", "Under Review"),
     )
     name = models.CharField(max_length=255)
     brand = models.ForeignKey(User, on_delete=models.CASCADE, related_name="brand_campaigns")
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name="creator_campaigns", null=True, blank=True)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="Under_Review")
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Under_Review")
     budget = models.DecimalField(max_digits=12, decimal_places=2)
     start_date = models.CharField(max_length=100, blank=True, null=True) # e.g. "May 12"
+    end_date = models.CharField(max_length=100, blank=True, null=True)
     progress = models.IntegerField(default=0)
     brief = models.TextField(blank=True, null=True)
     category = models.CharField(max_length=100, blank=True, null=True)
@@ -32,6 +36,9 @@ class Campaign(models.Model):
     admin_review = models.TextField(blank=True, null=True, help_text="Provide review/rejection comments to the business if rejected.")
     counter_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     counter_note = models.TextField(blank=True, null=True)
+    counter_round = models.IntegerField(default=0)
+    decline_reason = models.TextField(blank=True, null=True)
+    created_via = models.CharField(max_length=20, default="request", choices=(("request", "Direct Request"), ("pitch", "Creator Pitch")))
 
     panels = [
         FieldPanel('name'),
@@ -40,6 +47,7 @@ class Campaign(models.Model):
         FieldPanel('status'),
         FieldPanel('budget'),
         FieldPanel('start_date'),
+        FieldPanel('end_date'),
         FieldPanel('progress'),
         FieldPanel('brief'),
         FieldPanel('category'),
@@ -52,6 +60,9 @@ class Campaign(models.Model):
         FieldPanel('screenshare_brief'),
         FieldPanel('video_brief'),
         FieldPanel('admin_review'),
+        FieldPanel('counter_round'),
+        FieldPanel('decline_reason'),
+        FieldPanel('created_via'),
     ]
 
     def __str__(self):
@@ -275,21 +286,30 @@ class CampaignPlatform(models.Model):
 
 class Pitch(models.Model):
     STATUS_CHOICES = (
-        ("pending", "Pending"),
-        ("accepted", "Accepted"),
+        ("pending_admin", "Pending Admin Approval"),
+        ("pending", "Pending Business Review"),
+        ("accepted_by_business", "Accepted by Business – Awaiting Admin Conversion"),
+        ("accepted", "Accepted – Converted to Campaign"),
+        ("biz_counter_pending", "Business Counter – Pending Admin"),
+        ("biz_countered", "Business Counter – Approved"),
+        ("pitch_counter_pending", "Creator Counter – Pending Admin"),
+        ("pitch_countered", "Creator Counter – Approved"),
         ("declined", "Declined"),
-        ("counter_offer", "Counter Offer"),
     )
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_pitches")
     brand = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_pitches")
     campaign_name = models.CharField(max_length=255)
-    budget = models.DecimalField(max_digits=12, decimal_places=2)
+    budget = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     sent_date = models.CharField(max_length=100)
     tags = models.JSONField(default=list, blank=True, null=True)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="pending")
+    status = models.CharField(max_length=35, choices=STATUS_CHOICES, default="pending_admin")
     description = models.TextField(blank=True, null=True)
     deliverables = models.JSONField(default=list, blank=True, null=True)
     counter_offer = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    counter_note = models.TextField(null=True, blank=True)
+    counter_count = models.IntegerField(default=0)
+    attachment = models.FileField(upload_to="pitch_attachments/", null=True, blank=True)
+    decline_reason = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.campaign_name} - {self.status}"
