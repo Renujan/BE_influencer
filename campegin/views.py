@@ -129,12 +129,17 @@ class CampaignViewSet(viewsets.ModelViewSet):
             try:
                 deliverables_list = json.loads(deliverables_json)
                 for item in deliverables_list:
+                    del_name = item.get("text", "Deliverable")[:255]
                     Deliverable.objects.create(
                         campaign=campaign,
-                        name=item.get("text", "Deliverable")[:255],
+                        name=del_name,
                         type="post",
                         brief=item.get("brief", "")
                     )
+                    # Automatically add business custom deliverable to Super Admin CampaignDeliverables options list
+                    clean_name = del_name.split(" × ", 1)[-1].strip() if " × " in del_name else del_name.strip()
+                    if clean_name:
+                        CampaignDeliverable.objects.get_or_create(name=clean_name)
             except Exception as e:
                 print("Error parsing deliverables:", e)
 
@@ -166,12 +171,17 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 deliverables_list = json.loads(deliverables_json)
                 campaign.deliverables.all().delete()
                 for item in deliverables_list:
+                    del_name = item.get("text", "Deliverable")[:255]
                     Deliverable.objects.create(
                         campaign=campaign,
-                        name=item.get("text", "Deliverable")[:255],
+                        name=del_name,
                         type="post",
                         brief=item.get("brief", "")
                     )
+                    # Automatically add business custom deliverable to Super Admin CampaignDeliverables options list
+                    clean_name = del_name.split(" × ", 1)[-1].strip() if " × " in del_name else del_name.strip()
+                    if clean_name:
+                        CampaignDeliverable.objects.get_or_create(name=clean_name)
             except Exception as e:
                 print("Error parsing deliverables:", e)
 
@@ -610,7 +620,7 @@ class CampaignSettingsView(APIView):
     def get(self, request):
         categories = CampaignCategory.objects.all()
         languages = CampaignLanguage.objects.all()
-        deliverables = Deliverable.objects.all()
+        deliverables = CampaignDeliverable.objects.all()
         platforms = CampaignPlatform.objects.all()
 
         return Response({
@@ -619,6 +629,15 @@ class CampaignSettingsView(APIView):
             "deliverables": CampaignDeliverableSerializer(deliverables, many=True).data,
             "platforms": CampaignPlatformSerializer(platforms, many=True).data,
         })
+
+    def post(self, request):
+        name = request.data.get("name") or request.data.get("deliverable")
+        if name and isinstance(name, str) and name.strip():
+            raw_name = name.strip()
+            clean_name = raw_name.split(" × ", 1)[-1].strip() if " × " in raw_name else raw_name
+            obj, created = CampaignDeliverable.objects.get_or_create(name=clean_name)
+            return Response({"id": obj.id, "name": obj.name, "created": created})
+        return Response({"error": "Invalid deliverable name"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 

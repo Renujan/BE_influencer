@@ -47,7 +47,33 @@ class Command(BaseCommand):
             CampaignLanguage.objects.get_or_create(name=name)
         self.stdout.write("Campaign languages seeded.")
 
-        deliverable_names = ["1 × Instagram Reel (60s)", "2 × Instagram Stories", "1 × YouTube video (5 min)", "1 × TikTok video (30s)"]
+        deliverable_names = [
+            "Instagram Reel (30s / 60s / 90s short-form vertical video)",
+            "Instagram Story (15s photo or video with link sticker, poll, or discount code)",
+            "Instagram Static Feed Post (Single high-resolution photo)",
+            "Instagram Carousel Post (3–10 slides of images or short clips)",
+            "Instagram Collab Post (Joint post co-authored on both creator and brand profiles)",
+            "Instagram Broadcast Channel Message (Direct push message sent to creator's top subscribers)",
+            "TikTok Video (15s / 30s / 60s organic short-form vertical video)",
+            "TikTok Multi-Part Series (A connected 2 to 3 video storytelling arc)",
+            "TikTok / Instagram Live Stream (Real-time Q&A, product demonstration, or live unboxing)",
+            "YouTube Dedicated Video (Full 8–15 minute video focused entirely on the brand/product)",
+            "YouTube Integrated Segment (60s dedicated sponsorship mid-roll inside a regular video)",
+            "YouTube Short (60s vertical short-form video)",
+            "YouTube Community Tab Post (Image, text update, or interactive poll linking to product)",
+            "X / Twitter Thread (3–5 connected tweets for tech, B2B, or product launches)",
+            "LinkedIn Article / Long-Form Post (B2B commentary, SaaS showcase, or corporate review)",
+            "Blog Article / Review (In-depth 500–1000 word blog post with SEO back-links)",
+            "Raw UGC Video Asset (Unedited, unbranded video file created purely for the brand to run as ads)",
+            "High-Res Product Photography (Original studio/lifestyle photos for brand's website or e-commerce)",
+            "Raw B-Roll Footage (Extra background video clips provided to brand's in-house team)",
+            "Link in Bio Placement (Dedicated tracking link added to creator's bio for 7 to 30 days)",
+            "Pinned Post (Sponsored video or photo pinned to top of creator profile for set duration)",
+            "Whitelisting / Dark Posting Rights (Permission for brand to run paid ads through creator's official account)",
+            "Digital Commercial Usage Rights (Permission for brand to use creator's content on website, email, or Amazon)",
+            "Category Exclusivity (Agreement that creator won't promote direct competitors for 30–90 days)",
+            "Custom Discount / Affiliate Promo Code (Unique coupon code generated for tracking creator conversions)"
+        ]
         for name in deliverable_names:
             CampaignDeliverable.objects.get_or_create(name=name)
         self.stdout.write("Campaign deliverables seeded.")
