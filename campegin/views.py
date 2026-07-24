@@ -474,12 +474,25 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def counter(self, request, pk=None):
         campaign = self.get_object()
+        if (campaign.counter_round or 0) >= 2:
+            return Response({"error": "Maximum 2 counter offer rounds reached."}, status=status.HTTP_400_BAD_REQUEST)
         counter_price = request.data.get("price")
         counter_note = request.data.get("note")
         campaign.counter_price = counter_price
         campaign.counter_note = counter_note
         campaign.counter_round = (campaign.counter_round or 0) + 1
         campaign.status = "Countered_Pending"
+
+        history = list(campaign.counter_history or [])
+        history.append({
+            "round": campaign.counter_round,
+            "sender": "Creator",
+            "sender_name": campaign.creator.username if campaign.creator else "Creator",
+            "price": str(counter_price),
+            "note": counter_note or "",
+            "status": "Countered_Pending"
+        })
+        campaign.counter_history = history
         campaign.save()
         
         Notification.objects.create(
@@ -546,6 +559,17 @@ class RequestViewSet(viewsets.ModelViewSet):
         campaign.counter_price = counter_price
         campaign.counter_note = counter_note
         campaign.status = "Business_Counter_Pending"
+
+        history = list(campaign.counter_history or [])
+        history.append({
+            "round": campaign.counter_round or 1,
+            "sender": "Business",
+            "sender_name": campaign.brand.username if campaign.brand else "Business",
+            "price": str(counter_price),
+            "note": counter_note or "",
+            "status": "Business_Counter_Pending"
+        })
+        campaign.counter_history = history
         campaign.save()
         
         Notification.objects.create(
@@ -792,27 +816,53 @@ class PitchViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def business_counter(self, request, pk=None):
-        """Business sends counter offer → goes to biz_counter_pending (needs admin approval), max 2 rounds"""
+        """Business sends counter offer → goes to biz_counter_pending (needs admin approval), max 2 rounds per side"""
         pitch = self.get_object()
-        if pitch.counter_count >= 2:
+        if pitch.counter_count >= 4:
             return Response({"error": "Counter offer limit reached. Maximum 2 counter offer rounds allowed."}, status=400)
         pitch.counter_count += 1
         pitch.status = "biz_counter_pending"
-        pitch.counter_offer = request.data.get("counter_offer") or request.data.get("counter_price")
-        pitch.counter_note = request.data.get("note") or request.data.get("counter_note") or ""
+        offer_val = request.data.get("counter_offer") or request.data.get("counter_price")
+        note_val = request.data.get("note") or request.data.get("counter_note") or ""
+        pitch.counter_offer = offer_val
+        pitch.counter_note = note_val
+
+        history = list(pitch.counter_history or [])
+        history.append({
+            "round": pitch.counter_count,
+            "sender": "Business",
+            "sender_name": pitch.brand.username if pitch.brand else "Business",
+            "price": str(offer_val),
+            "note": note_val,
+            "status": "biz_counter_pending"
+        })
+        pitch.counter_history = history
         pitch.save()
         return Response(PitchSerializer(pitch).data)
 
     @action(detail=True, methods=["post"])
     def creator_counter(self, request, pk=None):
-        """Creator sends counter offer → goes to pitch_counter_pending (needs admin approval), max 2 rounds"""
+        """Creator sends counter offer → goes to pitch_counter_pending (needs admin approval), max 2 rounds per side"""
         pitch = self.get_object()
-        if pitch.counter_count >= 2:
+        if pitch.counter_count >= 4:
             return Response({"error": "Counter offer limit reached. Maximum 2 counter offer rounds allowed."}, status=400)
         pitch.counter_count += 1
         pitch.status = "pitch_counter_pending"
-        pitch.counter_offer = request.data.get("counter_offer") or request.data.get("counter_price")
-        pitch.counter_note = request.data.get("note") or request.data.get("counter_note") or ""
+        offer_val = request.data.get("counter_offer") or request.data.get("counter_price")
+        note_val = request.data.get("note") or request.data.get("counter_note") or ""
+        pitch.counter_offer = offer_val
+        pitch.counter_note = note_val
+
+        history = list(pitch.counter_history or [])
+        history.append({
+            "round": pitch.counter_count,
+            "sender": "Creator",
+            "sender_name": pitch.creator.username if pitch.creator else "Creator",
+            "price": str(offer_val),
+            "note": note_val,
+            "status": "pitch_counter_pending"
+        })
+        pitch.counter_history = history
         pitch.save()
         return Response(PitchSerializer(pitch).data)
 

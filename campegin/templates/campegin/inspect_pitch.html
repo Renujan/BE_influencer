@@ -543,30 +543,84 @@
 
         <!-- ── Negotiation & Counter Offer History ───────────────────────── -->
         <div>
-            <h3 class="custom-section-title">Negotiation &amp; Counter Offers</h3>
+            <h3 class="custom-section-title">Negotiation &amp; Counter Offers Log</h3>
             <div class="custom-table-wrapper">
                 <table class="custom-data-table">
                     <thead>
                         <tr>
-                            <th>Current Status</th>
+                            <th>Step / Stage</th>
+                            <th>Counter Offer Sender</th>
+                            <th>Proposed Counter Price</th>
                             <th>Original Budget</th>
-                            <th>Counter Offer Price</th>
-                            <th>Counter Note</th>
+                            <th>Remarks / Counter Note</th>
+                            <th>Moderation / Flow Status</th>
                         </tr>
                     </thead>
                     <tbody>
+                        <!-- Initial Proposal -->
                         <tr>
-                            <td>
-                                <span class="badge-status {{ status }}">{{ instance.get_status_display }}</span>
-                            </td>
+                            <td><strong style="color: #475569;">Initial Pitch</strong></td>
+                            <td>Creator ({{ instance.creator.username }})</td>
                             <td><strong>${{ instance.budget }}</strong></td>
-                            <td>
-                                {% if instance.counter_offer %}
-                                    <strong style="color: #d97706;">${{ instance.counter_offer }}</strong>
-                                {% else %}–{% endif %}
-                            </td>
-                            <td style="color: #64748b;">{{ instance.counter_note|default:"–" }}</td>
+                            <td>${{ instance.budget }}</td>
+                            <td style="color: #64748b;">Initial pitch proposal submitted by creator</td>
+                            <td><span class="badge-status pending_admin">Pitch Created</span></td>
                         </tr>
+                        {% if instance.counter_history %}
+                            {% for item in instance.counter_history %}
+                            <tr>
+                                <td><strong style="color: #d97706;">Counter Round {{ item.round }}</strong></td>
+                                <td>
+                                    {% if item.sender == 'Creator' %}
+                                        <strong>Creator</strong> ({{ item.sender_name|default:instance.creator.username }})
+                                    {% elif item.sender == 'Business' %}
+                                        <strong>Business</strong> ({{ item.sender_name|default:instance.brand.username }})
+                                    {% else %}
+                                        <strong>{{ item.sender }}</strong> ({{ item.sender_name }})
+                                    {% endif %}
+                                </td>
+                                <td><strong style="color: #d97706; font-size: 15px;">${{ item.price }}</strong></td>
+                                <td>${{ instance.budget }}</td>
+                                <td style="color: #334155;">{{ item.note|default:"No notes provided" }}</td>
+                                <td>
+                                    {% if item.status == 'pitch_counter_pending' or item.status == 'biz_counter_pending' %}
+                                        <span class="badge-status pending_admin">Awaiting Admin Approval</span>
+                                    {% elif item.status == 'pitch_countered' or item.status == 'biz_countered' or item.status == 'counter_offer' %}
+                                        <span class="badge-status accepted">Approved &amp; Forwarded</span>
+                                    {% elif item.status == 'accepted' or item.status == 'accepted_by_business' %}
+                                        <span class="badge-status accepted">Accepted</span>
+                                    {% else %}
+                                        <span class="badge-status {{ item.status }}">{{ item.status|title }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% elif instance.counter_offer %}
+                        <tr>
+                            <td><strong style="color: #d97706;">Counter Round {{ instance.counter_count|default:1 }}</strong></td>
+                            <td>
+                                {% if status == 'pitch_counter_pending' or status == 'pitch_countered' %}
+                                    <strong>Creator</strong> ({{ instance.creator.username }})
+                                {% elif status == 'biz_counter_pending' or status == 'biz_countered' or status == 'counter_offer' %}
+                                    <strong>Business</strong> ({{ instance.brand.username }})
+                                {% else %}
+                                    Counter Party
+                                {% endif %}
+                            </td>
+                            <td><strong style="color: #d97706; font-size: 15px;">${{ instance.counter_offer }}</strong></td>
+                            <td>${{ instance.budget }}</td>
+                            <td style="color: #334155;">{{ instance.counter_note|default:"No notes provided" }}</td>
+                            <td>
+                                {% if status == 'pitch_counter_pending' or status == 'biz_counter_pending' %}
+                                    <span class="badge-status pending_admin">Awaiting Admin Approval</span>
+                                {% elif status == 'pitch_countered' or status == 'biz_countered' or status == 'counter_offer' %}
+                                    <span class="badge-status accepted">Approved &amp; Forwarded</span>
+                                {% else %}
+                                    <span class="badge-status {{ status }}">{{ instance.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>

@@ -37,6 +37,7 @@ class Campaign(models.Model):
     counter_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     counter_note = models.TextField(blank=True, null=True)
     counter_round = models.IntegerField(default=0)
+    counter_history = models.JSONField(default=list, blank=True, null=True)
     decline_reason = models.TextField(blank=True, null=True)
     created_via = models.CharField(max_length=20, default="request", choices=(("request", "Direct Request"), ("pitch", "Creator Pitch")))
 
@@ -308,6 +309,7 @@ class Pitch(models.Model):
     counter_offer = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     counter_note = models.TextField(null=True, blank=True)
     counter_count = models.IntegerField(default=0)
+    counter_history = models.JSONField(default=list, blank=True, null=True)
     attachment = models.FileField(upload_to="pitch_attachments/", null=True, blank=True)
     decline_reason = models.TextField(null=True, blank=True)
 

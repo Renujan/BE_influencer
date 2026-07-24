@@ -810,28 +810,64 @@
 
         <!-- Negotiation History Section -->
         <div style="margin-bottom: 24px;">
-            <h3 class="custom-section-title">Negotiation &amp; Counter Offers</h3>
+            <h3 class="custom-section-title">Negotiation &amp; Counter Offers Log</h3>
             <div class="custom-table-wrapper">
                 <table class="custom-data-table">
                     <thead>
                         <tr>
-                            <th>Current Status</th>
+                            <th>Step / Stage</th>
+                            <th>Sender</th>
+                            <th>Proposed Counter Price</th>
                             <th>Original Budget</th>
-                            <th>Counter Price</th>
                             <th>Counter Note</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
+                        <!-- Initial Budget Row -->
                         <tr>
-                            <td>
-                                <span class="badge-status {% if instance.status == 'Countered' or instance.status == 'Business_Countered' %}pending{% elif instance.status == 'Live' %}live{% else %}draft{% endif %}">
-                                    {{ instance.get_status_display|default:instance.status }}
-                                </span>
-                            </td>
+                            <td><strong style="color: #475569;">Initial Campaign Budget</strong></td>
+                            <td>Business ({% if instance.brand %}{{ instance.brand.username }}{% else %}Brand{% endif %})</td>
+                            <td><strong>${{ instance.budget|default:"0.00" }}</strong></td>
                             <td>${{ instance.budget|default:"0.00" }}</td>
-                            <td>{% if instance.counter_price %}${{ instance.counter_price }}{% else %}-{% endif %}</td>
-                            <td>{{ instance.counter_note|default:"-" }}</td>
+                            <td style="color: #64748b;">Initial campaign request created</td>
+                            <td><span class="badge-status live">Active</span></td>
                         </tr>
+                        {% if instance.counter_history %}
+                            {% for item in instance.counter_history %}
+                            <tr>
+                                <td><strong style="color: #d97706;">Counter Round {{ item.round }}</strong></td>
+                                <td>
+                                    {% if item.sender == 'Creator' %}
+                                        <strong>Creator</strong> ({% if instance.creator %}{{ instance.creator.username }}{% else %}Creator{% endif %})
+                                    {% else %}
+                                        <strong>Business</strong> ({% if instance.brand %}{{ instance.brand.username }}{% else %}Brand{% endif %})
+                                    {% endif %}
+                                </td>
+                                <td><strong style="color: #d97706; font-size: 15px;">${{ item.price }}</strong></td>
+                                <td>${{ instance.budget|default:"0.00" }}</td>
+                                <td style="color: #334155;">{{ item.note|default:"-" }}</td>
+                                <td>
+                                    <span class="badge-status {% if item.status == 'Countered' or item.status == 'Business_Countered' %}pending{% elif item.status == 'Live' %}live{% else %}draft{% endif %}">
+                                        {{ item.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% elif instance.counter_price %}
+                            <tr>
+                                <td><strong style="color: #d97706;">Counter Round {{ instance.counter_round|default:1 }}</strong></td>
+                                <td>Counter Party</td>
+                                <td><strong style="color: #d97706; font-size: 15px;">${{ instance.counter_price }}</strong></td>
+                                <td>${{ instance.budget|default:"0.00" }}</td>
+                                <td>{{ instance.counter_note|default:"-" }}</td>
+                                <td>
+                                    <span class="badge-status {% if instance.status == 'Countered' or instance.status == 'Business_Countered' %}pending{% elif instance.status == 'Live' %}live{% else %}draft{% endif %}">
+                                        {{ instance.get_status_display|default:instance.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -897,21 +933,21 @@
                         <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">Review the campaign and choose to approve/publish, reject, or mark it as completed.</p>
                     </div>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        {% if instance.status == "Countered_Pending" or instance.status == "Countered" %}
+                        {% if instance.status == "Countered_Pending" %}
                             <button type="submit" name="status" value="Approve_Creator_Counter" class="btn-header-primary" style="background-color: #16a34a; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                 Approve Creator Counter (${{ instance.counter_price }})
                             </button>
                         {% endif %}
 
-                        {% if instance.status == "Business_Counter_Pending" or instance.status == "Business_Countered" %}
+                        {% if instance.status == "Business_Counter_Pending" %}
                             <button type="submit" name="status" value="Approve_Business_Counter" class="btn-header-primary" style="background-color: #2563eb; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                 Approve Business Counter (${{ instance.counter_price }})
                             </button>
                         {% endif %}
 
-                        {% if instance.status == "Countered_Pending" or instance.status == "Business_Counter_Pending" or instance.status == "Countered" or instance.status == "Business_Countered" %}
+                        {% if instance.status == "Countered_Pending" or instance.status == "Business_Counter_Pending" %}
                             <button type="submit" name="status" value="Reject_Counter" class="btn-header-primary" style="background-color: #dc2626; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Reject this counter offer?');">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                 Reject Counter Offer

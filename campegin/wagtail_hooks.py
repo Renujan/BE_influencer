@@ -255,12 +255,22 @@ class PitchInspectView(InspectView):
         elif action == "approve_creator_counter" or status_val == "approve_creator_counter":
             # Admin approves creator's counter → now visible to business
             self.object.status = "pitch_countered"
+            if self.object.counter_history:
+                history = list(self.object.counter_history)
+                if history:
+                    history[-1]["status"] = "pitch_countered"
+                    self.object.counter_history = history
             self.object.save()
             messages.success(request, f"Creator counter offer approved for '{self.object.campaign_name}'.")
 
         elif action == "approve_biz_counter" or status_val == "approve_biz_counter":
             # Admin approves business's counter → now visible to creator
             self.object.status = "biz_countered"
+            if self.object.counter_history:
+                history = list(self.object.counter_history)
+                if history:
+                    history[-1]["status"] = "biz_countered"
+                    self.object.counter_history = history
             self.object.save()
             messages.success(request, f"Business counter offer approved for '{self.object.campaign_name}'.")
 
