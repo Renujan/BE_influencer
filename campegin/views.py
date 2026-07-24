@@ -773,6 +773,27 @@ class PitchViewSet(viewsets.ModelViewSet):
             return Pitch.objects.filter(creator=user)
         return Pitch.objects.filter(models.Q(brand=user) | models.Q(creator=user))
 
+    def create(self, request, *args, **kwargs):
+        # Enforce 2 pitch requests per day limit for creator
+        user = request.user
+        if not (user.is_staff or user.is_superuser):
+            from datetime import date
+            today_str1 = date.today().strftime("%b %d, %Y")
+            today_str2 = date.today().strftime("%Y-%m-%d")
+            req_date = request.data.get("sent_date")
+
+            query = Pitch.objects.filter(creator=user).filter(
+                models.Q(sent_date=today_str1) |
+                models.Q(sent_date=today_str2) |
+                (models.Q(sent_date=req_date) if req_date else models.Q())
+            )
+            if query.count() >= 2:
+                return Response(
+                    {"error": "Daily request limit reached. Creators can only send a maximum of 2 pitch requests per day."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         attachment = self.request.FILES.get("attachment")
         if attachment:
