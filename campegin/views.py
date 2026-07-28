@@ -340,12 +340,11 @@ class CampaignViewSet(viewsets.ModelViewSet):
         )
         return Response(WorkspaceFileSerializer(ws_file).data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[permissions.AllowAny])
     def submit_deliverable(self, request, pk=None):
         campaign = self.get_object()
         del_id = request.data.get("deliverable_id")
         
-        # Determine if this is a final post or a draft
         link = request.data.get("link")
         screenshot_name = request.data.get("screenshot_name", "")
         assetDriveLink = request.data.get("assetDriveLink")
@@ -359,18 +358,17 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         deliverable = get_object_or_404(Deliverable, campaign=campaign, id=del_id)
         
-        if link or screenshot_name:
-            if link:
-                deliverable.link = link
-            if screenshot_name:
-                deliverable.screenshot_name = screenshot_name
-            deliverable.status = "Published"
-        elif assetDriveLink or assetFileName:
-            if assetDriveLink:
-                deliverable.assetDriveLink = assetDriveLink
-            if assetFileName:
-                deliverable.assetFileName = assetFileName
-            deliverable.status = "Pending Review"
+        if link:
+            deliverable.link = link
+        if screenshot_name:
+            deliverable.screenshot_name = screenshot_name
+        if assetDriveLink:
+            deliverable.assetDriveLink = assetDriveLink
+        if assetFileName:
+            deliverable.assetFileName = assetFileName
+
+        # Require Initial Admin Intercept Approval!
+        deliverable.status = "Pending Admin Review"
 
         if views is not None:
             deliverable.views = views
@@ -382,23 +380,51 @@ class CampaignViewSet(viewsets.ModelViewSet):
         deliverable.save()
         return Response(DeliverableSerializer(deliverable).data)
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[permissions.AllowAny])
     def review_deliverable(self, request, pk=None):
         campaign = self.get_object()
         del_id = request.data.get("deliverable_id")
-        status_action = request.data.get("status") # Approved or Revision Requested
+        status_action = request.data.get("status")
+        name = request.data.get("name")
+        del_type = request.data.get("type")
+        brief = request.data.get("brief")
+        deadline = request.data.get("deadline")
 
-        if not del_id or not status_action:
-            return Response({"error": "deliverable_id and status are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not del_id:
+            return Response({"error": "deliverable_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         deliverable = get_object_or_404(Deliverable, campaign=campaign, id=del_id)
-        deliverable.status = status_action
+        
+        revision_notes = request.data.get("revision_notes")
+        revision_link = request.data.get("revision_reference_link")
+        revision_file = request.FILES.get("revision_reference_file")
+
+        if status_action:
+            deliverable.status = status_action
+        if name:
+            deliverable.name = name
+            clean_name = name.split(" × ", 1)[-1].strip() if " × " in name else name.strip()
+            if clean_name:
+                CampaignDeliverable.objects.get_or_create(name=clean_name)
+        if del_type:
+            deliverable.type = del_type
+        if brief is not None:
+            deliverable.brief = brief
+        if deadline is not None:
+            deliverable.deadline = deadline
+        if revision_notes is not None:
+            deliverable.revision_notes = revision_notes
+        if revision_link is not None:
+            deliverable.revision_reference_link = revision_link
+        if revision_file is not None:
+            deliverable.revision_reference_file = revision_file
+
         deliverable.save()
 
         # Update progression based on deliverables
         total_dels = campaign.deliverables.count()
         if total_dels > 0:
-            approved_dels = campaign.deliverables.filter(status="Approved").count()
+            approved_dels = campaign.deliverables.filter(status__in=["Approved", "Published"]).count()
             campaign.progress = int((approved_dels / total_dels) * 100)
             campaign.save()
 

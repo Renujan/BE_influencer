@@ -562,15 +562,6 @@
                     <div class="custom-form-control-readonly">{{ instance.delivery_language|default:"-" }}</div>
                 </div>
 
-                <div class="custom-form-group full-width">
-                    <label class="custom-form-label">Campaign Progress ({{ instance.progress }}%)</label>
-                    <div class="custom-form-control-readonly" style="display: block; min-height: auto; padding: 16px 20px;">
-                        <strong>{{ instance.progress }}% Complete</strong>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: {{ instance.progress }}%;"></div>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="custom-form-group full-width">
                     <label class="custom-form-label">Brief Description</label>
@@ -699,48 +690,162 @@
 
         <!-- Deliverables list -->
         <div>
-            <h3 class="custom-section-title">Deliverables</h3>
-            <div class="custom-table-wrapper">
-                <table class="custom-data-table">
+            <h3 class="custom-section-title">Deliverables &amp; Uploaded Assets</h3>
+            <div class="custom-table-wrapper" style="overflow-x: auto; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <table class="custom-data-table" style="width: 100%; min-width: 850px; table-layout: fixed;">
                     <thead>
                         <tr>
-                            <th>Deliverable Name</th>
-                            <th>Type</th>
-                            <th>Deadline</th>
-                            <th>Link</th>
-                            <th>Status</th>
-                            <th>Brief Notes</th>
+                            <th style="width: 18%;">Deliverable Name</th>
+                            <th style="width: 8%;">Type</th>
+                            <th style="width: 10%;">Deadline</th>
+                            <th style="width: 25%;">Uploaded Files &amp; Links</th>
+                            <th style="width: 14%;">Status</th>
+                            <th style="width: 13%;">Brief Notes</th>
+                            <th style="width: 12%; white-space: nowrap;">Admin Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for del in deliverables %}
-                            <tr>
-                                <td><strong>{{ del.name }}</strong></td>
-                                <td><span class="tag-item" style="margin: 0;">{{ del.type }}</span></td>
-                                <td>{{ del.deadline|default:"-" }}</td>
+                            <tr style="vertical-align: top;">
+                                <td style="word-wrap: break-word; overflow-wrap: break-word;">
+                                    <strong style="color: #0f172a; font-size: 13px;">{{ del.name }}</strong>
+                                </td>
+                                <td><span class="tag-item" style="margin: 0; font-size: 11px;">{{ del.type }}</span></td>
+                                <td style="white-space: nowrap; font-size: 12px; color: #475569;">{{ del.deadline|default:"-" }}</td>
                                 <td>
-                                    {% if del.link %}
-                                        <a href="{{ del.link }}" target="_blank" style="color: #0284c7; text-decoration: none;">View link</a>
-                                    {% else %}
-                                        -
-                                    {% endif %}
+                                    <div style="display: flex; flex-direction: column; gap: 5px; font-size: 12px; width: 100%; overflow: hidden;">
+                                        {% if del.assetDriveLink %}
+                                            <a href="{{ del.assetDriveLink }}" target="_blank" title="{{ del.assetDriveLink }}" style="color: #0284c7; font-weight: 600; text-decoration: underline; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">
+                                                ☁️ Cloud Asset Link
+                                            </a>
+                                        {% endif %}
+                                        {% if del.assetFileName %}
+                                            <a href="{{ del.assetFileName.url }}" target="_blank" title="{{ del.assetFileName.name }}" style="color: #0d9488; font-weight: 600; text-decoration: underline; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">
+                                                📁 Draft File: {{ del.assetFileName.name }}
+                                            </a>
+                                        {% endif %}
+                                        {% if del.link %}
+                                            <a href="{{ del.link }}" target="_blank" title="{{ del.link }}" style="color: #2F54EB; font-weight: 600; text-decoration: underline; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">
+                                                🔗 Live Post Link
+                                            </a>
+                                        {% endif %}
+                                        {% if del.screenshot_name %}
+                                            <a href="{{ del.screenshot_name.url }}" target="_blank" title="{{ del.screenshot_name.name }}" style="color: #ea580c; font-weight: 600; text-decoration: underline; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">
+                                                📊 Screenshot: {{ del.screenshot_name.name }}
+                                            </a>
+                                        {% endif %}
+
+                                        {% if del.revision_notes or del.revision_reference_link or del.revision_reference_file %}
+                                            <div style="margin-top: 6px; padding: 6px 8px; background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; font-size: 11px;">
+                                                <div style="color: #c2410c; font-weight: 700;">📝 Requested Change / Notes:</div>
+                                                <div style="color: #431407; margin-top: 2px;">{{ del.revision_notes }}</div>
+                                                {% if del.revision_reference_link %}
+                                                    <a href="{{ del.revision_reference_link }}" target="_blank" style="color: #d97706; font-weight: 600; text-decoration: underline; display: block; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                        🔗 Ref Link: {{ del.revision_reference_link }}
+                                                    </a>
+                                                {% endif %}
+                                                {% if del.revision_reference_file %}
+                                                    <a href="{{ del.revision_reference_file.url }}" target="_blank" style="color: #d97706; font-weight: 600; text-decoration: underline; display: block; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                        📎 Ref File: {{ del.revision_reference_file.name }}
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if not del.assetDriveLink and not del.assetFileName and not del.link and not del.screenshot_name and not del.revision_notes %}
+                                            <span style="color: #94a3b8; font-style: italic;">No files uploaded</span>
+                                        {% endif %}
+                                    </div>
                                 </td>
                                 <td>
-                                    <span class="badge-status {% if del.status == 'Approved' or del.status == 'Published' %}live{% else %}pending{% endif %}">
+                                    <span class="badge-status {% if del.status == 'Approved' or del.status == 'Published' %}live{% else %}pending{% endif %}" style="display: inline-block; white-space: normal; line-height: 1.3;">
                                         {{ del.status }}
                                     </span>
                                 </td>
-                                <td><span style="color: #64748b;">{{ del.brief|default:"-" }}</span></td>
+                                <td style="word-wrap: break-word; overflow-wrap: break-word; max-width: 140px;">
+                                    <span style="color: #64748b; font-size: 12px;">{{ del.brief|default:"-" }}</span>
+                                </td>
+                                <td style="white-space: nowrap;">
+                                    <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+                                        {% if del.status == 'Pending Admin Review' or del.status == 'Pending' or del.status == 'Published' %}
+                                            {% if del.assetDriveLink or del.assetFileName or del.link or del.screenshot_name %}
+                                                <button type="button" onclick="adminReviewDeliverable({{ instance.id }}, {{ del.id }}, 'Pending Business Review')" style="background-color: #0284c7; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); text-align: center;">
+                                                    ✓ Approve Submission
+                                                </button>
+                                            {% else %}
+                                                <span style="color: #94a3b8; font-size: 11px; font-style: italic;">⌛ Awaiting Upload</span>
+                                            {% endif %}
+                                        {% endif %}
+
+                                        {% if del.status == 'Revision Requested (Pending Admin)' %}
+                                            <button type="button" onclick="adminReviewDeliverable({{ instance.id }}, {{ del.id }}, 'Revision Requested')" style="background-color: #d97706; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); text-align: center;">
+                                                ✓ Approve Change Request
+                                            </button>
+                                        {% endif %}
+
+                                        {% if del.status == 'Pending Final Admin Approval' or del.status == 'Pending Business Review' %}
+                                            <button type="button" onclick="adminReviewDeliverable({{ instance.id }}, {{ del.id }}, 'Approved')" style="background-color: #16a34a; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); text-align: center;">
+                                                ★ Approve &amp; Publish
+                                            </button>
+                                        {% endif %}
+
+                                        {% if del.status == 'Pending Admin Review' or del.status == 'Pending Business Review' or del.status == 'Pending Final Admin Approval' or del.status == 'Published' %}
+                                            <button type="button" onclick="adminReviewDeliverable({{ instance.id }}, {{ del.id }}, 'Revision Requested')" style="background-color: #dc2626; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); text-align: center;">
+                                                ✕ Request Revision
+                                            </button>
+                                        {% endif %}
+
+                                        {% if del.status == 'Approved' %}
+                                            <span style="color: #16a34a; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                                                ✓ Approved &amp; Published
+                                            </span>
+                                        {% endif %}
+
+                                        {% if del.status == 'Revision Requested' and not del.assetDriveLink and not del.assetFileName and not del.link and not del.screenshot_name %}
+                                            <span style="color: #d97706; font-size: 11px; font-weight: 600; white-space: normal; line-height: 1.3;">
+                                                ⌛ Waiting for Creator Re-upload
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">No deliverables recorded for this campaign</td>
+                                <td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">No deliverables recorded for this campaign</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+
+        <script>
+            function adminReviewDeliverable(campaignId, delId, statusAction) {
+                if (!confirm("Confirm changing deliverable status to '" + statusAction + "'?")) return;
+                var csrfToken = '{{ csrf_token }}';
+                fetch('/api/campegins/campaigns/' + campaignId + '/review_deliverable/', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ deliverable_id: delId, status: statusAction })
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.text().then(text => { throw new Error(text || 'HTTP ' + res.status); });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    alert("Deliverable status updated to: " + statusAction);
+                    window.location.reload();
+                })
+                .catch(err => {
+                    alert("Failed to update status: " + err.message);
+                });
+            }
+        </script>
 
         <!-- Payment Installments -->
         <div>

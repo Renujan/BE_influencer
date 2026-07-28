@@ -19,7 +19,11 @@ class CampaignMilestoneSerializer(serializers.ModelSerializer):
 class DeliverableSerializer(serializers.ModelSerializer):
     class Meta:
         model = Deliverable
-        fields = ["id", "name", "type", "status", "deadline", "brief", "link", "screenshot_name", "assetDriveLink", "assetFileName", "views", "reach", "er"]
+        fields = [
+            "id", "name", "type", "status", "deadline", "brief", "link", "screenshot_name", 
+            "assetDriveLink", "assetFileName", "views", "reach", "er",
+            "revision_notes", "revision_reference_link", "revision_reference_file"
+        ]
 
 class PaymentInstallmentSerializer(serializers.ModelSerializer):
     class Meta:

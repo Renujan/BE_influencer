@@ -150,6 +150,9 @@ class Deliverable(models.Model):
     assetFileName = models.FileField(upload_to="deliverables/", blank=True, null=True)
     link = models.URLField(blank=True, default="")
     screenshot_name = models.FileField(upload_to="deliverables/", blank=True, null=True)
+    revision_notes = models.TextField(blank=True, default="")
+    revision_reference_link = models.URLField(max_length=500, blank=True, default="")
+    revision_reference_file = models.FileField(upload_to="deliverables/revisions/", blank=True, null=True)
 
     def __str__(self):
         return f"{self.campaign.name} - {self.name} ({self.status})"
