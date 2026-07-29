@@ -19,7 +19,8 @@ import datetime
 def chat_monitor_detail_view(request, campaign_id):
     """Comprehensive detail page: chat history + campaign info + business & creator profiles."""
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    messages = campaign.messages.all().order_by("id")
+    # Show only direct live chat between Creator & Business in Chat Monitor
+    messages = campaign.messages.filter(message_type="main").order_by("id")
     reviews = campaign.chat_reviews.all().order_by("-id")
 
     # Business profile
@@ -63,7 +64,8 @@ def chat_monitor_detail_view(request, campaign_id):
 def chat_monitor_download_pdf_view(request, campaign_id):
     """Generate a PDF report of the chat monitor detail page."""
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    messages = campaign.messages.all().order_by("id")
+    # Show only direct live chat between Creator & Business
+    messages = campaign.messages.filter(message_type="main").order_by("id")
     reviews = campaign.chat_reviews.all().order_by("-id")
 
     business_profile = getattr(campaign.brand, "business_profile", None)
@@ -147,7 +149,7 @@ class CampaignChatsViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(WorkspaceMessageSerializer(msg).data, status=status.HTTP_201_CREATED)
         else:
             # GET: return all messages ordered by ID
-            msgs = campaign.messages.all().order_by("id")
+            msgs = campaign.messages.filter(message_type="main").order_by("id")
             return Response(WorkspaceMessageSerializer(msgs, many=True).data)
 
     @action(detail=True, methods=["get"])
@@ -175,7 +177,8 @@ class CampaignChatsViewSet(viewsets.ReadOnlyModelViewSet):
 @staff_member_required
 def chat_monitor_view_chat_view(request, campaign_id):
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    messages = campaign.messages.all().order_by("id")
+    # Show only direct live chat between Creator & Business
+    messages = campaign.messages.filter(message_type="main").order_by("id")
     context = {
         "campaign": campaign,
         "chat_messages": messages,

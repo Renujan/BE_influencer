@@ -39,7 +39,7 @@ class Command(BaseCommand):
         # 1b. Campaign settings
         category_names = ["Fashion", "Beauty", "Tech", "Food", "Travel", "Fitness", "Gaming", "Lifestyle", "Finance", "Health & Wellness", "Education", "Entertainment", "Sports", "Automotive", "Real Estate", "Non-Profit"]
         for name in category_names:
-            CampaignCategory.objects.get_or_create(name=name)
+            CampaignCategory.objects.get_or_create(name=name, defaults={"min_price": 10000.00, "max_price": 50000.00})
         self.stdout.write("Campaign categories seeded.")
 
         language_names = ["English", "Arabic", "French", "Spanish", "German", "Mandarin", "Hindi", "Portuguese", "Japanese", "Korean"]

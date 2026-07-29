@@ -137,7 +137,8 @@ class CampaignCategoryViewSet(SnippetViewSet):
     menu_label = "Categories"
     icon = "tag"
     add_to_admin_menu = False
-    list_export = ("id", "name")
+    list_display = ("name", "min_price", "max_price")
+    list_export = ("id", "name", "min_price", "max_price")
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
 

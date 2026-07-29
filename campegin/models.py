@@ -228,9 +228,13 @@ class AdminComplianceTicket(models.Model):
 
 class CampaignCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    min_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True)
+    max_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True)
 
     panels = [
         FieldPanel("name"),
+        FieldPanel("min_price"),
+        FieldPanel("max_price"),
     ]
 
     class Meta:

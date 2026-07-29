@@ -259,11 +259,13 @@ class CampaignViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def send_message(self, request, pk=None):
         campaign = self.get_object()
-        text = request.data.get("text")
+        text = request.data.get("text", "")
+        file_attachment = request.data.get("file_attachment", "") or request.data.get("file", "")
         message_type = request.data.get("message_type", "main")
+        file_size = request.data.get("file_size", "1.5 MB")
         
-        if not text:
-            return Response({"error": "Text is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not text and not file_attachment:
+            return Response({"error": "Text or file attachment is required"}, status=status.HTTP_400_BAD_REQUEST)
             
         user = request.user
         
@@ -277,14 +279,27 @@ class CampaignViewSet(viewsets.ModelViewSet):
         import datetime
         now = datetime.datetime.now()
         time_str = now.strftime("%H:%M")
+        date_str = now.strftime("%b %d, %Y")
         
         message = WorkspaceMessage.objects.create(
             campaign=campaign,
             sender=user,
-            text=text,
+            text=text or (f"Shared attachment: {file_attachment}" if file_attachment else ""),
+            file_attachment=file_attachment,
             message_type=message_type,
             time=time_str
         )
+
+        if file_attachment:
+            WorkspaceFile.objects.create(
+                campaign=campaign,
+                name=file_attachment,
+                size=file_size,
+                sender=user,
+                date=date_str,
+                time=now.strftime("%I:%M %p")
+            )
+
         return Response(WorkspaceMessageSerializer(message).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
@@ -638,6 +653,12 @@ class RequestViewSet(viewsets.ModelViewSet):
         campaign.decline_reason = reason
         campaign.save()
         return Response({"message": "Counter offer rejected", "status": "Rejected", "decline_reason": reason})
+
+
+class CampaignCategoryApiViewSet(viewsets.ModelViewSet):
+    queryset = CampaignCategory.objects.all().order_by("id")
+    serializer_class = CampaignCategorySerializer
+    permission_classes = [permissions.AllowAny]
 
 
 class CampaignSettingsView(APIView):
