@@ -7,7 +7,7 @@ from .models import (
 class NicheSerializer(serializers.ModelSerializer):
     class Meta:
         model = Niche
-        fields = ["id", "name"]
+        fields = ["id", "name", "is_active"]
 
 class BusinessTypeSerializer(serializers.ModelSerializer):
     class Meta:

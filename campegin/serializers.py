@@ -3,8 +3,13 @@ from django.contrib.auth.models import User
 from .models import (
     Campaign, CampaignTask, CampaignMilestone, Deliverable,
     PaymentInstallment, WorkspaceFile, WorkspaceMessage, AdminComplianceTicket,
-    CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform, Pitch
+    CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform, Pitch, CampaignNiche
 )
+
+class CampaignNicheSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CampaignNiche
+        fields = ["id", "name", "is_active"]
 
 class CampaignTaskSerializer(serializers.ModelSerializer):
     class Meta:

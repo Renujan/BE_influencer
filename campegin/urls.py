@@ -1,12 +1,13 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import CampaignViewSet, RequestViewSet, CampaignSettingsView, CampaignStatsView, PitchViewSet, CreatorEarningsView, BusinessAnalyticsView, CampaignCategoryApiViewSet
+from .views import CampaignViewSet, RequestViewSet, CampaignSettingsView, CampaignStatsView, PitchViewSet, CreatorEarningsView, BusinessAnalyticsView, CampaignCategoryApiViewSet, CampaignNicheViewSet
 
 router = DefaultRouter()
 router.register(r"campaigns", CampaignViewSet, basename="campaign")
 router.register(r"requests", RequestViewSet, basename="request")
 router.register(r"pitches", PitchViewSet, basename="pitch")
 router.register(r"categories", CampaignCategoryApiViewSet, basename="campaign-category")
+router.register(r"campaign-niches", CampaignNicheViewSet, basename="campaign-niche")
 
 urlpatterns = [
     path("campaign-settings/", CampaignSettingsView.as_view(), name="campaign-settings"),

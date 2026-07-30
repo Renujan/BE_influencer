@@ -187,8 +187,9 @@ class NicheViewSet(ModelViewSet):
     menu_icon = "tag"
     menu_item_name = "niches"
     add_to_admin_menu = False
-    form_fields = ["name"]
-    list_display = ("name",)
+    form_fields = ["name", "is_active"]
+    list_display = ("name", "is_active")
+    list_editable = ("is_active",)
     search_fields = ("name",)
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"

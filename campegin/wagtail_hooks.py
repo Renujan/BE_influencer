@@ -308,8 +308,47 @@ class PitchViewSet(SnippetViewSet):
     list_filter = ("status",)
     search_fields = ("campaign_name", "creator__username", "brand__username")
 
+from .models import Campaign, CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform, Pitch, CampaignNiche
+from wagtail.permission_policies.base import ModelPermissionPolicy
+from wagtail.admin.forms import WagtailAdminModelForm
+from wagtail.admin.ui.tables import Column
+
+class CampaignNichePermissionPolicy(ModelPermissionPolicy):
+    def user_has_permission(self, user, action):
+        if action in ["add", "delete"]:
+            return False
+        return super().user_has_permission(user, action)
+
+    def user_has_any_permission(self, user, actions):
+        allowed = [a for a in actions if a not in ["add", "delete"]]
+        if not allowed:
+            return False
+        return super().user_has_any_permission(user, allowed)
+
+class CampaignNicheForm(WagtailAdminModelForm):
+    class Meta:
+        model = CampaignNiche
+        fields = ["name", "is_active"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "name" in self.fields:
+            self.fields["name"].disabled = True
+            self.fields["name"].required = False
+
+class CampaignNicheViewSet(SnippetViewSet):
+    model = CampaignNiche
+    base_form_class = CampaignNicheForm
+    permission_policy = CampaignNichePermissionPolicy(CampaignNiche)
+    menu_label = "Niches"
+    icon = "tag"
+    menu_name = "campaign_niches"
+    list_display = ("name", "is_active")
+    list_editable = ("is_active",)
+    search_fields = ("name",)
+
 class CampaignWorkspaceGroup(SnippetViewSetGroup):
-    items = (CampaignViewSet, PitchViewSet, CampaignCategoryViewSet, CampaignLanguageViewSet, CampaignDeliverableViewSet, CampaignPlatformViewSet)
+    items = (CampaignViewSet, PitchViewSet, CampaignCategoryViewSet, CampaignLanguageViewSet, CampaignDeliverableViewSet, CampaignPlatformViewSet, CampaignNicheViewSet)
     menu_icon = "tasks"
     menu_label = "Campaign Workspaces"
     menu_name = "campaign_workspaces"

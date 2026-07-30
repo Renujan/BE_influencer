@@ -15,6 +15,23 @@ class CampaignCategoryForm(WagtailAdminModelForm):
             attrs={"class": "w-full"}
         )
 
+class CampaignNiche(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True, verbose_name="Active", help_text="Checked = active/visible while creating campaign; Unchecked = inactive/hidden")
+
+    panels = [
+        FieldPanel("name"),
+        FieldPanel("is_active"),
+    ]
+
+    class Meta:
+        verbose_name = "Campaign Niche"
+        verbose_name_plural = "Campaign Niches"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
 class Campaign(models.Model):
     STATUS_CHOICES = (
         ("Pending", "Pending"),

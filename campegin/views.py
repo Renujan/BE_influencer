@@ -8,14 +8,14 @@ from django.contrib.auth.models import User
 from .models import (
     Campaign, CampaignTask, CampaignMilestone, Deliverable,
     PaymentInstallment, WorkspaceFile, WorkspaceMessage, AdminComplianceTicket,
-    CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform, Pitch
+    CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform, Pitch, CampaignNiche
 )
 from .serializers import (
     CampaignSerializer, WorkspaceMessageSerializer, WorkspaceFileSerializer,
     DeliverableSerializer, AdminComplianceTicketSerializer,
     CampaignCategorySerializer, CampaignLanguageSerializer,
     CampaignDeliverableSerializer, CampaignPlatformSerializer,
-    PitchSerializer
+    PitchSerializer, CampaignNicheSerializer
 )
 from notifications.models import Notification
 
@@ -661,6 +661,12 @@ class CampaignCategoryApiViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 
+class CampaignNicheViewSet(viewsets.ModelViewSet):
+    queryset = CampaignNiche.objects.all().order_by("name")
+    serializer_class = CampaignNicheSerializer
+    permission_classes = [permissions.AllowAny]
+
+
 class CampaignSettingsView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -669,12 +675,14 @@ class CampaignSettingsView(APIView):
         languages = CampaignLanguage.objects.all()
         deliverables = CampaignDeliverable.objects.all()
         platforms = CampaignPlatform.objects.all()
+        niches = CampaignNiche.objects.filter(is_active=True)
 
         return Response({
             "categories": CampaignCategorySerializer(categories, many=True).data,
             "languages": CampaignLanguageSerializer(languages, many=True).data,
             "deliverables": CampaignDeliverableSerializer(deliverables, many=True).data,
             "platforms": CampaignPlatformSerializer(platforms, many=True).data,
+            "niches": CampaignNicheSerializer(niches, many=True).data,
         })
 
     def post(self, request):

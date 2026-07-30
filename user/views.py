@@ -956,9 +956,16 @@ class MediumViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 class NicheViewSet(viewsets.ModelViewSet):
-    queryset = Niche.objects.all()
+    queryset = Niche.objects.all().order_by("name")
     serializer_class = NicheSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        active_only = self.request.query_params.get("active_only")
+        if active_only and active_only.lower() in ["true", "1"]:
+            qs = qs.filter(is_active=True)
+        return qs
 
 class BusinessTypeViewSet(viewsets.ModelViewSet):
     queryset = BusinessType.objects.all()

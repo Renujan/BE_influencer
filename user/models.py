@@ -63,9 +63,19 @@ class District(Orderable):
     def __str__(self):
         return self.name
 
-@register_snippet
 class Niche(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True, verbose_name="Active", help_text="Checked = active/visible; Unchecked = inactive/hidden")
+
+    panels = [
+        FieldPanel("name"),
+        FieldPanel("is_active"),
+    ]
+
+    class Meta:
+        verbose_name = "Niche"
+        verbose_name_plural = "Niches"
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
