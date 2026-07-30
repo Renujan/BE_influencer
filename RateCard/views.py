@@ -1,3 +1,9 @@
-from django.shortcuts import render
+from rest_framework import viewsets, permissions
+from .models import RateCard
+from .serializers import RateCardSerializer
 
-# Create your views here.
+
+class RateCardViewSet(viewsets.ModelViewSet):
+    queryset = RateCard.objects.all().order_by("-id")
+    serializer_class = RateCardSerializer
+    permission_classes = [permissions.AllowAny]
