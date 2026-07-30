@@ -93,7 +93,7 @@ class CampaignSerializer(serializers.ModelSerializer):
 class CampaignCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = CampaignCategory
-        fields = ["id", "name", "min_price", "max_price"]
+        fields = ["id", "name", "platform", "type", "duration", "min_price", "max_price"]
 
 class CampaignLanguageSerializer(serializers.ModelSerializer):
     class Meta:

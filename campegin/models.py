@@ -1,7 +1,19 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django import forms
 from wagtail.snippets.models import register_snippet
 from wagtail.admin.panels import FieldPanel
+from wagtail.admin.forms import WagtailAdminModelForm
+
+class CampaignCategoryForm(WagtailAdminModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import CampaignPlatform
+        platform_choices = [(p.name, p.name) for p in CampaignPlatform.objects.all()]
+        self.fields["platform"].widget = forms.Select(
+            choices=[("", "Select Platform")] + platform_choices,
+            attrs={"class": "w-full"}
+        )
 
 class Campaign(models.Model):
     STATUS_CHOICES = (
@@ -227,11 +239,19 @@ class AdminComplianceTicket(models.Model):
         return f"{self.campaign.name} - {self.category} ({self.status})"
 
 class CampaignCategory(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=255, blank=True, default="")
+    platform = models.CharField(max_length=100, blank=True, default="")
+    type = models.CharField(max_length=100, blank=True, default="")
+    duration = models.CharField(max_length=100, blank=True, default="")
     min_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True)
     max_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True)
 
+    base_form_class = CampaignCategoryForm
+
     panels = [
+        FieldPanel("platform"),
+        FieldPanel("type"),
+        FieldPanel("duration"),
         FieldPanel("name"),
         FieldPanel("min_price"),
         FieldPanel("max_price"),
@@ -242,7 +262,16 @@ class CampaignCategory(models.Model):
         verbose_name_plural = "Campaign Categories"
 
     def __str__(self):
-        return self.name
+        return self.name or f"{self.platform} - {self.type} ({self.duration})"
+
+    def save(self, *args, **kwargs):
+        parts = [p for p in [self.platform, self.type] if p]
+        base = " - ".join(parts) if parts else (self.name or "")
+        if self.duration:
+            self.name = f"{base} ({self.duration})" if base else self.duration
+        elif base:
+            self.name = base
+        super().save(*args, **kwargs)
 
 class CampaignLanguage(models.Model):
     name = models.CharField(max_length=100, unique=True)

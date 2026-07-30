@@ -37,9 +37,15 @@ class Command(BaseCommand):
         self.stdout.write("Business types created.")
 
         # 1b. Campaign settings
-        category_names = ["Fashion", "Beauty", "Tech", "Food", "Travel", "Fitness", "Gaming", "Lifestyle", "Finance", "Health & Wellness", "Education", "Entertainment", "Sports", "Automotive", "Real Estate", "Non-Profit"]
-        for name in category_names:
-            CampaignCategory.objects.get_or_create(name=name, defaults={"min_price": 10000.00, "max_price": 50000.00})
+        sample_cats = [
+            {"platform": "Instagram", "type": "Story", "duration": "24hr", "min_price": 10000.00, "max_price": 50000.00},
+            {"platform": "Instagram", "type": "Feed Post (Photo)", "duration": "Permanent", "min_price": 15000.00, "max_price": 60000.00},
+            {"platform": "Instagram", "type": "Reel / Short Video", "duration": "15s - 60s", "min_price": 20000.00, "max_price": 80000.00},
+            {"platform": "TikTok", "type": "TikTok Video", "duration": "15s - 60s", "min_price": 15000.00, "max_price": 75000.00},
+            {"platform": "YouTube", "type": "YouTube Dedicated Video", "duration": "8 - 15 min", "min_price": 60000.00, "max_price": 250000.00},
+        ]
+        for c in sample_cats:
+            CampaignCategory.objects.get_or_create(platform=c["platform"], type=c["type"], duration=c["duration"], defaults={"min_price": c["min_price"], "max_price": c["max_price"]})
         self.stdout.write("Campaign categories seeded.")
 
         language_names = ["English", "Arabic", "French", "Spanish", "German", "Mandarin", "Hindi", "Portuguese", "Japanese", "Korean"]
