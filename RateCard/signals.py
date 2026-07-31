@@ -10,13 +10,16 @@ def sync_creator_rate_to_rate_card(sender, instance, created, **kwargs):
         user = instance.creator.user if (instance.creator and instance.creator.user) else None
         c_name = (user.get_full_name() or user.username) if user else "Creator"
 
+        t_lower = (instance.content_type or "").lower()
+        default_dur = "60s" if any(k in t_lower for k in ["reel", "story", "shorts", "tiktok"]) else ("3-5 mins" if any(k in t_lower for k in ["video", "youtube"]) else ("1 Post" if any(k in t_lower for k in ["post", "image", "photo"]) else "-"))
+
         rate_card, _ = RateCard.objects.get_or_create(
             creator=user,
             platform=instance.platforms or "General",
             type=instance.content_type or "Deliverable",
             defaults={
                 "creator_name": c_name,
-                "duration": "",
+                "duration": default_dur,
                 "price": instance.price or 0.00,
                 "min_price": instance.min_price or 0.00,
                 "max_price": instance.max_price or 0.00,
@@ -26,6 +29,8 @@ def sync_creator_rate_to_rate_card(sender, instance, created, **kwargs):
         )
 
         rate_card.creator_name = c_name
+        if not rate_card.duration or not rate_card.duration.strip():
+            rate_card.duration = default_dur
         rate_card.price = instance.price or 0.00
         rate_card.min_price = instance.min_price or 0.00
         rate_card.max_price = instance.max_price or 0.00

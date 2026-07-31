@@ -51,6 +51,34 @@ class RateCard(models.Model):
         verbose_name_plural = "Rate Cards"
         ordering = ["-id"]
 
+    def get_niches(self):
+        user = self.creator
+        if not user and self.creator_name:
+            from django.contrib.auth.models import User
+            user = User.objects.filter(
+                models.Q(username__iexact=self.creator_name) |
+                models.Q(first_name__iexact=self.creator_name)
+            ).first()
+        if user and hasattr(user, "creator_profile") and user.creator_profile:
+            niches = [n.name for n in user.creator_profile.niches.all()]
+            if niches:
+                return ", ".join(niches)
+        return "-"
+    get_niches.short_description = "Selected Niches"
+
+    @property
+    def display_duration(self):
+        if self.duration and str(self.duration).strip():
+            return self.duration
+        t_lower = (self.type or "").lower()
+        if any(k in t_lower for k in ["reel", "story", "shorts", "tiktok"]):
+            return "60s"
+        if any(k in t_lower for k in ["video", "youtube"]):
+            return "3-5 mins"
+        if any(k in t_lower for k in ["post", "image", "photo"]):
+            return "1 Post"
+        return "-"
+
     def __str__(self):
         c_str = self.creator.username if self.creator else (self.creator_name or "General Creator")
         return f"{c_str} - {self.platform} {self.type} (${self.price})"
