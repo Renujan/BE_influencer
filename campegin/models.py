@@ -49,6 +49,12 @@ class Campaign(models.Model):
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name="creator_campaigns", null=True, blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Under_Review")
     budget = models.DecimalField(max_digits=12, decimal_places=2)
+    min_budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    max_budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    per_creator_budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    min_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    max_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    rate_card_id = models.CharField(max_length=100, blank=True, null=True)
     start_date = models.CharField(max_length=100, blank=True, null=True) # e.g. "May 12"
     end_date = models.CharField(max_length=100, blank=True, null=True)
     progress = models.IntegerField(default=0)
@@ -68,7 +74,7 @@ class Campaign(models.Model):
     counter_round = models.IntegerField(default=0)
     counter_history = models.JSONField(default=list, blank=True, null=True)
     decline_reason = models.TextField(blank=True, null=True)
-    created_via = models.CharField(max_length=20, default="request", choices=(("request", "Direct Request"), ("pitch", "Creator Pitch")))
+    created_via = models.CharField(max_length=50, default="direct_request", choices=(("direct_request", "Direct Request"), ("request", "Request"), ("pitch", "Creator Pitch")))
 
     panels = [
         FieldPanel('name'),
@@ -76,6 +82,12 @@ class Campaign(models.Model):
         FieldPanel('creator'),
         FieldPanel('status'),
         FieldPanel('budget'),
+        FieldPanel('min_budget'),
+        FieldPanel('max_budget'),
+        FieldPanel('per_creator_budget'),
+        FieldPanel('min_price'),
+        FieldPanel('max_price'),
+        FieldPanel('rate_card_id'),
         FieldPanel('start_date'),
         FieldPanel('end_date'),
         FieldPanel('progress'),

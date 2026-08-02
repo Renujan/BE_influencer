@@ -230,7 +230,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
         #     return Response({"error": "Admin privileges required."}, status=status.HTTP_403_FORBIDDEN)
         
         campaign = self.get_object()
-        if campaign.creator:
+        if campaign.creator or campaign.creator_name or campaign.influencer:
             campaign.status = "Pending"
         else:
             campaign.status = "Live"
@@ -472,16 +472,21 @@ class RequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         status_param = self.request.query_params.get("status")
 
+        statuses = ["Pending", "Countered", "Countered_Pending", "Business_Countered"]
+        if status_param:
+            statuses = [s.strip() for s in status_param.split(",")]
+
         if user.is_staff or user.is_superuser:
-            if status_param:
-                statuses = [s.strip() for s in status_param.split(",")]
-                return Campaign.objects.filter(status__in=statuses)
-            return Campaign.objects.all()
+            return Campaign.objects.filter(status__in=statuses)
 
         if hasattr(user, "business_profile"):
-            return Campaign.objects.filter(brand=user, status__in=["Pending", "Countered", "Business_Countered", "Business_Counter_Pending"])
+            return Campaign.objects.filter(brand=user, status__in=statuses)
         elif hasattr(user, "creator_profile"):
-            return Campaign.objects.filter(creator=user, status__in=["Pending", "Countered", "Countered_Pending", "Business_Countered"])
+            profile = getattr(user, "creator_profile", None)
+            q_filter = models.Q(creator=user)
+            if profile:
+                q_filter |= models.Q(creator__creator_profile=profile)
+            return Campaign.objects.filter(q_filter, status__in=statuses).distinct()
         return Campaign.objects.none()
 
     @action(detail=True, methods=["post"])
@@ -659,6 +664,13 @@ class CampaignCategoryApiViewSet(viewsets.ModelViewSet):
     queryset = CampaignCategory.objects.all().order_by("id")
     serializer_class = CampaignCategorySerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        platform = self.request.query_params.get("platform")
+        if platform:
+            qs = qs.filter(platform__iexact=platform)
+        return qs
 
 
 class CampaignNicheViewSet(viewsets.ModelViewSet):

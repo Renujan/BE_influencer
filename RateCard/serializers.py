@@ -6,11 +6,16 @@ from django.db import models
 class RateCardSerializer(serializers.ModelSerializer):
     creator_username = serializers.CharField(source="creator.username", read_only=True, default="")
     creator_niches = serializers.SerializerMethodField()
+    country = serializers.CharField(source="get_country", read_only=True)
+    province = serializers.CharField(source="get_province", read_only=True)
+    district = serializers.CharField(source="get_district", read_only=True)
+    medium = serializers.CharField(source="get_medium", read_only=True)
 
     class Meta:
         model = RateCard
         fields = [
             "id", "creator", "creator_username", "creator_name", "creator_niches",
+            "country", "province", "district", "medium",
             "platform", "type", "duration", "price",
             "min_price", "max_price", "description", "is_active",
             "created_at", "updated_at"

@@ -86,7 +86,7 @@ class CampaignInspectView(InspectView):
             self.object.progress = 62
             messages.success(request, f"Counter offer accepted! Campaign '{self.object.name}' is now Live.")
         elif status in [choice[0] for choice in self.object.STATUS_CHOICES]:
-            if status == "Live" and self.object.creator:
+            if status == "Live" and (self.object.creator or self.object.creator_name or self.object.influencer):
                 self.object.status = "Pending"
             else:
                 self.object.status = status
@@ -132,13 +132,25 @@ class CampaignViewSet(SnippetViewSet):
     list_filter = ("status",)
     search_fields = ("name", "brand__username", "creator__username")
 
+import django_filters
+from wagtail.admin.filters import WagtailFilterSet
+
+class CampaignCategoryFilterSet(WagtailFilterSet):
+    platform = django_filters.CharFilter(field_name="platform", lookup_expr="icontains")
+
+    class Meta:
+        model = CampaignCategory
+        fields = ["platform"]
+
 class CampaignCategoryViewSet(SnippetViewSet):
     model = CampaignCategory
     menu_label = "Categories"
     icon = "tag"
     add_to_admin_menu = False
+    filterset_class = CampaignCategoryFilterSet
     list_display = ("platform", "type", "duration", "min_price", "max_price")
     list_export = ("id", "platform", "type", "duration", "name", "min_price", "max_price")
+    list_filter = ("platform",)
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
 

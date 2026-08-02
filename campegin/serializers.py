@@ -56,7 +56,13 @@ class AdminComplianceTicketSerializer(serializers.ModelSerializer):
 
 class CampaignSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source="brand.username", read_only=True)
-    creator_name = serializers.CharField(source="creator.username", read_only=True, default="Open Request")
+    creator_name = serializers.SerializerMethodField()
+
+    def get_creator_name(self, obj):
+        if not obj.creator:
+            return "Open Request"
+        full_name = f"{obj.creator.first_name or ''} {obj.creator.last_name or ''}".strip()
+        return full_name if full_name else obj.creator.username
     tasks = CampaignTaskSerializer(many=True, read_only=True)
     milestones = CampaignMilestoneSerializer(many=True, read_only=True)
     deliverables = DeliverableSerializer(many=True, read_only=True)
@@ -88,7 +94,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         model = Campaign
         fields = [
             "id", "name", "brand", "brand_name", "creator", "creator_name",
-            "status", "budget", "start_date", "end_date", "progress", "brief", "admin_review",
+            "status", "budget", "min_budget", "max_budget", "per_creator_budget", "min_price", "max_price", "rate_card_id", "start_date", "end_date", "progress", "brief", "admin_review",
             "category", "delivery_language", "country", "province", "district", "medium", "voice_brief", "screenshare_brief", "video_brief",
             "counter_price", "counter_note", "counter_round", "decline_reason", "created_via",
             "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets"
