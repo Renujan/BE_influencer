@@ -105,6 +105,7 @@ class CreatorProfileInspectView(InspectView):
         
         context["payout_methods"] = creator_profile.payout_methods.all()
         context["social_accounts"] = creator_profile.user.social_accounts.all()
+        context["portfolio_items"] = creator_profile.user.portfolio_items.all()
         return context
 
 # 1. Business Profile Admin Viewset
@@ -162,7 +163,7 @@ class CreatorProfileViewSet(ModelViewSet):
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
     
-    list_display = ("user", "phone", "location", "country", "wallet_balance", "otp_verified", "status")
+    list_display = ("user", "phone", "location", "country", "get_formatted_wallet", "otp_verified", "get_status_badge")
     list_export = ("id", "user.username", "user.email", "phone", "location", "country.name", "wallet_balance", "otp_verified", "status")
     list_filter = ("otp_verified", "status")
     search_fields = ("user__username", "user__email", "phone", "location")

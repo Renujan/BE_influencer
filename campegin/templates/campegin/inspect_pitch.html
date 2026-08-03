@@ -495,7 +495,7 @@
                 <div class="custom-form-group">
                     <label class="custom-form-label">Proposed Budget</label>
                     <div class="custom-form-control-readonly" style="color: #0284c7; font-weight: 700;">
-                        ${{ instance.budget }}
+                        {{ instance.currency_symbol }}{{ instance.budget }}
                     </div>
                 </div>
 
@@ -561,8 +561,8 @@
                         <tr>
                             <td><strong style="color: #475569;">Initial Pitch</strong></td>
                             <td>Creator ({{ instance.creator.username }})</td>
-                            <td><strong>${{ instance.budget }}</strong></td>
-                            <td>${{ instance.budget }}</td>
+                            <td><strong>{{ instance.currency_symbol }}{{ instance.budget }}</strong></td>
+                            <td>{{ instance.currency_symbol }}{{ instance.budget }}</td>
                             <td style="color: #64748b;">Initial pitch proposal submitted by creator</td>
                             <td><span class="badge-status pending_admin">Pitch Created</span></td>
                         </tr>
@@ -579,8 +579,8 @@
                                         <strong>{{ item.sender }}</strong> ({{ item.sender_name }})
                                     {% endif %}
                                 </td>
-                                <td><strong style="color: #d97706; font-size: 15px;">${{ item.price }}</strong></td>
-                                <td>${{ instance.budget }}</td>
+                                <td><strong style="color: #d97706; font-size: 15px;">{{ instance.currency_symbol }}{{ item.price }}</strong></td>
+                                <td>{{ instance.currency_symbol }}{{ instance.budget }}</td>
                                 <td style="color: #334155;">{{ item.note|default:"No notes provided" }}</td>
                                 <td>
                                     {% if item.status == 'pitch_counter_pending' or item.status == 'biz_counter_pending' %}
@@ -607,8 +607,8 @@
                                     Counter Party
                                 {% endif %}
                             </td>
-                            <td><strong style="color: #d97706; font-size: 15px;">${{ instance.counter_offer }}</strong></td>
-                            <td>${{ instance.budget }}</td>
+                            <td><strong style="color: #d97706; font-size: 15px;">{{ instance.currency_symbol }}{{ instance.counter_offer }}</strong></td>
+                            <td>{{ instance.currency_symbol }}{{ instance.budget }}</td>
                             <td style="color: #334155;">{{ instance.counter_note|default:"No notes provided" }}</td>
                             <td>
                                 {% if status == 'pitch_counter_pending' or status == 'biz_counter_pending' %}
@@ -628,17 +628,17 @@
             {% if instance.counter_offer %}
             <div style="margin-top: 10px; font-size: 13px; background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; color: #64748b;">
                 {% if status == 'counter_offer' %}
-                    <strong>Waiting on Creator:</strong> The business sent a counter offer of <strong>${{ instance.counter_offer }}</strong>. Creator must respond.
+                    <strong>Waiting on Creator:</strong> The business sent a counter offer of <strong>{{ instance.currency_symbol }}{{ instance.counter_offer }}</strong>. Creator must respond.
                 {% elif status == 'pitch_counter_pending' %}
-                    <strong>Waiting on Admin:</strong> The creator sent a counter of <strong>${{ instance.counter_offer }}</strong>. Approve below to forward it to the business.
+                    <strong>Waiting on Admin:</strong> The creator sent a counter of <strong>{{ instance.currency_symbol }}{{ instance.counter_offer }}</strong>. Approve below to forward it to the business.
                 {% elif status == 'pitch_countered' %}
-                    <strong>Waiting on Business:</strong> Creator counter of <strong>${{ instance.counter_offer }}</strong> forwarded to the brand.
+                    <strong>Waiting on Business:</strong> Creator counter of <strong>{{ instance.currency_symbol }}{{ instance.counter_offer }}</strong> forwarded to the brand.
                 {% elif status == 'biz_counter_pending' %}
-                    <strong>Waiting on Admin:</strong> The business sent a counter of <strong>${{ instance.counter_offer }}</strong>. Approve below to forward it to the creator.
+                    <strong>Waiting on Admin:</strong> The business sent a counter of <strong>{{ instance.currency_symbol }}{{ instance.counter_offer }}</strong>. Approve below to forward it to the creator.
                 {% elif status == 'biz_countered' %}
-                    <strong>Waiting on Creator:</strong> Business counter of <strong>${{ instance.counter_offer }}</strong> forwarded to the creator.
+                    <strong>Waiting on Creator:</strong> Business counter of <strong>{{ instance.currency_symbol }}{{ instance.counter_offer }}</strong> forwarded to the creator.
                 {% elif status == 'accepted' and instance.counter_offer %}
-                    <strong style="color:#166534;">Negotiation Complete:</strong> Counter offer was accepted. Final budget: <strong>${{ instance.budget }}</strong>.
+                    <strong style="color:#166534;">Negotiation Complete:</strong> Counter offer was accepted. Final budget: <strong>{{ instance.currency_symbol }}{{ instance.budget }}</strong>.
                 {% endif %}
             </div>
             {% endif %}
@@ -688,7 +688,7 @@
                             <!-- Creator's counter is waiting for admin approval -->
                             <button type="submit" name="action" value="approve_creator_counter" class="action-btn green">
                                 <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                                Approve Creator Counter (${{ instance.counter_offer }})
+                                Approve Creator Counter ({{ instance.currency_symbol }}{{ instance.counter_offer }})
                             </button>
                         {% endif %}
 
@@ -696,7 +696,7 @@
                             <!-- Business counter is waiting for admin approval -->
                             <button type="submit" name="action" value="approve_biz_counter" class="action-btn blue">
                                 <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                                Approve Business Counter (${{ instance.counter_offer }})
+                                Approve Business Counter ({{ instance.currency_symbol }}{{ instance.counter_offer }})
                             </button>
                         {% endif %}
 

@@ -340,7 +340,7 @@
                 </td>
                 <td>
                     <div class="label">Wallet Balance</div>
-                    <div class="value"><strong>${{ instance.wallet_balance }}</strong></div>
+                    <div class="value"><strong>{{ instance.currency_symbol }}{{ instance.wallet_balance }}</strong></div>
                 </td>
             </tr>
             <tr>
@@ -466,7 +466,7 @@
                                 -
                             {% endfor %}
                         </td>
-                        <td><strong>${{ rate.price }}</strong></td>
+                        <td><strong>{{ instance.currency_symbol }}{{ rate.price }}</strong></td>
                         <td><span style="color: #64748b; font-size: 8pt;">{{ rate.notes|default:"-" }}</span></td>
                     </tr>
                 {% empty %}

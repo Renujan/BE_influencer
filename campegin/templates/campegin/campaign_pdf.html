@@ -159,7 +159,7 @@
         <tr>
             <td>
                 <div class="label">Budget</div>
-                <div class="value"><strong>${{ instance.budget }}</strong></div>
+                <div class="value"><strong>{{ instance.currency_symbol }}{{ instance.budget }}</strong></div>
             </td>
             <td>
                 <div class="label">Start Date</div>
@@ -305,7 +305,7 @@
             {% for pay in payments %}
                 <tr>
                     <td><strong>{{ pay.milestone_name }}</strong></td>
-                    <td><strong>${{ pay.amount }}</strong></td>
+                    <td><strong>{{ instance.currency_symbol }}{{ pay.amount }}</strong></td>
                     <td>{{ pay.payment_date|default:"-" }}</td>
                     <td>
                         <span class="badge badge-{% if pay.status == 'Released' %}live{% elif pay.status == 'In Escrow' %}pending{% else %}completed{% endif %}">

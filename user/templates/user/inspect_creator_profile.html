@@ -352,7 +352,7 @@
 
                 <div class="custom-form-group">
                     <label class="custom-form-label">Wallet Balance</label>
-                    <div class="custom-form-control-readonly"><strong>${{ instance.wallet_balance }}</strong></div>
+                    <div class="custom-form-control-readonly"><strong>{{ instance.currency_symbol }}{{ instance.wallet_balance }}</strong></div>
                 </div>
 
                 <div class="custom-form-group">
@@ -367,6 +367,17 @@
                             <span class="tag-item">{{ niche.name }}</span>
                         {% empty %}
                             <span style="color: #94a3b8;">No Niches Defined</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Mediums / Platforms</label>
+                    <div class="custom-form-control-readonly">
+                        {% for medium in instance.mediums.all %}
+                            <span class="tag-item">{{ medium.name }}</span>
+                        {% empty %}
+                            <span style="color: #94a3b8;">No Mediums Defined</span>
                         {% endfor %}
                     </div>
                 </div>
@@ -434,12 +445,57 @@
                                         -
                                     {% endfor %}
                                 </td>
-                                <td><strong>${{ rate.price }}</strong></td>
+                                <td><strong>{{ instance.currency_symbol }}{{ rate.price }}</strong></td>
                                 <td><span style="color: #64748b;">{{ rate.notes|default:"-" }}</span></td>
                             </tr>
                         {% empty %}
                             <tr>
                                 <td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">No Rate Card pricing lists found</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Creator Portfolio & Past Work Section -->
+        <div>
+            <h3 class="custom-section-title">Portfolio &amp; Past Work</h3>
+            <div class="custom-table-wrapper">
+                <table class="custom-data-table">
+                    <thead>
+                        <tr>
+                            <th>Content Title</th>
+                            <th>Platform</th>
+                            <th>Media Type</th>
+                            <th>Brand / Client</th>
+                            <th>Views / Reach</th>
+                            <th>Engagement Rate</th>
+                            <th>Post Link / Proof</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in portfolio_items %}
+                            <tr>
+                                <td><strong>{{ item.title }}</strong></td>
+                                <td>
+                                    <span class="tag-item" style="background-color: #f1f5f9; color: #334155; font-size: 11px; text-transform: uppercase;">{{ item.platform }}</span>
+                                </td>
+                                <td>{{ item.media_type|title }}</td>
+                                <td><strong>{{ item.brand|default:"—" }}</strong></td>
+                                <td>{{ item.views|default:"0" }}</td>
+                                <td><span style="color: #16a34a; font-weight: 600;">{{ item.engagement_rate }}%</span></td>
+                                <td>
+                                    {% if item.post_link %}
+                                        <a href="{{ item.post_link }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Post</a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">No portfolio items uploaded by creator</td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -523,6 +579,8 @@
                         <span class="badge-status {% if settings.two_factor_enabled %}approved{% else %}pending{% endif %}">
                             2FA: {% if settings.two_factor_enabled %}Active{% else %}Inactive{% endif %}
                         </span>
+                    </div>
+                </div>
             </div>
         </div>
 

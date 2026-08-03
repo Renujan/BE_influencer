@@ -19,8 +19,8 @@ import datetime
 def chat_monitor_detail_view(request, campaign_id):
     """Comprehensive detail page: chat history + campaign info + business & creator profiles."""
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    # Show only direct live chat between Creator & Business in Chat Monitor
-    messages = campaign.messages.filter(message_type="main").order_by("id")
+    # Show all workspace chat messages including main, creator and business admin support channels
+    messages = campaign.messages.all().order_by("id")
     reviews = campaign.chat_reviews.all().order_by("-id")
 
     # Business profile
@@ -64,8 +64,8 @@ def chat_monitor_detail_view(request, campaign_id):
 def chat_monitor_download_pdf_view(request, campaign_id):
     """Generate a PDF report of the chat monitor detail page."""
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    # Show only direct live chat between Creator & Business
-    messages = campaign.messages.filter(message_type="main").order_by("id")
+    # Show all workspace chat messages
+    messages = campaign.messages.all().order_by("id")
     reviews = campaign.chat_reviews.all().order_by("-id")
 
     business_profile = getattr(campaign.brand, "business_profile", None)

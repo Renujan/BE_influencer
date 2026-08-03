@@ -186,10 +186,13 @@
         </div>
 
         <div id="admin-chat-input-area" style="padding: 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: none;">
-            <div style="display: flex; gap: 12px;">
+            <div style="display: flex; gap: 12px; align-items: center;">
                 <input type="text" id="admin-chat-input" placeholder="Type a message..." style="flex: 1; padding: 10px 16px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-size: 14px;">
-                <button type="button" id="admin-chat-send" style="background: #8b5cf6; color: white; border: none; padding: 0 24px; border-radius: 6px; font-weight: 600; cursor: pointer;">Send</button>
+                <input type="file" id="admin-chat-file" style="display: none;">
+                <button type="button" id="admin-chat-file-btn" onclick="document.getElementById('admin-chat-file').click()" style="background: #e2e8f0; color: #475569; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer;">📎 Attach</button>
+                <button type="button" id="admin-chat-send" style="background: #8b5cf6; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-weight: 600; cursor: pointer;">Send</button>
             </div>
+            <div id="admin-file-selected-name" style="font-size: 12px; color: #64748b; margin-top: 6px; display: none;"></div>
         </div>
     </div>
 </div>
@@ -203,8 +206,21 @@
         const messagesContainer = document.getElementById("admin-chat-messages");
         const inputArea = document.getElementById("admin-chat-input-area");
         const chatInput = document.getElementById("admin-chat-input");
+        const chatFileInput = document.getElementById("admin-chat-file");
+        const fileSelectedName = document.getElementById("admin-file-selected-name");
         const sendBtn = document.getElementById("admin-chat-send");
         const tabBtns = document.querySelectorAll(".admin-tab-btn");
+
+        if (chatFileInput) {
+            chatFileInput.addEventListener("change", function() {
+                if (chatFileInput.files && chatFileInput.files[0]) {
+                    fileSelectedName.textContent = "Selected file: " + chatFileInput.files[0].name;
+                    fileSelectedName.style.display = "block";
+                } else {
+                    fileSelectedName.style.display = "none";
+                }
+            });
+        }
 
         function getCookie(name) {
             let cookieValue = null;
@@ -248,10 +264,29 @@
                     </div>
                 ` : '';
 
+                const fileAttachment = m.file_attachment || m.file;
+                let fileMarkup = "";
+                if (fileAttachment) {
+                    const fileStr = String(fileAttachment);
+                    const fileUrl = (fileStr.startsWith('http') || fileStr.startsWith('/media/'))
+                        ? fileStr 
+                        : '/media/' + fileStr;
+                    const fileName = fileStr.split('/').pop() || 'Attachment';
+                    fileMarkup = `
+                        <div style="margin-top: 6px; padding: 4px 8px; background: rgba(0, 0, 0, 0.08); border-radius: 6px; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                            <span>📎</span>
+                            <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="color: ${isMe ? '#e9d5ff' : '#2563eb'}; font-weight: 600; text-decoration: underline; word-break: break-all;">
+                                ${fileName}
+                            </a>
+                        </div>
+                    `;
+                }
+
                 div.innerHTML = `
                     <span style="font-size: 11px; color: #64748b; margin-bottom: 2px;">${m.sender_name} - ${m.time}</span>
                     <div style="background: ${isMe ? '#8b5cf6' : '#e2e8f0'}; color: ${isMe ? 'white' : '#1e293b'}; padding: 8px 14px; border-radius: 8px; max-width: 75%; font-size: 14px; position: relative;">
-                        <div>${m.text}</div>
+                        <div>${m.text || ''}</div>
+                        ${fileMarkup}
                         ${adminActionButtons}
                     </div>
                 `;
@@ -344,18 +379,24 @@
 
         function sendMessage() {
             const text = chatInput.value.trim();
-            if (!text) return;
+            const file = chatFileInput && chatFileInput.files ? chatFileInput.files[0] : null;
+
+            if (!text && !file) return;
+
+            const formData = new FormData();
+            formData.append("text", text);
+            formData.append("message_type", activeTab);
+            if (file) {
+                formData.append("file", file);
+                formData.append("file_attachment", file.name);
+            }
             
             fetch(`/api/campegins/campaigns/${campaignId}/send_message/`, {
                 method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({
-                    text: text,
-                    message_type: activeTab
-                })
+                body: formData
             })
             .then(res => {
                 if (res.ok) return res.json();
@@ -363,6 +404,8 @@
             })
             .then(msg => {
                 chatInput.value = "";
+                if (chatFileInput) chatFileInput.value = "";
+                if (fileSelectedName) fileSelectedName.style.display = "none";
                 allMessages.push(msg);
                 renderMessages();
             })

@@ -143,6 +143,19 @@ class BusinessProfile(models.Model):
             self.featured_at = None
         super().save(*args, **kwargs)
 
+    @property
+    def currency_symbol(self):
+        if self.country:
+            if self.country.currency:
+                from campegin.models import extract_currency_symbol
+                sym = extract_currency_symbol(self.country.currency)
+                if sym:
+                    return sym
+            from campegin.models import COUNTRY_CURRENCY_SYMBOL_MAP
+            if self.country.name and self.country.name in COUNTRY_CURRENCY_SYMBOL_MAP:
+                return COUNTRY_CURRENCY_SYMBOL_MAP[self.country.name]
+        return "$"
+
     def __str__(self):
         return f"{self.company_name or self.user.username} (Business)"
 
@@ -193,6 +206,19 @@ class CreatorProfile(models.Model):
     def role(self):
         return "creator"
 
+    @property
+    def currency_symbol(self):
+        if self.country:
+            if self.country.currency:
+                from campegin.models import extract_currency_symbol
+                sym = extract_currency_symbol(self.country.currency)
+                if sym:
+                    return sym
+            from campegin.models import COUNTRY_CURRENCY_SYMBOL_MAP
+            if self.country.name and self.country.name in COUNTRY_CURRENCY_SYMBOL_MAP:
+                return COUNTRY_CURRENCY_SYMBOL_MAP[self.country.name]
+        return "$"
+
     def save(self, *args, **kwargs):
         from django.utils import timezone
         if self.is_featured and not self.featured_at:
@@ -200,6 +226,24 @@ class CreatorProfile(models.Model):
         elif not self.is_featured:
             self.featured_at = None
         super().save(*args, **kwargs)
+
+    def get_formatted_wallet(self):
+        return f"{self.currency_symbol}{self.wallet_balance:,.2f}"
+    get_formatted_wallet.short_description = "Wallet Balance"
+
+    def get_status_badge(self):
+        from django.utils.html import format_html
+        colors = {
+            "approved": ("#dcfce7", "#166534", "Approved"),
+            "pending": ("#fef9c3", "#854d0e", "Pending"),
+            "restricted": ("#ffe4e6", "#991b1b", "Restricted"),
+        }
+        bg, fg, label = colors.get(self.status, ("#f8fafc", "#475569", str(self.status).title()))
+        return format_html(
+            '<span style="background-color: {}; color: {}; font-weight: 600; font-size: 11px; padding: 3px 10px; border-radius: 4px; display: inline-block;">{}</span>',
+            bg, fg, label
+        )
+    get_status_badge.short_description = "Status"
 
     def __str__(self):
         return f"{self.user.username} (Creator)"

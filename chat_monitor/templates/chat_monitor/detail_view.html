@@ -538,11 +538,13 @@
                 {{ msg.sender.username|slice:":1"|upper }}
               </div>
               <div class="msg-content">
-                <span class="sender-name">{{ msg.sender.username }}</span>
+                <span class="sender-name">{{ msg.sender.username }} {% if msg.message_type != 'main' %}<small style="color:#6366f1;font-weight:600;">({{ msg.message_type|title }})</small>{% endif %}</span>
                 <div class="bubble">
                   {{ msg.text }}
                   {% if msg.file_attachment %}
-                    <br/><small style="opacity:.75;">📎 {{ msg.file_attachment }}</small>
+                    <div style="margin-top:6px;padding:4px 8px;background:rgba(0,0,0,0.06);border-radius:6px;font-size:0.78rem;">
+                      📎 <a href="{% if msg.file_attachment|slice:':4' == 'http' or msg.file_attachment|slice:':7' == '/media/' %}{{ msg.file_attachment }}{% else %}/media/{{ msg.file_attachment }}{% endif %}" target="_blank" rel="noopener noreferrer" style="color:inherit;font-weight:600;text-decoration:underline;">{{ msg.file_attachment }}</a>
+                    </div>
                   {% endif %}
                 </div>
                 <span class="msg-timestamp">{{ msg.time }}</span>

@@ -4,6 +4,43 @@ from django import forms
 from wagtail.snippets.models import register_snippet
 from wagtail.admin.panels import FieldPanel
 from wagtail.admin.forms import WagtailAdminModelForm
+import re
+
+COUNTRY_CURRENCY_SYMBOL_MAP = {
+    "United States": "$",
+    "United Kingdom": "£",
+    "Canada": "$",
+    "Australia": "A$",
+    "India": "₹",
+    "Sri Lanka": "Rs",
+    "Germany": "€",
+    "France": "€",
+    "Italy": "€",
+    "Spain": "€",
+    "Japan": "¥",
+    "China": "¥",
+    "South Korea": "₩",
+    "Brazil": "R$",
+    "Mexico": "$",
+    "South Africa": "R",
+    "Nigeria": "₦",
+    "New Zealand": "$",
+    "Singapore": "S$",
+    "United Arab Emirates": "د.إ",
+    "Saudi Arabia": "﷼",
+    "Netherlands": "€",
+    "Sweden": "kr",
+    "Switzerland": "Fr"
+}
+
+def extract_currency_symbol(currency_str):
+    if not currency_str:
+        return None
+    currency_str = str(currency_str).strip()
+    match = re.search(r'\(([^)]+)\)', currency_str)
+    if match:
+        return match.group(1).strip()
+    return currency_str
 
 class CampaignCategoryForm(WagtailAdminModelForm):
     def __init__(self, *args, **kwargs):
@@ -138,6 +175,51 @@ class Campaign(models.Model):
         url = reverse("chat_monitor_review", args=[self.id])
         return format_html('<a class="button button-small button-secondary" href="{}">Review</a>', url)
     get_review_btn.short_description = "Review"
+
+    @property
+    def currency_symbol(self):
+        if self.country:
+            c_str = str(self.country).strip()
+            if c_str in COUNTRY_CURRENCY_SYMBOL_MAP:
+                return COUNTRY_CURRENCY_SYMBOL_MAP[c_str]
+            try:
+                from user.models import Country
+                c = Country.objects.filter(name__iexact=c_str).first()
+                if c and c.currency:
+                    sym = extract_currency_symbol(c.currency)
+                    if sym:
+                        return sym
+            except Exception:
+                pass
+
+        if self.creator:
+            try:
+                if hasattr(self.creator, 'creator_profile') and self.creator.creator_profile and self.creator.creator_profile.country:
+                    c = self.creator.creator_profile.country
+                    if c and c.currency:
+                        sym = extract_currency_symbol(c.currency)
+                        if sym:
+                            return sym
+                    if c and c.name and c.name in COUNTRY_CURRENCY_SYMBOL_MAP:
+                        return COUNTRY_CURRENCY_SYMBOL_MAP[c.name]
+            except Exception:
+                pass
+
+        if self.brand:
+            try:
+                if hasattr(self.brand, 'business_profile') and self.brand.business_profile and self.brand.business_profile.country:
+                    c = self.brand.business_profile.country
+                    if c and c.currency:
+                        sym = extract_currency_symbol(c.currency)
+                        if sym:
+                            return sym
+                    if c and c.name and c.name in COUNTRY_CURRENCY_SYMBOL_MAP:
+                        return COUNTRY_CURRENCY_SYMBOL_MAP[c.name]
+            except Exception:
+                pass
+
+        return "$"
+
 
 
 
@@ -380,3 +462,34 @@ class Pitch(models.Model):
 
     def __str__(self):
         return f"{self.campaign_name} - {self.status}"
+
+    @property
+    def currency_symbol(self):
+        if self.creator:
+            try:
+                if hasattr(self.creator, 'creator_profile') and self.creator.creator_profile and self.creator.creator_profile.country:
+                    c = self.creator.creator_profile.country
+                    if c and c.currency:
+                        sym = extract_currency_symbol(c.currency)
+                        if sym:
+                            return sym
+                    if c and c.name and c.name in COUNTRY_CURRENCY_SYMBOL_MAP:
+                        return COUNTRY_CURRENCY_SYMBOL_MAP[c.name]
+            except Exception:
+                pass
+
+        if self.brand:
+            try:
+                if hasattr(self.brand, 'business_profile') and self.brand.business_profile and self.brand.business_profile.country:
+                    c = self.brand.business_profile.country
+                    if c and c.currency:
+                        sym = extract_currency_symbol(c.currency)
+                        if sym:
+                            return sym
+                    if c and c.name and c.name in COUNTRY_CURRENCY_SYMBOL_MAP:
+                        return COUNTRY_CURRENCY_SYMBOL_MAP[c.name]
+            except Exception:
+                pass
+
+        return "$"
+

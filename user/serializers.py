@@ -150,6 +150,7 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
     campaign_count = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
     settings = serializers.SerializerMethodField()
+    portfolio = serializers.SerializerMethodField()
 
     class Meta:
         model = CreatorProfile
@@ -160,7 +161,7 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
             "social_accounts", "otp_verified", "status",
             "verification_documents_submitted", "document_type", "document_front",
             "document_back", "other_details", "campaign_count", "followers_count", "settings",
-            "is_featured", "featured_at"
+            "is_featured", "featured_at", "portfolio"
         ]
 
     def get_campaign_count(self, instance):
@@ -176,5 +177,13 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
         from Setting.serializers import CreatorSettingsSerializer
         settings_obj, _ = CreatorSettings.objects.get_or_create(creator=instance)
         return CreatorSettingsSerializer(settings_obj).data
+
+    def get_portfolio(self, instance):
+        try:
+            from portfolio.views import serialize_item
+            items = instance.user.portfolio_items.all()
+            return [serialize_item(item) for item in items]
+        except Exception:
+            return []
 
 
