@@ -136,6 +136,16 @@ class RateCard(models.Model):
         return f"${float(self.price):,.2f}"
     formatted_price.short_description = "Price"
 
+    def formatted_min_price(self):
+        val = self.min_price if (self.min_price is not None and self.min_price > 0) else (self.price or 0.00)
+        return f"${float(val):,.2f}"
+    formatted_min_price.short_description = "Min Price"
+
+    def formatted_max_price(self):
+        val = self.max_price if (self.max_price is not None and self.max_price > 0) else (self.price or 0.00)
+        return f"${float(val):,.2f}"
+    formatted_max_price.short_description = "Max Price"
+
     def __str__(self):
         c_str = self.creator.username if self.creator else (self.creator_name or "General Creator")
         return f"{c_str} - {self.platform} {self.type} (${self.price})"

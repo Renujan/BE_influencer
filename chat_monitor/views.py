@@ -21,6 +21,20 @@ def chat_monitor_detail_view(request, campaign_id):
     campaign = get_object_or_404(Campaign, id=campaign_id)
     # Show all workspace chat messages including main, creator and business admin support channels
     messages = campaign.messages.all().order_by("id")
+    # Auto-sync user submitted compliance tickets into ChatReview if missing
+    for t in campaign.tickets.all():
+        s_role = getattr(t, "sender_role", "both") or "both"
+        s_name = getattr(t, "sender_name", "") or (t.sender.username if getattr(t, "sender", None) else "")
+        prefix = f"[{s_role.upper()} REQUEST{' by ' + s_name if s_name else ''}]"
+        expected_text = f"{prefix} {t.message}"
+        if not ChatReview.objects.filter(campaign=campaign, review_text=t.message).exists() and not ChatReview.objects.filter(campaign=campaign, review_text=expected_text).exists():
+            ChatReview.objects.create(
+                campaign=campaign,
+                category=t.category or "Safety / Guidelines",
+                review_text=expected_text,
+                target_audience="creator" if s_role in ["creator", "influencer"] else ("business" if s_role == "business" else "both")
+            )
+
     reviews = campaign.chat_reviews.all().order_by("-id")
 
     # Business profile
@@ -177,8 +191,8 @@ class CampaignChatsViewSet(viewsets.ReadOnlyModelViewSet):
 @staff_member_required
 def chat_monitor_view_chat_view(request, campaign_id):
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    # Show only direct live chat between Creator & Business
-    messages = campaign.messages.filter(message_type="main").order_by("id")
+    # Show all workspace chat messages
+    messages = campaign.messages.all().order_by("id")
     context = {
         "campaign": campaign,
         "chat_messages": messages,
@@ -217,7 +231,31 @@ def chat_monitor_review_view(request, campaign_id):
                 target_audience=target_audience,
                 review_text=review_text
             )
+            from campegin.models import AdminComplianceTicket
+            AdminComplianceTicket.objects.create(
+                campaign=campaign,
+                category=category,
+                message=f"Directive: {review_text}",
+                status="Admin Determination",
+                reply=review_text,
+                sender_role="admin",
+                target_audience=target_audience
+            )
             return redirect(reverse("chat_monitor_review", args=[campaign.id]))
+
+    # Auto-sync user submitted compliance tickets into ChatReview if missing
+    for t in campaign.tickets.all():
+        s_role = getattr(t, "sender_role", "both") or "both"
+        s_name = getattr(t, "sender_name", "") or (t.sender.username if getattr(t, "sender", None) else "")
+        prefix = f"[{s_role.upper()} REQUEST{' by ' + s_name if s_name else ''}]"
+        expected_text = f"{prefix} {t.message}"
+        if not ChatReview.objects.filter(campaign=campaign, review_text=t.message).exists() and not ChatReview.objects.filter(campaign=campaign, review_text=expected_text).exists():
+            ChatReview.objects.create(
+                campaign=campaign,
+                category=t.category or "Safety / Guidelines",
+                review_text=expected_text,
+                target_audience="creator" if s_role in ["creator", "influencer"] else ("business" if s_role == "business" else "both")
+            )
 
     reviews = campaign.chat_reviews.all().order_by("-id")
     context = {

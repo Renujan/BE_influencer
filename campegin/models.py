@@ -52,6 +52,25 @@ class CampaignCategoryForm(WagtailAdminModelForm):
             attrs={"class": "w-full"}
         )
 
+class CampaignDeliverableForm(WagtailAdminModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import CampaignPlatform
+        platform_choices = [(p.name, p.name) for p in CampaignPlatform.objects.all()]
+        if not platform_choices:
+            platform_choices = [
+                ("Facebook", "Facebook"),
+                ("Instagram", "Instagram"),
+                ("TikTok", "TikTok"),
+                ("YouTube", "YouTube"),
+                ("LinkedIn", "LinkedIn"),
+                ("X", "X"),
+            ]
+        self.fields["platform"].widget = forms.Select(
+            choices=[("", "Select Platform")] + platform_choices,
+            attrs={"class": "w-full"}
+        )
+
 class CampaignNiche(models.Model):
     name = models.CharField(max_length=100, unique=True)
     is_active = models.BooleanField(default=True, verbose_name="Active", help_text="Checked = active/visible while creating campaign; Unchecked = inactive/hidden")
@@ -154,6 +173,10 @@ class Campaign(models.Model):
     def get_creator_name(self):
         return self.creator.username if self.creator else "-"
     get_creator_name.short_description = "Creator Name"
+
+    @property
+    def creator_name(self):
+        return self.creator.username if self.creator else (self.influencer or "")
 
     def get_last_chat_time(self):
         last_msg = self.messages.all().order_by("-id").first()
@@ -340,6 +363,9 @@ class AdminComplianceTicket(models.Model):
         ("Approved", "Approved"),
     )
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name="tickets")
+    sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    sender_role = models.CharField(max_length=50, blank=True, default="")
+    target_audience = models.CharField(max_length=50, blank=True, default="both")
     category = models.CharField(max_length=100, choices=CATEGORY_CHOICES)
     message = models.TextField()
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Pending Review")
@@ -399,9 +425,13 @@ class CampaignLanguage(models.Model):
         return self.name
 
 class CampaignDeliverable(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
+    platform = models.CharField(max_length=100, blank=True, null=True, default="")
+
+    base_form_class = CampaignDeliverableForm
 
     panels = [
+        FieldPanel("platform"),
         FieldPanel("name"),
     ]
 
@@ -410,13 +440,75 @@ class CampaignDeliverable(models.Model):
         verbose_name_plural = "Campaign Deliverables"
 
     def __str__(self):
+        if self.platform:
+            return f"{self.platform} - {self.name}"
         return self.name
+
+from wagtail.admin.panels import FieldPanel
+from wagtail.admin.forms import WagtailAdminModelForm
+from django.forms.widgets import ClearableFileInput
+from django.utils.html import mark_safe
+
+class CustomPlatformLogoInput(ClearableFileInput):
+    def render(self, name, value, attrs=None, renderer=None):
+        output = super().render(name, value, attrs=attrs, renderer=renderer)
+        if value:
+            url = ""
+            try:
+                if hasattr(value, "url") and value.url:
+                    url = value.url
+                elif isinstance(value, str) and value.strip():
+                    url = value if (value.startswith("/") or value.startswith("http")) else f"/media/{value}"
+            except Exception:
+                if hasattr(value, "name") and value.name:
+                    url = f"/media/{value.name}"
+
+            if url:
+                preview = f'''
+                <div style="margin-top: 12px; padding: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; align-items: center; gap: 14px;">
+                    <span style="font-size: 12px; font-weight: 600; color: #475569;">Saved Logo Preview:</span>
+                    <img src="{url}" style="height: 48px; width: 48px; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 4px;" alt="Logo Preview" />
+                    <a href="{url}" target="_blank" style="font-size: 12px; font-weight: 600; color: #2563eb; text-decoration: underline;">Open Image</a>
+                </div>
+                '''
+                return mark_safe(output + preview)
+        return output
+
+class CampaignPlatformForm(WagtailAdminModelForm):
+    class Meta:
+        widgets = {
+            "logo": CustomPlatformLogoInput(),
+        }
 
 class CampaignPlatform(models.Model):
     platform_id = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
     color = models.CharField(max_length=50, blank=True, null=True)
-    logo = models.CharField(max_length=50, blank=True, null=True)
+    logo = models.ImageField(upload_to="platform_logos/", blank=True, null=True)
+
+    base_form_class = CampaignPlatformForm
+
+    def logo_preview(self):
+        if self.logo:
+            try:
+                url = ""
+                if hasattr(self.logo, "url") and self.logo.url:
+                    url = self.logo.url
+                elif isinstance(self.logo, str) and self.logo.strip():
+                    val = self.logo.strip()
+                    if val.startswith("/") or val.startswith("http") or val.endswith((".png", ".jpg", ".jpeg", ".svg", ".webp")):
+                        url = val if (val.startswith("/") or val.startswith("http")) else f"/media/{val}"
+                    else:
+                        return mark_safe(f'<span style="font-size: 18px; line-height: 1; padding: 4px 8px; background: #f1f5f9; border-radius: 6px;">{val}</span>')
+                elif hasattr(self.logo, "name") and self.logo.name:
+                    url = f"/media/{self.logo.name}"
+                
+                if url:
+                    return mark_safe(f'<img src="{url}" style="height: 36px; width: 36px; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 2px;" />')
+            except Exception:
+                pass
+        return "-"
+    logo_preview.short_description = "Logo Preview"
 
     panels = [
         FieldPanel("platform_id"),

@@ -86,11 +86,12 @@ class CampaignInspectView(InspectView):
             self.object.progress = 62
             messages.success(request, f"Counter offer accepted! Campaign '{self.object.name}' is now Live.")
         elif status in [choice[0] for choice in self.object.STATUS_CHOICES]:
-            if status == "Live" and (self.object.creator or self.object.creator_name or self.object.influencer):
+            if status == "Live":
                 self.object.status = "Pending"
+                messages.success(request, f"Campaign '{self.object.name}' approved! It is now Pending for creator acceptance.")
             else:
                 self.object.status = status
-            messages.success(request, f"Campaign status successfully updated to '{self.object.status}'.")
+                messages.success(request, f"Campaign status successfully updated to '{self.object.status}'.")
 
         self.object.admin_review = admin_review or ""
         self.object.save()
@@ -168,7 +169,9 @@ class CampaignDeliverableViewSet(SnippetViewSet):
     menu_label = "Deliverables"
     icon = "doc-full"
     add_to_admin_menu = False
-    list_export = ("id", "name")
+    list_display = ("id", "platform", "name")
+    list_export = ("id", "platform", "name")
+    list_filter = ("platform",)
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
 
@@ -177,9 +180,8 @@ class CampaignPlatformViewSet(SnippetViewSet):
     menu_label = "Target Platforms"
     icon = "desktop"
     add_to_admin_menu = False
+    list_display = ("id", "platform_id", "name", "color", "logo_preview")
     list_export = ("id", "platform_id", "name", "color", "logo")
-    edit_template_name = "wagtailadmin/generic_edit_premium.html"
-    create_template_name = "wagtailadmin/generic_create_premium.html"
 
 class PitchIndexView(IndexView):
     """Custom index view so the list row action says 'View' instead of 'Inspect'."""

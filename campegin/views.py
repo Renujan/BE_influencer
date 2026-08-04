@@ -18,6 +18,7 @@ from .serializers import (
     PitchSerializer, CampaignNicheSerializer
 )
 from notifications.models import Notification
+from chat_monitor.models import ChatReview
 
 from user.permissions import IsApprovedBusiness
 
@@ -98,8 +99,16 @@ class CampaignViewSet(viewsets.ModelViewSet):
             path = default_storage.save(os.path.join('campaign_briefs', video_file.name), video_file)
             video_brief_path = default_storage.url(path)
 
+        start_date = serializer.validated_data.get("start_date") or self.request.data.get("start_date")
+        from datetime import datetime
+        if not start_date:
+            start_date = datetime.now().strftime("%b %d, %Y")
+        elif not any(char.isdigit() and len(w.strip(",")) == 4 for w in str(start_date).split() for char in w):
+            start_date = f"{str(start_date).strip()}, {datetime.now().year}"
+
         campaign = serializer.save(
             brand=self.request.user,
+            start_date=start_date,
             voice_brief=voice_brief_path or serializer.validated_data.get("voice_brief", ""),
             screenshare_brief=screenshare_brief_path or serializer.validated_data.get("screenshare_brief", ""),
             video_brief=video_brief_path or serializer.validated_data.get("video_brief", "")
@@ -230,11 +239,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
         #     return Response({"error": "Admin privileges required."}, status=status.HTTP_403_FORBIDDEN)
         
         campaign = self.get_object()
-        if campaign.creator or campaign.creator_name or campaign.influencer:
-            campaign.status = "Pending"
-        else:
-            campaign.status = "Live"
-            campaign.progress = 62  # mock starting progress
+        campaign.status = "Pending"
         campaign.admin_review = ""  # clear any previous rejection comments
         campaign.save()
         return Response(CampaignSerializer(campaign).data)
@@ -494,13 +499,31 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if not category or not message:
             return Response({"error": "Category and message are required"}, status=status.HTTP_400_BAD_REQUEST)
 
+        user = request.user
+        profile = getattr(user, "profile", None)
+        sender_role = "creator" if (hasattr(user, "creator_profile") or getattr(profile, "role", "") == "influencer") else "business"
+
         ticket = AdminComplianceTicket.objects.create(
             campaign=campaign,
+            sender=user,
+            sender_role=sender_role,
+            target_audience=sender_role,
             category=category,
             message=message,
             status="Pending Review",
             reply="Our specialists will audit the campaign context and chat logs."
         )
+
+        try:
+            ChatReview.objects.create(
+                campaign=campaign,
+                category=category or "Safety / Guidelines",
+                review_text=f"[{sender_role.upper()} REQUEST by {user.username}] {message}",
+                target_audience="creator" if sender_role in ["creator", "influencer"] else "business"
+            )
+        except Exception as e:
+            print("Error creating ChatReview:", e)
+
         return Response(AdminComplianceTicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
 
 
@@ -720,6 +743,19 @@ class CampaignNicheViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 
+class CampaignDeliverableApiViewSet(viewsets.ModelViewSet):
+    queryset = CampaignDeliverable.objects.all().order_by("id")
+    serializer_class = CampaignDeliverableSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        platform = self.request.query_params.get("platform")
+        if platform:
+            qs = qs.filter(platform__iexact=platform)
+        return qs
+
+
 class CampaignSettingsView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -740,11 +776,15 @@ class CampaignSettingsView(APIView):
 
     def post(self, request):
         name = request.data.get("name") or request.data.get("deliverable")
+        platform = request.data.get("platform") or ""
         if name and isinstance(name, str) and name.strip():
             raw_name = name.strip()
             clean_name = raw_name.split(" × ", 1)[-1].strip() if " × " in raw_name else raw_name
-            obj, created = CampaignDeliverable.objects.get_or_create(name=clean_name)
-            return Response({"id": obj.id, "name": obj.name, "created": created})
+            obj, created = CampaignDeliverable.objects.get_or_create(name=clean_name, defaults={"platform": platform})
+            if not created and platform and obj.platform != platform:
+                obj.platform = platform
+                obj.save()
+            return Response({"id": obj.id, "name": obj.name, "platform": obj.platform, "created": created})
         return Response({"error": "Invalid deliverable name"}, status=status.HTTP_400_BAD_REQUEST)
 
 

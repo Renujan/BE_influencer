@@ -10,6 +10,14 @@ class Notification(models.Model):
         ("payment", "Escrow / Payment"),
         ("compliance", "Compliance & Dispute"),
     )
+    TARGET_ROLE_CHOICES = (
+        ("all", "All Roles"),
+        ("admin", "Admin Only"),
+        ("business", "Business Only"),
+        ("creator", "Creator Only"),
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications")
+    target_role = models.CharField(max_length=20, choices=TARGET_ROLE_CHOICES, default="all")
     title = models.CharField(max_length=255)
     message = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default="signup")

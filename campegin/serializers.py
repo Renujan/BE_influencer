@@ -1,3 +1,4 @@
+from django.db import models
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
@@ -50,9 +51,13 @@ class WorkspaceMessageSerializer(serializers.ModelSerializer):
         fields = ["id", "sender", "sender_name", "text", "file_attachment", "time", "message_type"]
 
 class AdminComplianceTicketSerializer(serializers.ModelSerializer):
+    sender_name = serializers.CharField(source="sender.username", read_only=True)
+
     class Meta:
         model = AdminComplianceTicket
-        fields = ["id", "category", "message", "status", "reply", "date"]
+        fields = ["id", "category", "message", "status", "reply", "date", "sender_role", "sender_name", "target_audience"]
+
+from chat_monitor.serializers import ChatReviewSerializer
 
 class CampaignSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source="brand.username", read_only=True)
@@ -69,7 +74,35 @@ class CampaignSerializer(serializers.ModelSerializer):
     payments = PaymentInstallmentSerializer(many=True, read_only=True)
     files = WorkspaceFileSerializer(many=True, read_only=True)
     messages = serializers.SerializerMethodField()
-    tickets = AdminComplianceTicketSerializer(many=True, read_only=True)
+    tickets = serializers.SerializerMethodField()
+    reviews = serializers.SerializerMethodField()
+
+    def get_tickets(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user:
+            return AdminComplianceTicketSerializer(obj.tickets.all(), many=True).data
+
+        user = request.user
+        if user.is_staff or user.is_superuser:
+            return AdminComplianceTicketSerializer(obj.tickets.all(), many=True).data
+
+        profile = getattr(user, "profile", None)
+        role = profile.role if profile else ("influencer" if hasattr(user, "creator_profile") else "business")
+
+        if role in ["influencer", "creator"]:
+            qs = obj.tickets.filter(
+                models.Q(sender_role__in=["creator", "influencer"]) |
+                models.Q(sender=user) |
+                (models.Q(sender_role__in=["admin", "system", ""]) & models.Q(target_audience__in=["creator", "influencer", "both"]))
+            ).distinct().order_by("-id")
+        else:
+            qs = obj.tickets.filter(
+                models.Q(sender_role="business") |
+                models.Q(sender=user) |
+                (models.Q(sender_role__in=["admin", "system", ""]) & models.Q(target_audience__in=["business", "both"]))
+            ).distinct().order_by("-id")
+
+        return AdminComplianceTicketSerializer(qs, many=True).data
 
     def get_messages(self, obj):
         request = self.context.get('request')
@@ -90,6 +123,20 @@ class CampaignSerializer(serializers.ModelSerializer):
                 msgs = obj.messages.filter(message_type='main')
         return WorkspaceMessageSerializer(msgs, many=True).data
 
+    def get_reviews(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user:
+            return ChatReviewSerializer(obj.chat_reviews.all(), many=True).data
+
+        user = request.user
+        profile = getattr(user, "profile", None)
+        role = profile.role if profile else "influencer"
+        if role == "business":
+            qs = obj.chat_reviews.filter(target_audience__in=["business", "both"]).order_by("-id")
+        else:
+            qs = obj.chat_reviews.filter(target_audience__in=["creator", "both"]).order_by("-id")
+        return ChatReviewSerializer(qs, many=True).data
+
     class Meta:
         model = Campaign
         fields = [
@@ -97,7 +144,7 @@ class CampaignSerializer(serializers.ModelSerializer):
             "status", "budget", "min_budget", "max_budget", "per_creator_budget", "min_price", "max_price", "rate_card_id", "start_date", "end_date", "progress", "brief", "admin_review",
             "category", "delivery_language", "country", "province", "district", "medium", "voice_brief", "screenshare_brief", "video_brief",
             "counter_price", "counter_note", "counter_round", "decline_reason", "created_via",
-            "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets"
+            "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews"
         ]
         read_only_fields = ["brand"]
 
@@ -114,12 +161,22 @@ class CampaignLanguageSerializer(serializers.ModelSerializer):
 class CampaignDeliverableSerializer(serializers.ModelSerializer):
     class Meta:
         model = CampaignDeliverable
-        fields = ["id", "name"]
+        fields = ["id", "name", "platform"]
 
 class CampaignPlatformSerializer(serializers.ModelSerializer):
+    logo = serializers.SerializerMethodField()
+
     class Meta:
         model = CampaignPlatform
         fields = ["id", "platform_id", "name", "color", "logo"]
+
+    def get_logo(self, obj):
+        if obj.logo:
+            try:
+                return obj.logo.url
+            except Exception:
+                return str(obj.logo)
+        return ""
 
 class PitchSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source="brand.username", read_only=True)

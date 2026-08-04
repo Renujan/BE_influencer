@@ -2,31 +2,46 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timesince import timesince
 from django.utils import timezone
+from django.db.models import Q
 from .models import Notification
 import json
 
 @csrf_exempt
 def get_notifications(request):
     if request.method == "GET":
-        qs = Notification.objects.all().order_by('-created_at')[:30]
+        req_user = request.user
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Token "):
+            try:
+                from rest_framework.authtoken.models import Token
+                token_key = auth_header.split(" ")[1]
+                req_user = Token.objects.get(key=token_key).user
+            except:
+                pass
+
+        is_authenticated = hasattr(req_user, "is_authenticated") and req_user.is_authenticated
+        is_admin = is_authenticated and (req_user.is_staff or req_user.is_superuser)
+        is_business = is_authenticated and (hasattr(req_user, "business_profile") or (hasattr(req_user, "profile") and req_user.profile.role == "business"))
+        is_creator = is_authenticated and not is_business and not is_admin
+
+        if is_admin:
+            qs = Notification.objects.all().order_by('-created_at')[:30]
+        elif is_business:
+            qs = Notification.objects.filter(
+                Q(user=req_user) | Q(target_role__in=["business", "all"])
+            ).exclude(target_role="admin").order_by('-created_at')[:30]
+        elif is_creator:
+            qs = Notification.objects.filter(
+                Q(user=req_user) | Q(target_role__in=["creator", "all"])
+            ).exclude(target_role="admin").order_by('-created_at')[:30]
+        else:
+            qs = Notification.objects.filter(
+                target_role__in=["business", "all"]
+            ).exclude(target_role="admin").order_by('-created_at')[:30]
+
         data = []
         for n in qs:
-            # Map to suitable creator frontend routes instead of backend admin URLs
-            is_business = False
-            req_user = request.user
-            auth_header = request.headers.get("Authorization")
-            if auth_header and auth_header.startswith("Token "):
-                try:
-                    from rest_framework.authtoken.models import Token
-                    token_key = auth_header.split(" ")[1]
-                    req_user = Token.objects.get(key=token_key).user
-                except:
-                    pass
-
-            if hasattr(req_user, "is_authenticated") and req_user.is_authenticated:
-                is_business = hasattr(req_user, "business_profile") or (hasattr(req_user, "profile") and req_user.profile.role == "business")
-
-            if is_business:
+            if is_business or (not is_authenticated and True):
                 front_url = "/dashboard"
                 if n.category == "campaign":
                     front_url = "/dashboard/campaigns"
@@ -37,7 +52,6 @@ def get_notifications(request):
                 elif n.category == "signup":
                     front_url = "/dashboard/settings"
                 
-                # specific override for requests
                 if "request" in n.title.lower() or "request" in n.message.lower():
                     front_url = "/dashboard/requests"
             else:
@@ -76,6 +90,21 @@ def mark_read(request, pk):
 @csrf_exempt
 def mark_all_read_api(request):
     if request.method == "POST":
-        Notification.objects.filter(is_read=False).update(is_read=True)
+        req_user = request.user
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Token "):
+            try:
+                from rest_framework.authtoken.models import Token
+                token_key = auth_header.split(" ")[1]
+                req_user = Token.objects.get(key=token_key).user
+            except:
+                pass
+
+        if hasattr(req_user, "is_authenticated") and req_user.is_authenticated:
+            Notification.objects.filter(
+                Q(user=req_user) | Q(target_role__in=["business", "creator", "all"])
+            ).exclude(target_role="admin").filter(is_read=False).update(is_read=True)
+        else:
+            Notification.objects.filter(is_read=False).update(is_read=True)
         return JsonResponse({"status": "success"})
     return JsonResponse({"status": "error"}, status=400)

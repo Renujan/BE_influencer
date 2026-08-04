@@ -192,14 +192,19 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
             instance.rates.all().delete()
             # Create new rates
             for rate_item in rates_data:
+                min_p = rate_item.get("min_price")
+                max_p = rate_item.get("max_price")
+                price_p = rate_item.get("price")
+                if price_p is None or float(price_p or 0) == 0:
+                    price_p = min_p if min_p is not None else 0.00
                 CreatorRate.objects.create(
                     creator=instance,
                     content_type=rate_item.get("content_type"),
                     platforms=rate_item.get("platforms"),
-                    price=rate_item.get("price"),
-                    min_price=rate_item.get("min_price"),
-                    max_price=rate_item.get("max_price"),
-                    notes=rate_item.get("notes")
+                    price=price_p,
+                    min_price=min_p if min_p is not None else price_p,
+                    max_price=max_p if max_p is not None else price_p,
+                    notes=rate_item.get("notes") or ""
                 )
                 
         # Update payout methods

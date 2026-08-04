@@ -12,7 +12,7 @@ class RateCardViewSet(SnippetViewSet):
     menu_name = "rate_cards"
     menu_order = 250
     add_to_admin_menu = True
-    list_display = ("id", "creator", "creator_name", "get_niches", "get_country", "get_province", "get_district", "get_medium", "platform", "type", "display_duration", "formatted_price", "is_active")
+    list_display = ("id", "creator", "creator_name", "get_niches", "get_country", "get_province", "get_district", "get_medium", "platform", "type", "display_duration", "formatted_min_price", "formatted_max_price", "is_active")
     list_export = ("id", "creator.username", "creator_name", "get_niches", "get_country", "get_province", "get_district", "get_medium", "platform", "type", "display_duration", "price", "min_price", "max_price", "is_active")
     list_filter = ("platform", "country", "medium", "is_active")
     search_fields = ("creator__username", "creator_name", "country", "province", "district", "medium", "platform", "type", "description")
