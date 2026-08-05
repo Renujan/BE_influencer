@@ -319,8 +319,8 @@ def register_main_admin_menu_item():
 
 @hooks.register('construct_main_menu')
 def hide_unwanted_menu_items(request, menu_items):
-    # Hide reports, images, documents, help, explorer (Pages), and snippets items from the main menu sidebar
-    menu_items[:] = [item for item in menu_items if item.name not in ['reports', 'images', 'documents', 'help', 'explorer', 'snippets']]
+    # Hide search, reports, images, documents, help, explorer (Pages), and snippets items from the main menu sidebar
+    menu_items[:] = [item for item in menu_items if item.name not in ['search', 'wagtailadmin_search', 'reports', 'images', 'documents', 'help', 'explorer', 'snippets']]
 
 @hooks.register('construct_settings_menu')
 def hide_unwanted_settings_menu_items(request, menu_items):

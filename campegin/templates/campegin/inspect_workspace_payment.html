@@ -1,0 +1,336 @@
+{% extends "wagtailadmin/base.html" %}
+
+{% block titletag %}Workspace Payment Details - {{ instance.campaign.name }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    .custom-inspect-wrapper {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 24px;
+        background-color: #f8fafc;
+        min-height: 100vh;
+    }
+
+    .custom-header-bar {
+        background-color: #1e293b;
+        padding: 24px 32px;
+        color: #ffffff;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .custom-header-title h1 {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+    }
+
+    .custom-header-title p {
+        font-size: 13px;
+        color: #cbd5e1;
+        margin: 4px 0 0 0;
+    }
+
+    .range-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+    }
+
+    .range-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .range-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .range-card-label {
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+    }
+
+    .badge-orange {
+        background-color: #fff7ed;
+        color: #ea580c;
+        border: 1px solid #ffedd5;
+        padding: 2px 10px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .badge-blue {
+        background-color: #eff6ff;
+        color: #2563eb;
+        border: 1px solid #dbeafe;
+        padding: 2px 10px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .range-card-price {
+        font-size: 24px;
+        font-weight: 800;
+        color: #0f172a;
+        font-family: monospace;
+    }
+
+    .final-price-box {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .final-price-text {
+        font-size: 16px;
+        font-weight: 700;
+        color: #166534;
+    }
+
+    .final-price-amount {
+        font-size: 26px;
+        font-weight: 800;
+        color: #15803d;
+        font-family: monospace;
+        margin-left: 8px;
+    }
+
+    .divide-section {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        margin-top: 24px;
+    }
+
+    .section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .table-custom {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+        font-size: 13px;
+    }
+
+    .table-custom th {
+        background: #f8fafc;
+        text-align: left;
+        padding: 12px 16px;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        font-size: 11px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .table-custom td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+    }
+
+    .btn-action {
+        background-color: #2563eb;
+        color: #ffffff !important;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 12px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-action-emerald {
+        background-color: #059669;
+        color: #ffffff !important;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 12px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-preset {
+        background-color: #f1f5f9;
+        color: #334155;
+        border: 1px solid #cbd5e1;
+        padding: 6px 14px;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+        margin-right: 8px;
+    }
+
+    .input-custom {
+        padding: 6px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="custom-inspect-wrapper">
+    <div class="custom-header-bar">
+        <div class="custom-header-title">
+            <h1>Workspace Payment Negotiation — {{ instance.campaign.name }}</h1>
+            <p>Brand: <strong>{{ brand_name }}</strong> | Creator: <strong>{{ creator_name }}</strong> | Status: <strong>{{ instance.get_status_display }}</strong></p>
+        </div>
+        <div>
+            <a href="{% url 'wagtailsnippets_WorkspacePayment_workspacepaymentnegotiation:edit' instance.pk %}" class="btn-action">Edit Negotiation</a>
+            <a href="{% url 'wagtailsnippets_WorkspacePayment_workspacepaymentnegotiation:list' %}" class="btn-preset">Back to List</a>
+        </div>
+    </div>
+
+    <!-- Price Range Cards -->
+    <div class="range-cards-grid">
+        <div class="range-card">
+            <div class="range-card-header">
+                <span class="range-card-label">Selected Creator Ratecard Range</span>
+                <span class="badge-orange">Creator Rates</span>
+            </div>
+            <div class="range-card-price">
+                {{ creator_rate_range }}
+            </div>
+        </div>
+
+        <div class="range-card">
+            <div class="range-card-header">
+                <span class="range-card-label">Business Campaign Price Range</span>
+                <span class="badge-blue">Campaign Budget</span>
+            </div>
+            <div class="range-card-price">
+                {{ business_budget_range }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Agreed Price Panel -->
+    <div class="final-price-box">
+        <div class="final-price-text">
+            Accepted Final Price: <span class="final-price-amount">{{ formatted_final_price }}</span>
+        </div>
+        <div>
+            <span class="badge-blue">{{ instance.get_status_display }}</span>
+        </div>
+    </div>
+
+    <!-- Divide Final Price into Installments Panel -->
+    <div class="divide-section">
+        <div class="section-title">
+            <span>⚡ Quick Divide Final Price into Milestone Installments</span>
+        </div>
+        <form method="POST" style="margin-bottom: 16px;">
+            {% csrf_token %}
+            <input type="hidden" name="action_type" value="divide_installments">
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Choose a preset or submit to divide the final price ({{ formatted_final_price }}) into milestone installments for this campaign:</p>
+            <button type="submit" name="preset" value="3_milestones" class="btn-action-emerald">Divide into 3 Milestones (Kickoff 30%, Drafts 40%, Final 30%)</button>
+            <button type="submit" name="preset" value="50_50" class="btn-action">Divide into 2 Milestones (50% / 50%)</button>
+        </form>
+    </div>
+
+    <!-- Installments Breakdown Table -->
+    <div class="divide-section">
+        <div class="section-title">
+            <span>💳 Milestone Installments Payout Breakdown</span>
+        </div>
+
+        {% if installments %}
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Installment Name</th>
+                    <th>Price / Amount</th>
+                    <th>Paid Date</th>
+                    <th>Is Paid? / Status</th>
+                    <th>Receipt Proof Image</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inst in installments %}
+                <tr>
+                    <td>
+                        <form method="POST" style="display: flex; gap: 8px; align-items: center;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action_type" value="update_installment_row">
+                            <input type="hidden" name="installment_id" value="{{ inst.id }}">
+                            <input type="text" name="title" value="{{ inst.title }}" class="input-custom" style="width: 160px;">
+                    </td>
+                    <td>
+                            <input type="text" name="amount" value="{{ inst.amount }}" class="input-custom" style="width: 100px; font-family: monospace;">
+                    </td>
+                    <td>
+                            <input type="date" name="paid_date" value="{{ inst.paid_date|date:'Y-m-d' }}" class="input-custom">
+                    </td>
+                    <td>
+                            <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                                <input type="checkbox" name="is_paid" value="true" {% if inst.is_paid or inst.status == 'released' %}checked{% endif %}>
+                                {% if inst.is_paid or inst.status == 'released' %}
+                                    <span style="color: #059669;">Released (Paid)</span>
+                                {% else %}
+                                    <span style="color: #d97706;">In Escrow</span>
+                                {% endif %}
+                            </label>
+                    </td>
+                    <td>
+                        {% if inst.receipt_image %}
+                            <a href="{{ inst.receipt_image.url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Proof Image</a>
+                        {% elif inst.receipt_url %}
+                            <a href="{{ inst.receipt_url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Proof Link</a>
+                        {% else %}
+                            <span style="color: #94a3b8;">No proof uploaded</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                            <button type="submit" class="btn-action">Save Changes</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="font-size: 13px; color: #64748b; margin-top: 12px;">No milestone installments created yet. Click one of the divide buttons above to divide the final price.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -25,6 +25,7 @@ urlpatterns = [
     path("api/inquire/", include("inquire.urls")),
     path("api/portfolio/", include("portfolio.urls")),
     path("api/rate-cards/", include("RateCard.urls")),
+    path("api/workspace-payment/", include("WorkspacePayment.urls")),
     path("api/notifications/", include("notifications.api_urls")),
     path("api/analytics/", include("user.analytics_urls")),
 

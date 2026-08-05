@@ -6,6 +6,7 @@ from django.shortcuts import redirect
 from django.contrib import messages
 from django.urls import path, reverse
 from .models import Campaign, CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform, Pitch
+from WorkspacePayment.models import WorkspacePaymentNegotiation
 from .views import download_campaign_pdf_view
 
 from wagtail.admin.ui.tables import TitleColumn
@@ -361,8 +362,175 @@ class CampaignNicheViewSet(SnippetViewSet):
     list_editable = ("is_active",)
     search_fields = ("name",)
 
+import re
+
+class WorkspacePaymentIndexView(IndexView):
+    def _get_title_column(self, field_name, column_class=TitleColumn, **kwargs):
+        column_class = self._get_title_column_class(column_class)
+
+        def get_url(instance):
+            if inspect_url := self.get_inspect_url(instance):
+                return inspect_url
+            return self.get_edit_url(instance)
+
+        if not self.model:
+            return column_class("campaign", label=gettext_lazy("Campaign"), accessor=str, get_url=get_url)
+        return self._get_custom_column(field_name, column_class, get_url=get_url, **kwargs)
+
+    def get_list_more_buttons(self, instance):
+        buttons = super().get_list_more_buttons(instance)
+        for item in buttons:
+            if hasattr(item, "label") and (str(item.label) == "Inspect" or item.label == "Inspect"):
+                item.label = "View / Divide Payment"
+                item.icon_name = "view"
+        return buttons
+
+
+class WorkspacePaymentInspectView(InspectView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        negotiation = self.object
+        campaign = negotiation.campaign
+
+        context['instance'] = negotiation
+        context['brand_name'] = getattr(campaign, 'brand_name', None) or (campaign.brand.username if campaign and campaign.brand else "Brand")
+        context['creator_name'] = getattr(campaign, 'creator_name', None) or (campaign.creator.username if campaign and campaign.creator else "Creator")
+
+        min_budg = getattr(campaign, 'min_budget', None) or getattr(campaign, 'min_price', None) or "10000.00"
+        max_budg = getattr(campaign, 'max_budget', None) or getattr(campaign, 'max_price', None) or "51000.00"
+        cr_min = getattr(campaign, 'creator_min_price', None) or getattr(campaign, 'min_price', None) or "20000.00"
+        cr_max = getattr(campaign, 'creator_max_price', None) or getattr(campaign, 'max_price', None) or "49000.00"
+
+        symbol = "Rs"
+        if campaign and campaign.country:
+            country_currency_map = {
+                "Sri Lanka": "LKR (Rs)",
+                "United States": "USD ($)",
+                "United Kingdom": "GBP (£)",
+                "India": "INR (₹)",
+                "United Arab Emirates": "AED (AED)",
+                "European Union": "EUR (€)",
+                "Canada": "CAD ($)",
+                "Australia": "AUD ($)",
+                "Singapore": "SGD ($)",
+            }
+            c_name = str(campaign.country.name) if hasattr(campaign.country, "name") else str(campaign.country)
+            curr_str = country_currency_map.get(c_name, "LKR (Rs)")
+            match = re.search(r'\(([^)]+)\)', curr_str)
+            if match:
+                symbol = match.group(1)
+
+        try:
+            cr_min_val = float(cr_min)
+            cr_max_val = float(cr_max)
+            min_budg_val = float(min_budg)
+            max_budg_val = float(max_budg)
+            final_val = float(negotiation.final_price or 0)
+        except (ValueError, TypeError):
+            cr_min_val, cr_max_val, min_budg_val, max_budg_val, final_val = 20000, 49000, 10000, 51000, 0
+
+        context['creator_rate_range'] = f"{symbol}{cr_min_val:,.0f} – {symbol}{cr_max_val:,.0f}"
+        context['business_budget_range'] = f"{symbol}{min_budg_val:,.0f} – {symbol}{max_budg_val:,.0f}"
+        context['formatted_final_price'] = f"{symbol}{final_val:,.2f}"
+        context['installments'] = negotiation.installments.all().order_by('id')
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        negotiation = self.get_object()
+        campaign = negotiation.campaign
+        action_type = request.POST.get('action_type')
+
+        if action_type == 'divide_installments':
+            preset = request.POST.get('preset')
+            final_price = float(negotiation.final_price or 0)
+            from WorkspacePayment.models import WorkspaceInstallment
+
+            WorkspaceInstallment.objects.filter(campaign=campaign).delete()
+
+            if preset == '3_milestones':
+                items = [
+                    ('Kickoff payment', final_price * 0.3),
+                    ('Drafts approved', final_price * 0.4),
+                    ('Final delivery', final_price * 0.3),
+                ]
+            else:
+                items = [
+                    ('Installment 1 (50%)', final_price * 0.5),
+                    ('Installment 2 (50%)', final_price * 0.5),
+                ]
+
+            for title, amt in items:
+                WorkspaceInstallment.objects.create(
+                    campaign=campaign,
+                    negotiation=negotiation,
+                    title=title,
+                    amount=amt,
+                    status='in_escrow'
+                )
+            messages.success(request, f"Divided final price for '{campaign.name}' into milestone installments.")
+
+        elif action_type == 'update_installment_row':
+            inst_id = request.POST.get('installment_id')
+            title = request.POST.get('title')
+            amount = request.POST.get('amount')
+            paid_date = request.POST.get('paid_date')
+            is_paid = request.POST.get('is_paid') == 'true'
+
+            from WorkspacePayment.models import WorkspaceInstallment
+            try:
+                inst = WorkspaceInstallment.objects.get(id=inst_id)
+                if title:
+                    inst.title = title.strip()
+                if amount:
+                    try:
+                        inst.amount = float(amount)
+                    except ValueError:
+                        pass
+                inst.is_paid = is_paid
+                if is_paid:
+                    inst.status = 'released'
+                    if paid_date:
+                        inst.paid_date = paid_date
+                    elif not inst.paid_date:
+                        from django.utils import timezone
+                        inst.paid_date = timezone.now().date()
+                else:
+                    inst.status = 'in_escrow'
+                    if paid_date:
+                        inst.paid_date = paid_date
+                inst.save()
+                messages.success(request, f"Updated installment '{inst.title}'.")
+            except WorkspaceInstallment.DoesNotExist:
+                pass
+
+        return redirect(request.path)
+
+
+class WorkspacePaymentViewSet(SnippetViewSet):
+    model = WorkspacePaymentNegotiation
+    menu_label = "Workspace Payment"
+    icon = "credit-card"
+    menu_name = "workspace_payment"
+    index_view_class = WorkspacePaymentIndexView
+    inspect_view_enabled = True
+    inspect_view_class = WorkspacePaymentInspectView
+    inspect_template_name = "campegin/inspect_workspace_payment.html"
+    list_display = ("campaign", "final_price", "status", "revision_reason", "updated_at")
+    list_filter = ("status",)
+    search_fields = ("campaign__name", "revision_reason")
+
 class CampaignWorkspaceGroup(SnippetViewSetGroup):
-    items = (CampaignViewSet, PitchViewSet, CampaignCategoryViewSet, CampaignLanguageViewSet, CampaignDeliverableViewSet, CampaignPlatformViewSet, CampaignNicheViewSet)
+    items = (
+        CampaignViewSet,
+        PitchViewSet,
+        WorkspacePaymentViewSet,
+        CampaignCategoryViewSet,
+        CampaignLanguageViewSet,
+        CampaignDeliverableViewSet,
+        CampaignPlatformViewSet,
+        CampaignNicheViewSet,
+    )
     menu_icon = "tasks"
     menu_label = "Campaign Workspaces"
     menu_name = "campaign_workspaces"
