@@ -365,6 +365,30 @@ class CampaignNicheViewSet(SnippetViewSet):
 import re
 
 class WorkspacePaymentIndexView(IndexView):
+    def auto_create_negotiations(self):
+        try:
+            live_campaigns = Campaign.objects.filter(status__in=["Live", "Completed"])
+            for camp in live_campaigns:
+                WorkspacePaymentNegotiation.objects.get_or_create(
+                    campaign=camp,
+                    defaults={
+                        "final_price": camp.counter_price or camp.budget or 0,
+                        "status": "admin_approved" if str(getattr(camp, "created_via", "")).lower() in ["pitch", "request"] else "pending_creator_approval",
+                    }
+                )
+        except Exception as e:
+            pass
+
+    def get_base_queryset(self):
+        self.auto_create_negotiations()
+        qs = super().get_base_queryset() if hasattr(super(), "get_base_queryset") else self.model.objects.all()
+        return qs.filter(campaign__status__in=["Live", "Completed"])
+
+    def get_queryset(self):
+        self.auto_create_negotiations()
+        qs = super().get_queryset() if hasattr(super(), "get_queryset") else self.model.objects.all()
+        return qs.filter(campaign__status__in=["Live", "Completed"])
+
     def _get_title_column(self, field_name, column_class=TitleColumn, **kwargs):
         column_class = self._get_title_column_class(column_class)
 
@@ -396,6 +420,11 @@ class WorkspacePaymentInspectView(InspectView):
         context['brand_name'] = getattr(campaign, 'brand_name', None) or (campaign.brand.username if campaign and campaign.brand else "Brand")
         context['creator_name'] = getattr(campaign, 'creator_name', None) or (campaign.creator.username if campaign and campaign.creator else "Creator")
 
+        created_via = str(getattr(campaign, 'created_via', 'direct_request') or 'direct_request').lower().strip()
+        is_direct_request = (created_via == 'direct_request')
+        context['created_via'] = created_via
+        context['is_direct_request'] = is_direct_request
+
         min_budg = getattr(campaign, 'min_budget', None) or getattr(campaign, 'min_price', None) or "10000.00"
         max_budg = getattr(campaign, 'max_budget', None) or getattr(campaign, 'max_price', None) or "51000.00"
         cr_min = getattr(campaign, 'creator_min_price', None) or getattr(campaign, 'min_price', None) or "20000.00"
@@ -425,14 +454,33 @@ class WorkspacePaymentInspectView(InspectView):
             cr_max_val = float(cr_max)
             min_budg_val = float(min_budg)
             max_budg_val = float(max_budg)
-            final_val = float(negotiation.final_price or 0)
+
+            if not is_direct_request:
+                eff_price = getattr(campaign, 'counter_price', None) or getattr(campaign, 'budget', 0)
+                final_val = float(negotiation.final_price or eff_price or 0)
+                if (not negotiation.final_price or float(negotiation.final_price) == 0) and final_val > 0:
+                    negotiation.final_price = final_val
+                    negotiation.save(update_fields=['final_price'])
+            else:
+                final_val = float(negotiation.final_price or 0)
         except (ValueError, TypeError):
             cr_min_val, cr_max_val, min_budg_val, max_budg_val, final_val = 20000, 49000, 10000, 51000, 0
 
         context['creator_rate_range'] = f"{symbol}{cr_min_val:,.0f} – {symbol}{cr_max_val:,.0f}"
         context['business_budget_range'] = f"{symbol}{min_budg_val:,.0f} – {symbol}{max_budg_val:,.0f}"
         context['formatted_final_price'] = f"{symbol}{final_val:,.2f}"
-        context['installments'] = negotiation.installments.all().order_by('id')
+        
+        installments = negotiation.installments.all().order_by('id')
+        total_allocated = sum(float(inst.amount or 0) for inst in installments)
+        remaining_amount = max(0.0, final_val - total_allocated)
+        is_fully_allocated = (final_val > 0 and (total_allocated >= final_val or abs(total_allocated - final_val) < 0.01))
+
+        context['installments'] = installments
+        context['total_allocated'] = total_allocated
+        context['formatted_total_allocated'] = f"{symbol}{total_allocated:,.2f}"
+        context['remaining_amount'] = remaining_amount
+        context['formatted_remaining_amount'] = f"{symbol}{remaining_amount:,.2f}"
+        context['is_fully_allocated'] = is_fully_allocated
 
         return context
 
@@ -470,6 +518,54 @@ class WorkspacePaymentInspectView(InspectView):
                 )
             messages.success(request, f"Divided final price for '{campaign.name}' into milestone installments.")
 
+        elif action_type == 'add_installment_manual':
+            final_price = float(negotiation.final_price or 0)
+            current_total = sum(float(inst.amount or 0) for inst in negotiation.installments.all())
+            if final_price > 0 and (current_total >= final_price or abs(current_total - final_price) < 0.01):
+                messages.warning(request, "Cannot add installment: final price is already fully allocated.")
+                return redirect(request.path)
+
+            title = request.POST.get('title', '').strip() or 'Installment'
+            amount_str = request.POST.get('amount', '0')
+            paid_date = request.POST.get('paid_date')
+            is_paid = request.POST.get('is_paid') == 'true'
+
+            try:
+                amount = float(amount_str)
+            except (ValueError, TypeError):
+                amount = 0.0
+
+            status = 'released' if is_paid else 'in_escrow'
+
+            from WorkspacePayment.models import WorkspaceInstallment
+            inst = WorkspaceInstallment(
+                campaign=campaign,
+                negotiation=negotiation,
+                title=title,
+                amount=amount,
+                status=status,
+                is_paid=is_paid,
+            )
+            if paid_date:
+                inst.paid_date = paid_date
+            elif is_paid:
+                from django.utils import timezone
+                inst.paid_date = timezone.now().date()
+
+            inst.save()
+            messages.success(request, f"Successfully added manual installment '{inst.title}'.")
+
+        elif action_type == 'delete_installment_row':
+            inst_id = request.POST.get('installment_id')
+            from WorkspacePayment.models import WorkspaceInstallment
+            try:
+                inst = WorkspaceInstallment.objects.get(id=inst_id)
+                inst_title = inst.title
+                inst.delete()
+                messages.warning(request, f"Deleted installment '{inst_title}'.")
+            except WorkspaceInstallment.DoesNotExist:
+                pass
+
         elif action_type == 'update_installment_row':
             inst_id = request.POST.get('installment_id')
             title = request.POST.get('title')
@@ -499,6 +595,7 @@ class WorkspacePaymentInspectView(InspectView):
                     inst.status = 'in_escrow'
                     if paid_date:
                         inst.paid_date = paid_date
+
                 inst.save()
                 messages.success(request, f"Updated installment '{inst.title}'.")
             except WorkspaceInstallment.DoesNotExist:
@@ -519,6 +616,21 @@ class WorkspacePaymentViewSet(SnippetViewSet):
     list_display = ("campaign", "final_price", "status", "revision_reason", "updated_at")
     list_filter = ("status",)
     search_fields = ("campaign__name", "revision_reason")
+
+    def get_queryset(self, request=None):
+        try:
+            live_campaigns = Campaign.objects.filter(status__in=["Live", "Completed"])
+            for camp in live_campaigns:
+                WorkspacePaymentNegotiation.objects.get_or_create(
+                    campaign=camp,
+                    defaults={
+                        "final_price": camp.counter_price or camp.budget or 0,
+                        "status": "admin_approved" if str(getattr(camp, "created_via", "")).lower() in ["pitch", "request"] else "pending_creator_approval",
+                    }
+                )
+        except Exception as e:
+            pass
+        return WorkspacePaymentNegotiation.objects.filter(campaign__status__in=["Live", "Completed"])
 
 class CampaignWorkspaceGroup(SnippetViewSetGroup):
     items = (

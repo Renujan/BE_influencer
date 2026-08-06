@@ -536,21 +536,21 @@ class RequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         status_param = self.request.query_params.get("status")
 
-        statuses = ["Pending", "Countered", "Countered_Pending", "Business_Countered"]
+        statuses = ["Pending", "Countered", "Countered_Pending", "Business_Countered", "Live", "Completed", "Rejected"]
         if status_param:
             statuses = [s.strip() for s in status_param.split(",")]
 
         if user.is_staff or user.is_superuser:
-            return Campaign.objects.filter(status__in=statuses)
+            return Campaign.objects.filter(status__in=statuses).exclude(created_via="pitch")
 
         if hasattr(user, "business_profile"):
-            return Campaign.objects.filter(brand=user, status__in=statuses)
+            return Campaign.objects.filter(brand=user, status__in=statuses).exclude(created_via="pitch")
         elif hasattr(user, "creator_profile"):
             profile = getattr(user, "creator_profile", None)
             q_filter = models.Q(creator=user)
             if profile:
                 q_filter |= models.Q(creator__creator_profile=profile)
-            return Campaign.objects.filter(q_filter, status__in=statuses).distinct()
+            return Campaign.objects.filter(q_filter, status__in=statuses).exclude(created_via="pitch").distinct()
         return Campaign.objects.none()
 
     @action(detail=True, methods=["post"])
