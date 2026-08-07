@@ -109,7 +109,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         }
 
     def get_campaign_count(self, instance):
-        return instance.user.brand_campaigns.filter(creator__isnull=True).count()
+        return instance.user.brand_campaigns.count()
         
     def get_active_campaigns(self, instance):
         campaigns = instance.user.brand_campaigns.filter(creator__isnull=True).order_by('-id')[:3]
@@ -161,7 +161,7 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
             "social_accounts", "otp_verified", "status",
             "verification_documents_submitted", "document_type", "document_front",
             "document_back", "other_details", "campaign_count", "followers_count", "settings",
-            "is_featured", "featured_at", "portfolio"
+            "is_featured", "featured_at", "portfolio", "average_rating", "total_ratings_count"
         ]
 
     def get_campaign_count(self, instance):

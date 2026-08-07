@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "portfolio",
     "RateCard",
     "WorkspacePayment",
+    "CreatorRating",
 ]
 
 

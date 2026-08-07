@@ -663,6 +663,42 @@
             </div>
         </div>
 
+        <!-- Ratings Received Section -->
+        <div>
+            <h3 class="custom-section-title" style="border-bottom: 2px solid #f59e0b; display: flex; align-items: center; justify-content: space-between;">
+                <span>Ratings & Reviews Received ({% if instance.user %}{{ instance.user.received_creator_ratings.count }}{% else %}0{% endif %})</span>
+                <span style="color: #f59e0b; font-size: 16px; font-weight: 700;">Average: {% if instance.average_rating > 0 %}★ {{ instance.average_rating }} / 5.0{% else %}No ratings yet{% endif %}</span>
+            </h3>
+            <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; overflow-x: auto;">
+                {% if instance.user and instance.user.received_creator_ratings.all %}
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;">
+                        <thead>
+                            <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                <th style="padding: 10px 14px; font-weight: 600; color: #475569;">Business Person</th>
+                                <th style="padding: 10px 14px; font-weight: 600; color: #475569;">Rating</th>
+                                <th style="padding: 10px 14px; font-weight: 600; color: #475569;">Campaign</th>
+                                <th style="padding: 10px 14px; font-weight: 600; color: #475569;">Review / Feedback</th>
+                                <th style="padding: 10px 14px; font-weight: 600; color: #475569;">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in instance.user.received_creator_ratings.all %}
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <td style="padding: 12px 14px; font-weight: 600; color: #1e293b;">{{ r.brand.username }}</td>
+                                    <td style="padding: 12px 14px; font-weight: 700; color: #f59e0b;">★ {{ r.rating }} / 5</td>
+                                    <td style="padding: 12px 14px; color: #0284c7; font-weight: 500;">{{ r.campaign.name }}</td>
+                                    <td style="padding: 12px 14px; color: #475569;">{{ r.review|default:"-" }}</td>
+                                    <td style="padding: 12px 14px; color: #64748b; font-size: 12px;">{{ r.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p style="margin: 0; color: #94a3b8; font-size: 14px; text-align: center; padding: 12px;">No ratings or reviews submitted for this creator yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Admin Moderation Section -->
         <div>
             <h3 class="custom-section-title" style="border-bottom: 2px solid #ef4444;">Admin Moderation Controls</h3>

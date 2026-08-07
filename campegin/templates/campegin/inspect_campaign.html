@@ -558,6 +558,16 @@
                 </div>
 
                 <div class="custom-form-group">
+                    <label class="custom-form-label">Campaign Flow Progress ({{ instance.progress }}%)</label>
+                    <div class="custom-form-control-readonly" style="flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px;">
+                        <strong style="color: #0284c7;">{{ instance.progress }}% Complete</strong>
+                        <div class="progress-bar-container" style="margin-top: 4px; width: 100%;">
+                            <div class="progress-bar-fill" style="width: {{ instance.progress }}%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="custom-form-group">
                     <label class="custom-form-label">Delivery Language</label>
                     <div class="custom-form-control-readonly">{{ instance.delivery_language|default:"-" }}</div>
                 </div>

@@ -203,6 +203,22 @@ class CreatorProfile(models.Model):
     saved_brands = models.ManyToManyField('BusinessProfile', blank=True, related_name="saved_by_creators")
 
     @property
+    def average_rating(self):
+        from CreatorRating.models import CreatorRating
+        from django.db.models import Avg
+        if not self.user:
+            return 0.0
+        avg = CreatorRating.objects.filter(creator=self.user).aggregate(Avg('rating'))['rating__avg']
+        return round(float(avg), 1) if avg is not None else 0.0
+
+    @property
+    def total_ratings_count(self):
+        from CreatorRating.models import CreatorRating
+        if not self.user:
+            return 0
+        return CreatorRating.objects.filter(creator=self.user).count()
+
+    @property
     def role(self):
         return "creator"
 
@@ -244,6 +260,14 @@ class CreatorProfile(models.Model):
             bg, fg, label
         )
     get_status_badge.short_description = "Status"
+
+    def get_rating_display(self):
+        from django.utils.html import format_html
+        avg = self.average_rating
+        if avg > 0:
+            return format_html('<span style="color: #f59e0b; font-weight: 700;">★ {}</span>', avg)
+        return "-"
+    get_rating_display.short_description = "Rating"
 
     def __str__(self):
         return f"{self.user.username} (Creator)"

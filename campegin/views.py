@@ -38,12 +38,16 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if user.is_staff or user.is_superuser:
             qs = Campaign.objects.all()
         else:
-            if hasattr(user, "business_profile"):
-                qs = Campaign.objects.filter(brand=user)
-            elif hasattr(user, "creator_profile"):
+            profile = getattr(user, "profile", None)
+            is_creator = hasattr(user, "creator_profile") or getattr(profile, "role", "") in ["influencer", "creator"]
+            is_business = hasattr(user, "business_profile") or getattr(profile, "role", "") in ["business", "brand"]
+
+            if is_creator:
                 qs = Campaign.objects.filter(creator=user).exclude(status="Under_Review")
+            elif is_business:
+                qs = Campaign.objects.filter(brand=user)
             else:
-                qs = Campaign.objects.none()
+                qs = Campaign.objects.filter(models.Q(creator=user) | models.Q(brand=user))
 
         # Allow query-param filtering by status
         status_param = self.request.query_params.get("status")
@@ -106,9 +110,12 @@ class CampaignViewSet(viewsets.ModelViewSet):
         elif not any(char.isdigit() and len(w.strip(",")) == 4 for w in str(start_date).split() for char in w):
             start_date = f"{str(start_date).strip()}, {datetime.now().year}"
 
+        created_time = self.request.data.get("created_time") or serializer.validated_data.get("created_time") or datetime.now().isoformat()
+
         campaign = serializer.save(
             brand=self.request.user,
             start_date=start_date,
+            created_time=created_time,
             voice_brief=voice_brief_path or serializer.validated_data.get("voice_brief", ""),
             screenshare_brief=screenshare_brief_path or serializer.validated_data.get("screenshare_brief", ""),
             video_brief=video_brief_path or serializer.validated_data.get("video_brief", "")
@@ -501,7 +508,12 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         user = request.user
         profile = getattr(user, "profile", None)
-        sender_role = "creator" if (hasattr(user, "creator_profile") or getattr(profile, "role", "") == "influencer") else "business"
+        if user == campaign.creator or (campaign.creator and user.id == campaign.creator.id):
+            sender_role = "creator"
+        elif user == campaign.brand or (campaign.brand and user.id == campaign.brand.id):
+            sender_role = "business"
+        else:
+            sender_role = "creator" if (hasattr(user, "creator_profile") or getattr(profile, "role", "") in ["influencer", "creator"]) else "business"
 
         ticket = AdminComplianceTicket.objects.create(
             campaign=campaign,
@@ -559,7 +571,6 @@ class RequestViewSet(viewsets.ModelViewSet):
         if campaign.status == "Business_Countered" and campaign.counter_price:
             campaign.budget = campaign.counter_price
         campaign.status = "Live"
-        campaign.progress = 62 # set to default mockup progression
         campaign.save()
         return Response(CampaignSerializer(campaign).data)
 
@@ -631,7 +642,6 @@ class RequestViewSet(viewsets.ModelViewSet):
         if campaign.counter_price:
             campaign.budget = campaign.counter_price
         campaign.status = "Live"
-        campaign.progress = 62
         campaign.save()
         
         Notification.objects.create(
@@ -862,11 +872,21 @@ class CampaignStatsView(APIView):
         # ROI proxy
         total_roi = 4.1 if total_budget > 0 else 0.0
 
+        avg_rating = 0.0
+        if has_creator and hasattr(user, "creator_profile"):
+            avg_rating = user.creator_profile.average_rating
+        elif has_business:
+            from CreatorRating.models import CreatorRating
+            avg_res = CreatorRating.objects.filter(brand=user).aggregate(avg=Avg("rating"))["avg"]
+            avg_rating = round(float(avg_res), 1) if avg_res is not None else 0.0
+
         return Response({
             "total_campaigns": total_campaigns,
             "live_now": live_now,
             "total_budget": total_budget,
             "avg_engagement": avg_engagement,
+            "avg_rating": avg_rating,
+            "average_rating": avg_rating,
             "total_reach": total_reach,
             "total_impressions": total_impressions,
             "total_roi": total_roi,
@@ -878,16 +898,83 @@ class BusinessAnalyticsView(APIView):
 
     def get(self, request):
         from django.db.models import Sum, Avg
+        from datetime import datetime
         user = request.user
         qs = Campaign.objects.filter(brand=user)
+        total_campaigns_count = qs.count()
 
-        total_budget = float(qs.aggregate(total=Sum("budget"))["total"] or 0)
-        avg_progress = float(qs.aggregate(avg=Avg("progress"))["avg"] or 0)
+        # 1. Average progress across all campaigns created by this business user
+        avg_progress = float(qs.aggregate(avg=Avg("progress"))["avg"] or 0) if total_campaigns_count > 0 else 0.0
+
+        # 2. Allocated Budget: Total Decided Final Price from workspace payment negotiations ONLY
+        total_allocated_budget = 0.0
+        durations = []
+
+        from WorkspacePayment.models import WorkspacePaymentNegotiation
+        for c in qs:
+            price = None
+            try:
+                # Check for payment negotiation final_price in workspace endpoint
+                neg = WorkspacePaymentNegotiation.objects.filter(campaign_id=c.id).order_by('-id').first()
+                if neg and neg.final_price is not None and float(neg.final_price) > 0:
+                    price = float(neg.final_price)
+            except Exception:
+                pass
+
+            # Only add to total_allocated_budget if final price was decided in workspace!
+            if price is not None:
+                total_allocated_budget += price
+
+            # Calculate duration for each campaign
+            days = 0
+            if c.start_date and c.end_date:
+                try:
+                    d1 = datetime.strptime(str(c.start_date).strip(), "%Y-%m-%d")
+                    d2 = datetime.strptime(str(c.end_date).strip(), "%Y-%m-%d")
+                    days = max(1, (d2 - d1).days)
+                except Exception:
+                    days = 28
+            elif c.created_at:
+                days = 28
+
+            if days > 0:
+                durations.append(days)
+
+        # Average duration calculation across all campaigns
+        avg_duration_days = int(sum(durations) / len(durations)) if len(durations) > 0 else 0
+
+        # 3. Total Paid: Workspace Payment Installment Payout Breakdown (is_paid=True or status='released')
+        total_paid_amount = 0.0
+        last_paid_milestone = "None"
+        try:
+            from WorkspacePayment.models import WorkspaceInstallment
+            paid_insts = WorkspaceInstallment.objects.filter(campaign__brand=user, is_paid=True)
+            sum_val = float(paid_insts.aggregate(total=Sum("amount"))["total"] or 0)
+            if sum_val > 0:
+                total_paid_amount = sum_val
+                last_obj = paid_insts.order_by('-updated_at').first()
+                if last_obj:
+                    last_paid_milestone = last_obj.title
+        except Exception:
+            pass
+
+        if total_paid_amount == 0:
+            try:
+                from campegin.models import PaymentInstallment
+                legacy_paid = PaymentInstallment.objects.filter(campaign__brand=user, status__in=["Released", "Funded"])
+                sum_val = float(legacy_paid.aggregate(total=Sum("amount"))["total"] or 0)
+                if sum_val > 0:
+                    total_paid_amount = sum_val
+                    last_obj = legacy_paid.last()
+                    if last_obj:
+                        last_paid_milestone = last_obj.milestone_name
+            except Exception:
+                pass
+
         avg_engagement = round(3.0 + (avg_progress / 100) * 9.0, 1)
-
-        total_reach = int(total_budget * 1000)
-        total_impressions = int(total_budget * 2500)
-        total_roi = 4.1 if total_budget > 0 else 0.0
+        total_reach = int(total_allocated_budget * 1000)
+        total_impressions = int(total_allocated_budget * 2500)
+        total_roi = 4.1 if total_allocated_budget > 0 else 0.0
 
         # Top campaigns by engagement/progress
         top_campaigns_qs = qs.exclude(status="Pending").order_by("-progress")[:5]
@@ -907,6 +994,12 @@ class BusinessAnalyticsView(APIView):
 
         return Response({
             "stats": {
+                "avg_progress": round(avg_progress, 1),
+                "total_allocated_budget": total_allocated_budget,
+                "total_paid_amount": total_paid_amount,
+                "last_paid_milestone": last_paid_milestone,
+                "avg_duration_days": avg_duration_days,
+                "total_campaigns_count": total_campaigns_count,
                 "total_reach": total_reach,
                 "total_impressions": total_impressions,
                 "avg_engagement": avg_engagement,
@@ -1070,7 +1163,6 @@ class PitchViewSet(viewsets.ModelViewSet):
             budget=request.data.get("budget") or pitch.budget,
             brief=request.data.get("brief") or pitch.description or f"Campaign proposal based on pitch: {pitch.campaign_name}",
             status="Live",
-            progress=62,
             start_date=request.data.get("start_date") or pitch.sent_date or "2026-08-01",
             created_via="pitch",
         )

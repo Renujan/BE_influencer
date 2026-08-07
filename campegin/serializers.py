@@ -87,19 +87,30 @@ class CampaignSerializer(serializers.ModelSerializer):
             return AdminComplianceTicketSerializer(obj.tickets.all(), many=True).data
 
         profile = getattr(user, "profile", None)
-        role = profile.role if profile else ("influencer" if hasattr(user, "creator_profile") else "business")
+        is_creator = (user == obj.creator or (obj.creator and user.id == obj.creator.id) or hasattr(user, "creator_profile") or getattr(profile, "role", "") in ["influencer", "creator"])
 
-        if role in ["influencer", "creator"]:
+        if is_creator:
             qs = obj.tickets.filter(
                 models.Q(sender_role__in=["creator", "influencer"]) |
                 models.Q(sender=user) |
-                (models.Q(sender_role__in=["admin", "system", ""]) & models.Q(target_audience__in=["creator", "influencer", "both"]))
+                (models.Q(sender_role__in=["admin", "system", ""]) & (
+                    models.Q(target_audience__iexact="creator") |
+                    models.Q(target_audience__iexact="influencer") |
+                    models.Q(target_audience__iexact="both") |
+                    models.Q(target_audience="") |
+                    models.Q(target_audience__isnull=True)
+                ))
             ).distinct().order_by("-id")
         else:
             qs = obj.tickets.filter(
                 models.Q(sender_role="business") |
                 models.Q(sender=user) |
-                (models.Q(sender_role__in=["admin", "system", ""]) & models.Q(target_audience__in=["business", "both"]))
+                (models.Q(sender_role__in=["admin", "system", ""]) & (
+                    models.Q(target_audience__iexact="business") |
+                    models.Q(target_audience__iexact="both") |
+                    models.Q(target_audience="") |
+                    models.Q(target_audience__isnull=True)
+                ))
             ).distinct().order_by("-id")
 
         return AdminComplianceTicketSerializer(qs, many=True).data
@@ -130,12 +141,36 @@ class CampaignSerializer(serializers.ModelSerializer):
 
         user = request.user
         profile = getattr(user, "profile", None)
-        role = profile.role if profile else "influencer"
-        if role == "business":
-            qs = obj.chat_reviews.filter(target_audience__in=["business", "both"]).order_by("-id")
+        is_creator = (user == obj.creator or (obj.creator and user.id == obj.creator.id) or hasattr(user, "creator_profile") or getattr(profile, "role", "") in ["influencer", "creator"])
+
+        if is_creator:
+            qs = obj.chat_reviews.filter(
+                models.Q(target_audience__iexact="creator") |
+                models.Q(target_audience__iexact="influencer") |
+                models.Q(target_audience__iexact="both") |
+                models.Q(target_audience="") |
+                models.Q(target_audience__isnull=True)
+            ).order_by("-id")
         else:
-            qs = obj.chat_reviews.filter(target_audience__in=["creator", "both"]).order_by("-id")
+            qs = obj.chat_reviews.filter(
+                models.Q(target_audience__iexact="business") |
+                models.Q(target_audience__iexact="both") |
+                models.Q(target_audience="") |
+                models.Q(target_audience__isnull=True)
+            ).order_by("-id")
         return ChatReviewSerializer(qs, many=True).data
+
+    creator_rating = serializers.SerializerMethodField()
+
+    def get_creator_rating(self, obj):
+        if hasattr(obj, "rating") and obj.rating:
+            return {
+                "id": obj.rating.id,
+                "rating": obj.rating.rating,
+                "review": obj.rating.review,
+                "created_at": obj.rating.created_at,
+            }
+        return None
 
     class Meta:
         model = Campaign
@@ -143,8 +178,8 @@ class CampaignSerializer(serializers.ModelSerializer):
             "id", "name", "brand", "brand_name", "creator", "creator_name",
             "status", "budget", "min_budget", "max_budget", "per_creator_budget", "min_price", "max_price", "rate_card_id", "start_date", "end_date", "progress", "brief", "admin_review",
             "category", "delivery_language", "country", "province", "district", "medium", "voice_brief", "screenshare_brief", "video_brief",
-            "counter_price", "counter_note", "counter_round", "decline_reason", "created_via",
-            "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews"
+            "counter_price", "counter_note", "counter_round", "decline_reason", "created_via", "created_time", "created_at",
+            "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews", "creator_rating"
         ]
         read_only_fields = ["brand"]
 

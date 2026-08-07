@@ -68,7 +68,18 @@ def creator_action(request):
         if not revision_reason or not str(revision_reason).strip():
             return Response({'error': 'A reason is required when requesting a revision.'}, status=status.HTTP_400_BAD_REQUEST)
         negotiation.status = 'revision_requested'
-        negotiation.revision_reason = str(revision_reason).strip()
+        
+        reason_str = str(revision_reason).strip()
+        requested_price = request.data.get('requested_price') or request.data.get('price')
+        if requested_price and not reason_str.startswith('Requested Price:'):
+            try:
+                p_val = float(str(requested_price).replace(',', '').replace('$', '').replace('Rs', '').strip())
+                if p_val > 0:
+                    reason_str = f"Requested Price: ${p_val:,.2f} — Reason: {reason_str}"
+            except Exception:
+                pass
+                
+        negotiation.revision_reason = reason_str
 
     if request.user and request.user.is_authenticated:
         negotiation.action_by = request.user

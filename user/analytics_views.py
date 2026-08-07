@@ -105,11 +105,17 @@ def creator_analytics(request):
             "er": round(max(0.5, avg_er + random.uniform(-2, 2)), 1)
         })
 
+    avg_rating_val = 0.0
+    if hasattr(request.user, "creator_profile"):
+        avg_rating_val = request.user.creator_profile.average_rating
+
     return JsonResponse({
         "baseFollowers": base_followers,
         "totalVerifiedReach": total_reach,
         "avgVerifiedEr": avg_er,
-        "avgRating": 4.9,
+        "avgRating": avg_rating_val,
+        "avg_rating": avg_rating_val,
+        "average_rating": avg_rating_val,
         "top_posts": top_posts,
         "platform_stats": platform_stats,
         "growth_data": growth_data,

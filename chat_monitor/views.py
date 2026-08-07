@@ -24,6 +24,8 @@ def chat_monitor_detail_view(request, campaign_id):
     # Auto-sync user submitted compliance tickets into ChatReview if missing
     for t in campaign.tickets.all():
         s_role = getattr(t, "sender_role", "both") or "both"
+        if s_role == "admin":
+            continue
         s_name = getattr(t, "sender_name", "") or (t.sender.username if getattr(t, "sender", None) else "")
         prefix = f"[{s_role.upper()} REQUEST{' by ' + s_name if s_name else ''}]"
         expected_text = f"{prefix} {t.message}"
@@ -174,14 +176,23 @@ class CampaignChatsViewSet(viewsets.ReadOnlyModelViewSet):
         if campaign.brand != request.user and campaign.creator != request.user:
             return Response({"error": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
             
-        # Filter reviews based on user role (business sees business/both; creator sees creator/both)
-        profile = getattr(request.user, "profile", None)
-        role = profile.role if profile else "influencer"
+        is_creator = (request.user == campaign.creator or (campaign.creator and request.user.id == campaign.creator.id) or hasattr(request.user, "creator_profile"))
         
-        if role == "business":
-            reviews_qs = campaign.chat_reviews.filter(target_audience__in=["business", "both"]).order_by("-id")
+        if is_creator:
+            reviews_qs = campaign.chat_reviews.filter(
+                models.Q(target_audience__iexact="creator") |
+                models.Q(target_audience__iexact="influencer") |
+                models.Q(target_audience__iexact="both") |
+                models.Q(target_audience="") |
+                models.Q(target_audience__isnull=True)
+            ).order_by("-id")
         else:
-            reviews_qs = campaign.chat_reviews.filter(target_audience__in=["creator", "both"]).order_by("-id")
+            reviews_qs = campaign.chat_reviews.filter(
+                models.Q(target_audience__iexact="business") |
+                models.Q(target_audience__iexact="both") |
+                models.Q(target_audience="") |
+                models.Q(target_audience__isnull=True)
+            ).order_by("-id")
             
         return Response(ChatReviewSerializer(reviews_qs, many=True).data)
 
@@ -208,16 +219,48 @@ def chat_monitor_review_view(request, campaign_id):
         review_id = request.POST.get("review_id")
 
         if action == "delete" and review_id:
-            ChatReview.objects.filter(id=review_id, campaign=campaign).delete()
+            rev = ChatReview.objects.filter(id=review_id, campaign=campaign).first()
+            if rev:
+                raw_text = rev.review_text
+                # Delete any associated AdminComplianceTicket so auto-sync will not recreate it
+                for t in campaign.tickets.all():
+                    s_role = getattr(t, "sender_role", "both") or "both"
+                    s_name = getattr(t, "sender_name", "") or (t.sender.username if getattr(t, "sender", None) else "")
+                    prefix = f"[{s_role.upper()} REQUEST{' by ' + s_name if s_name else ''}]"
+                    expected_text = f"{prefix} {t.message}"
+                    
+                    if (t.message == raw_text or 
+                        expected_text == raw_text or 
+                        f"Directive: {raw_text}" == t.message or
+                        t.reply == raw_text or
+                        (raw_text and raw_text.endswith(t.message))):
+                        t.delete()
+
+                rev.delete()
             return redirect(reverse("chat_monitor_review", args=[campaign.id]))
 
         if action == "edit" and review_id:
             rev = ChatReview.objects.filter(id=review_id, campaign=campaign).first()
             if rev:
-                rev.review_text = request.POST.get("review_text", rev.review_text)
-                rev.category = request.POST.get("category", rev.category)
-                rev.target_audience = request.POST.get("target_audience", rev.target_audience)
+                old_text = rev.review_text
+                new_text = request.POST.get("review_text", rev.review_text)
+                new_category = request.POST.get("category", rev.category)
+                new_target = request.POST.get("target_audience", rev.target_audience)
+                
+                rev.review_text = new_text
+                rev.category = new_category
+                rev.target_audience = new_target
                 rev.save()
+
+                # Update matching AdminComplianceTicket if exists
+                for t in campaign.tickets.all():
+                    if t.reply == old_text or t.message == f"Directive: {old_text}" or old_text.endswith(t.message):
+                        t.category = new_category
+                        t.target_audience = new_target
+                        t.message = f"Directive: {new_text}"
+                        t.reply = new_text
+                        t.save()
+
             return redirect(reverse("chat_monitor_review", args=[campaign.id]))
 
         category = request.POST.get("category", "Safety / Guidelines")
@@ -246,6 +289,8 @@ def chat_monitor_review_view(request, campaign_id):
     # Auto-sync user submitted compliance tickets into ChatReview if missing
     for t in campaign.tickets.all():
         s_role = getattr(t, "sender_role", "both") or "both"
+        if s_role == "admin":
+            continue
         s_name = getattr(t, "sender_name", "") or (t.sender.username if getattr(t, "sender", None) else "")
         prefix = f"[{s_role.upper()} REQUEST{' by ' + s_name if s_name else ''}]"
         expected_text = f"{prefix} {t.message}"
@@ -257,9 +302,21 @@ def chat_monitor_review_view(request, campaign_id):
                 target_audience="creator" if s_role in ["creator", "influencer"] else ("business" if s_role == "business" else "both")
             )
 
-    reviews = campaign.chat_reviews.all().order_by("-id")
+    all_reviews = campaign.chat_reviews.all().order_by("-id")
+    user_requests = []
+    admin_directives = []
+
+    for r in all_reviews:
+        text = r.review_text or ""
+        if text.startswith("[CREATOR REQUEST") or text.startswith("[INFLUENCER REQUEST") or text.startswith("[BUSINESS REQUEST"):
+            user_requests.append(r)
+        else:
+            admin_directives.append(r)
+
     context = {
         "campaign": campaign,
-        "reviews": reviews,
+        "reviews": all_reviews,
+        "user_requests": user_requests,
+        "admin_directives": admin_directives,
     }
     return render(request, "chat_monitor/review_chat.html", context)

@@ -163,7 +163,7 @@ class CreatorProfileViewSet(ModelViewSet):
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
     
-    list_display = ("user", "phone", "location", "country", "get_formatted_wallet", "otp_verified", "get_status_badge")
+    list_display = ("user", "phone", "location", "country", "get_formatted_wallet", "otp_verified", "get_status_badge", "get_rating_display")
     list_export = ("id", "user.username", "user.email", "phone", "location", "country.name", "wallet_balance", "otp_verified", "status")
     list_filter = ("otp_verified", "status")
     search_fields = ("user__username", "user__email", "phone", "location")
@@ -283,10 +283,14 @@ def register_custom_user_profiles_menu():
         icon_name="folder-open-1",
     )
 
+    from CreatorRating.wagtail_hooks import CreatorRatingViewSet
+    creator_rating_view = CreatorRatingViewSet()
+
     # Creator Submenu Items
     creator_menu = Menu(items=[
         MenuItem("Creator Profiles", creator_prof.menu_url, icon_name="user"),
         MenuItem("Niches", niche.menu_url, icon_name="tag"),
+        MenuItem("Rating", creator_rating_view.menu_url, icon_name="star"),
     ])
     creator_submenu = SubmenuMenuItem(
         label="Creator",
@@ -326,6 +330,31 @@ def hide_unwanted_menu_items(request, menu_items):
 def hide_unwanted_settings_menu_items(request, menu_items):
     # Keep only users and groups inside the settings menu
     menu_items[:] = [item for item in menu_items if item.name in ['users', 'groups']]
+
+from django.utils.safestring import mark_safe
+
+@hooks.register("insert_global_admin_css")
+def hide_sidebar_search_css():
+    return mark_safe(
+        """
+        <style>
+            /* Hide Super Admin Sidebar Search Bar & Search Form only */
+            form[action*="search"],
+            input[type="search"],
+            .sidebar-search,
+            .sidebar-search-form,
+            .w-sidebar-search,
+            [data-wagtail-sidebar-search],
+            [data-sidebar-search],
+            .sidebar-menu-item--search,
+            .w-sidebar__search,
+            .w-sidebar-search-form,
+            .sidebar-search__input {
+                display: none !important;
+            }
+        </style>
+        """
+    )
 
 
 from django.contrib.auth.signals import user_logged_in

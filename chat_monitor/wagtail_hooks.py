@@ -73,8 +73,9 @@ class ChatMonitorCampaignViewSet(ModelViewSet):
     index_view_class = ChatMonitorIndexView
 
     # "View Chat" and "Review" stay as inline buttons; campaign detail and PDF go into the dropdown
-    list_display = ("get_business_name", "get_creator_name", "get_last_chat_time", "get_view_chat_btn", "get_review_btn")
+    list_display = ("get_campaign_name", "get_business_name", "get_creator_name", "get_last_chat_time", "get_view_chat_btn", "get_review_btn")
     list_export = ("name", "brand.username", "creator.username", "status", "budget", "progress")
+    search_fields = ("name", "brand__username", "creator__username")
 
     @property
     def permission_policy(self):

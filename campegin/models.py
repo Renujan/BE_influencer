@@ -131,6 +131,8 @@ class Campaign(models.Model):
     counter_history = models.JSONField(default=list, blank=True, null=True)
     decline_reason = models.TextField(blank=True, null=True)
     created_via = models.CharField(max_length=50, default="direct_request", choices=(("direct_request", "Direct Request"), ("request", "Request"), ("pitch", "Creator Pitch")))
+    created_time = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
     panels = [
         FieldPanel('name'),
@@ -161,10 +163,64 @@ class Campaign(models.Model):
         FieldPanel('counter_round'),
         FieldPanel('decline_reason'),
         FieldPanel('created_via'),
+        FieldPanel('created_time'),
     ]
+
+    def calculate_flow_progress(self):
+        """
+        Calculate progress percentage according to the campaign flow progress:
+        - Rejected: 0%
+        - Under_Review: 20%
+        - Pending (Admin Approved, Creator Review): 40%
+        - Countered / Countered_Pending / Business_Counter_Pending / Business_Countered (Negotiation): 55%
+        - Live / Active: 70% base (+ up to 25% for completed deliverables/tasks, max 95%)
+        - Completed: 100%
+        """
+        status = (self.status or "").strip()
+        if status == "Rejected":
+            return 0
+        elif status == "Under_Review":
+            return 20
+        elif status == "Pending":
+            return 40
+        elif status in ["Countered", "Countered_Pending", "Business_Counter_Pending", "Business_Countered"]:
+            return 55
+        elif status in ["Live", "live", "Active", "active", "In_Progress", "in_progress"]:
+            if self.pk:
+                try:
+                    total_dels = self.deliverables.count()
+                    if total_dels > 0:
+                        approved_dels = self.deliverables.filter(status__in=["Approved", "Published"]).count()
+                        deliverable_bonus = int((approved_dels / total_dels) * 25)
+                        return min(95, 70 + deliverable_bonus)
+                except Exception:
+                    pass
+
+                try:
+                    total_tasks = self.tasks.count()
+                    if total_tasks > 0:
+                        done_tasks = self.tasks.filter(is_done=True).count()
+                        task_bonus = int((done_tasks / total_tasks) * 25)
+                        return min(95, 70 + task_bonus)
+                except Exception:
+                    pass
+
+            return 70
+        elif status in ["Completed", "completed"]:
+            return 100
+
+        return self.progress or 0
+
+    def save(self, *args, **kwargs):
+        self.progress = self.calculate_flow_progress()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} ({self.status})"
+
+    def get_campaign_name(self):
+        return self.name or "-"
+    get_campaign_name.short_description = "Campaign Name"
 
     def get_business_name(self):
         return self.brand.username if self.brand else "-"

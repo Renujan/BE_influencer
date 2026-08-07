@@ -84,7 +84,7 @@ class CampaignInspectView(InspectView):
             if self.object.counter_price:
                 self.object.budget = self.object.counter_price
             self.object.status = "Live"
-            self.object.progress = 62
+            self.object.progress = self.object.calculate_flow_progress()
             messages.success(request, f"Counter offer accepted! Campaign '{self.object.name}' is now Live.")
         elif status in [choice[0] for choice in self.object.STATUS_CHOICES]:
             if status == "Live":
