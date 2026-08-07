@@ -4,7 +4,7 @@ from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
 from wagtail.admin.views.generic.models import InspectView, IndexView, MenuItem as GenericMenuItem
 from django.utils.translation import gettext as _
 from django.urls import reverse, path
-from .models import BusinessProfile, CreatorProfile, Niche, BusinessType, Country, Medium
+from .models import BusinessProfile, CreatorProfile, Niche, BusinessType, Country, Medium, CreatorSocialAccount
 from Setting.models import CreatorSettings, BusinessSettings
 from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view, admin_approve_creator_view, admin_restrict_creator_view, admin_toggle_featured_view
 
@@ -234,6 +234,33 @@ class MediumViewSet(ModelViewSet):
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
 
+# Custom Index View for Social Accounts to ensure Inspect / View action is prominent
+class SocialAccountIndexView(IndexView):
+    def get_list_more_buttons(self, instance):
+        buttons = super().get_list_more_buttons(instance)
+        for item in buttons:
+            if hasattr(item, "label") and (str(item.label) == "Inspect" or item.label == _("Inspect")):
+                item.label = _("View")
+                item.icon_name = "view"
+        return buttons
+
+# 7. Creator Connected Social Accounts Viewset
+class CreatorSocialAccountViewSet(ModelViewSet):
+    model = CreatorSocialAccount
+    menu_label = "Connected Accounts"
+    icon = "link"
+    menu_icon = "link"
+    menu_item_name = "creator_social_accounts"
+    add_to_admin_menu = False
+    inspect_view_enabled = True
+    index_view_class = SocialAccountIndexView
+    form_fields = ["user", "platform", "username", "followers_count", "proof_link", "is_connected", "is_verified"]
+    inspect_view_fields = ["user", "platform", "username", "followers_count", "get_proof_link_display", "is_connected", "is_verified"]
+    list_display = ("user", "platform", "username", "followers_count", "get_proof_link_display", "is_connected", "is_verified")
+    list_editable = ("is_verified", "is_connected")
+    search_fields = ("user__username", "user__email", "user__first_name", "user__last_name", "platform", "username")
+    list_filter = ("platform", "is_connected", "is_verified")
+
 # Register Viewsets directly (without adding to sidebar directly, as we will use custom menu items)
 @hooks.register("register_admin_viewset")
 def register_business_profile_viewset():
@@ -258,6 +285,10 @@ def register_country_viewset():
 @hooks.register("register_admin_viewset")
 def register_medium_viewset():
     return MediumViewSet()
+
+@hooks.register("register_admin_viewset")
+def register_creator_social_account_viewset():
+    return CreatorSocialAccountViewSet()
 
 # Register custom nested menu items
 @hooks.register("register_admin_menu_item")
@@ -285,12 +316,14 @@ def register_custom_user_profiles_menu():
 
     from CreatorRating.wagtail_hooks import CreatorRatingViewSet
     creator_rating_view = CreatorRatingViewSet()
+    social_acc_view = CreatorSocialAccountViewSet()
 
     # Creator Submenu Items
     creator_menu = Menu(items=[
         MenuItem("Creator Profiles", creator_prof.menu_url, icon_name="user"),
         MenuItem("Niches", niche.menu_url, icon_name="tag"),
         MenuItem("Rating", creator_rating_view.menu_url, icon_name="star"),
+        MenuItem("Connected Account", social_acc_view.menu_url, icon_name="link"),
     ])
     creator_submenu = SubmenuMenuItem(
         label="Creator",

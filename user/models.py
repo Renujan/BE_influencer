@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils.safestring import mark_safe
 from wagtail.snippets.models import register_snippet
 
 from modelcluster.models import ClusterableModel
@@ -288,21 +289,26 @@ class CreatorRate(models.Model):
 
 @register_snippet
 class CreatorSocialAccount(models.Model):
-    PLATFORM_CHOICES = (
-        ("instagram", "Instagram"),
-        ("youtube", "YouTube"),
-        ("tiktok", "TikTok"),
-        ("facebook", "Facebook"),
-    )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="social_accounts")
-    platform = models.CharField(max_length=30, choices=PLATFORM_CHOICES)
-    username = models.CharField(max_length=100)
-    followers_count = models.CharField(max_length=50) # e.g. "1.2M", "320K"
-    engagement_rate = models.DecimalField(max_digits=5, decimal_places=2) # e.g. 8.20
+    platform = models.CharField(max_length=100)
+    username = models.CharField(max_length=100, blank=True, default="")
+    followers_count = models.CharField(max_length=50, blank=True, default="") # e.g. "1.2M", "320K", "50,000"
+    proof_link = models.CharField(max_length=255, blank=True, default="")
+    engagement_rate = models.DecimalField(max_digits=5, decimal_places=2, default=5.00) # e.g. 8.20
     is_connected = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False, help_text="Verified by Super Admin")
 
     def __str__(self):
-        return f"{self.user.username} - {self.platform} ({self.username})"
+        status_str = "Verified" if self.is_verified else ("In Verify" if self.is_connected else "Disconnected")
+        return f"{self.user.username} - {self.platform} ({status_str})"
+
+    def get_proof_link_display(self):
+        url = (self.proof_link or "").strip()
+        if not url:
+            return "-"
+        full_url = url if url.startswith("http://") or url.startswith("https://") else f"https://{url}"
+        return mark_safe(f'<a href="{full_url}" target="_blank" rel="noopener noreferrer" style="color: #2F54EB; font-weight: bold; text-decoration: underline; white-space: nowrap;">🔗 Open Link ↗</a>')
+    get_proof_link_display.short_description = "Proof Link"
 
 User.profile = property(lambda self: getattr(self, "business_profile", None) or getattr(self, "creator_profile", None))
 

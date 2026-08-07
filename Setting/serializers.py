@@ -222,6 +222,29 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
                     bank_book_photo_url=payout_item.get("bank_book_photo_url"),
                     is_primary=payout_item.get("is_primary", False)
                 )
+
+        # Update social accounts
+        socials_data = self.initial_data.get("social_accounts") or validated_data.get("social_accounts")
+        if socials_data and isinstance(socials_data, list):
+            from user.models import CreatorSocialAccount
+            for acc_item in socials_data:
+                platform_name = acc_item.get("platform") or acc_item.get("name")
+                if not platform_name:
+                    continue
+                sa_obj, _ = CreatorSocialAccount.objects.get_or_create(
+                    user=instance.user,
+                    platform=platform_name
+                )
+                sa_obj.username = acc_item.get("username") or acc_item.get("handle") or sa_obj.username or ""
+                sa_obj.followers_count = str(acc_item.get("followers_count") or acc_item.get("followers") or sa_obj.followers_count or "")
+                sa_obj.proof_link = acc_item.get("proof_link") or acc_item.get("proof_url") or sa_obj.proof_link or ""
+                if "is_connected" in acc_item:
+                    sa_obj.is_connected = bool(acc_item["is_connected"])
+                elif "connected" in acc_item:
+                    sa_obj.is_connected = bool(acc_item["connected"])
+                if "is_verified" in acc_item:
+                    sa_obj.is_verified = bool(acc_item["is_verified"])
+                sa_obj.save()
                 
         return instance
 

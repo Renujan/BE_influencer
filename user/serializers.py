@@ -47,7 +47,7 @@ class CreatorRateSerializer(serializers.ModelSerializer):
 class CreatorSocialAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = CreatorSocialAccount
-        fields = ["id", "platform", "username", "followers_count", "engagement_rate", "is_connected"]
+        fields = ["id", "platform", "username", "followers_count", "proof_link", "engagement_rate", "is_connected", "is_verified"]
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
