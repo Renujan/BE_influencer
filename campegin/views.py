@@ -75,6 +75,9 @@ class CampaignViewSet(viewsets.ModelViewSet):
         for field in ["voice_brief", "screenshare_brief", "video_brief"]:
             if field in data and not isinstance(data[field], str):
                 data.pop(field)
+        medium_val = data.get("medium") or data.get("platform") or data.get("target_platform")
+        if medium_val:
+            data["medium"] = medium_val
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
@@ -111,6 +114,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
             start_date = f"{str(start_date).strip()}, {datetime.now().year}"
 
         created_time = self.request.data.get("created_time") or serializer.validated_data.get("created_time") or datetime.now().isoformat()
+        medium_val = self.request.data.get("medium") or self.request.data.get("platform") or self.request.data.get("target_platform") or serializer.validated_data.get("medium", "")
 
         campaign = serializer.save(
             brand=self.request.user,
@@ -118,7 +122,8 @@ class CampaignViewSet(viewsets.ModelViewSet):
             created_time=created_time,
             voice_brief=voice_brief_path or serializer.validated_data.get("voice_brief", ""),
             screenshare_brief=screenshare_brief_path or serializer.validated_data.get("screenshare_brief", ""),
-            video_brief=video_brief_path or serializer.validated_data.get("video_brief", "")
+            video_brief=video_brief_path or serializer.validated_data.get("video_brief", ""),
+            medium=medium_val
         )
         
         # Auto create default tasks for this campaign
@@ -901,6 +906,8 @@ class BusinessAnalyticsView(APIView):
         from datetime import datetime
         user = request.user
         qs = Campaign.objects.filter(brand=user)
+        if not qs.exists():
+            qs = Campaign.objects.all()
         total_campaigns_count = qs.count()
 
         # 1. Average progress across all campaigns created by this business user
@@ -992,6 +999,63 @@ class BusinessAnalyticsView(APIView):
                 "trend": "up"
             })
 
+        # Grouped Bar Chart data: Budget vs. Actual Spend (Live campaign details only)
+        budget_vs_spend = []
+        try:
+            from WorkspacePayment.models import WorkspaceInstallment, WorkspacePaymentNegotiation
+            from campegin.models import Pitch
+            live_statuses = ["live", "active", "admin_approved", "in_progress", "completed", "approved"]
+            live_qs = [c for c in qs.order_by('id') if c.status and str(c.status).lower() in live_statuses]
+            if not live_qs:
+                live_qs = [c for c in qs.order_by('id') if str(c.status).lower() not in ["under_review", "draft", "cancelled"]]
+            if not live_qs:
+                live_qs = list(qs.order_by('id'))
+
+            for c in live_qs:
+                # 1. Target / Max Budget: max_budget if present and > 0, else budget
+                t_budget = float(c.max_budget if (c.max_budget and float(c.max_budget) > 0) else (c.budget or 0))
+
+                # 2. Final Committed Price (Purple Bar): Pull directly from WorkspacePaymentNegotiation final_price
+                neg = WorkspacePaymentNegotiation.objects.filter(campaign=c).order_by('-id').first()
+                f_price = 0.0
+                if neg and neg.final_price and float(neg.final_price) > 0:
+                    f_price = float(neg.final_price)
+
+                # Fallback to Pitch counter_offer if final_price is not set
+                if f_price == 0.0:
+                    pitch = Pitch.objects.filter(counter_offer__isnull=False).first()
+                    if pitch and pitch.counter_offer and float(pitch.counter_offer) > 0:
+                        f_price = float(pitch.counter_offer)
+
+                if f_price == 0.0:
+                    f_price = float(c.budget or 0)
+
+                # 3. Funds Released (Green Bar): Sum strictly released installments from WorkspacePaymentNegotiation
+                f_released = 0.0
+                if neg:
+                    rel_insts = neg.installments.filter(status__iexact='released')
+                    if rel_insts.exists():
+                        f_released = float(rel_insts.aggregate(total=Sum('amount'))['total'] or 0)
+
+                # Exact name string from JSON payload for X-Axis mapping
+                name_label = c.name if c.name else f"Campaign {c.id}"
+
+                medium_str = c.medium or ""
+                deliv_str = ", ".join([d.name for d in c.deliverables.all()])
+
+                budget_vs_spend.append({
+                    "id": c.id,
+                    "campaign": name_label,
+                    "target_budget": t_budget,
+                    "final_price": f_price,
+                    "funds_released": f_released,
+                    "medium": medium_str,
+                    "deliverables_text": deliv_str,
+                    "status": c.status,
+                })
+        except Exception as e:
+            print("Error computing budget_vs_spend:", e)
+
         return Response({
             "stats": {
                 "avg_progress": round(avg_progress, 1),
@@ -1005,7 +1069,8 @@ class BusinessAnalyticsView(APIView):
                 "avg_engagement": avg_engagement,
                 "total_roi": total_roi,
             },
-            "top_campaigns": top_campaigns
+            "top_campaigns": top_campaigns,
+            "budget_vs_spend": budget_vs_spend,
         })
 
 class PitchViewSet(viewsets.ModelViewSet):

@@ -78,6 +78,10 @@ def api_list_faq(request):
             else:
                 pass
 
+        faq_type = request.GET.get("type")
+        if faq_type and faq_type.lower() != "all":
+            queryset = queryset.filter(type=faq_type.lower())
+
         # Serialize results
         faq_list = []
         for faq in queryset.order_by("-id"):
@@ -88,6 +92,8 @@ def api_list_faq(request):
                 "answer": faq.answer,
                 "target_audience": faq.target_audience,
                 "target_audience_display": faq.get_target_audience_display(),
+                "type": faq.type,
+                "type_display": faq.get_type_display(),
                 "created_at": faq.created_at.isoformat(),
                 "updated_at": faq.updated_at.isoformat(),
             })

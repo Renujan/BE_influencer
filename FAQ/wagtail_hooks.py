@@ -46,9 +46,9 @@ class FAQViewSet(ModelViewSet):
     inspect_view_enabled = True
     inspect_template_name = "FAQ/inspect_faq.html"
     index_view_class = FAQIndexView
-    list_display = ("faq_id", "question", "target_audience", "is_active", "created_at")
-    list_export = ("faq_id", "question", "answer", "target_audience", "is_active", "created_at", "updated_at")
-    list_filter = ("target_audience", "is_active")
+    list_display = ("faq_id", "question", "target_audience", "type", "is_active", "created_at")
+    list_export = ("faq_id", "question", "answer", "target_audience", "type", "is_active", "created_at", "updated_at")
+    list_filter = ("target_audience", "type", "is_active")
     search_fields = ("faq_id", "question", "answer")
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"

@@ -449,29 +449,82 @@ class Command(BaseCommand):
         FAQ.objects.all().delete()
         faqs_data = [
             {
-                "question": "How do I link my Instagram/TikTok account?",
-                "answer": "Go to your Profile settings, scroll to Social Accounts, click Link and input your username. Our platform will sync your follower and engagement metrics.",
-                "target": "creator"
-            },
-            {
-                "question": "When do I get paid?",
-                "answer": "Once the brand approves your final deliverable, the escrow amount is released and added to your wallet balance. You can request payout on the next scheduled payout date.",
-                "target": "creator"
-            },
-            {
                 "question": "How does the Escrow Payment system work?",
-                "answer": "When you start a campaign, you fund the agreed budget. The funds are held safely in escrow. They are only released to the creator when milestones or final deliverables are approved.",
-                "target": "business"
+                "answer": "When you fund a campaign, your budget is securely held in our escrow system. Funds are released to the creator in milestones or in full only after you review and approve the submitted deliverables.",
+                "target": "business",
+                "type": "payment"
             },
             {
                 "question": "Can I request revisions for a draft?",
-                "answer": "Yes, you can request revisions on any deliverable before final approval. Just use the 'Request Revision' action in the campaign workspace.",
-                "target": "business"
+                "answer": "Yes, you can request revisions on any deliverable before final approval. Use the 'Request Revision' action in the campaign workspace and specify the changes needed.",
+                "target": "business",
+                "type": "campaign"
             },
             {
-                "question": "What is the platform service fee?",
-                "answer": "We charge a standard 5% fee on successfully completed campaign transactions to cover escrow and compliance audit costs.",
-                "target": "both"
+                "question": "What payment methods are supported for funding campaigns?",
+                "answer": "We support major Credit/Debit Cards, Wire Transfers, and Direct Bank Transfers. All transactions are encrypted and audited for security.",
+                "target": "business",
+                "type": "payment"
+            },
+            {
+                "question": "How do I track real-time campaign performance and deliverables?",
+                "answer": "Navigate to your Business Analytics and Campaign Workspace tabs to monitor real-time task progress, submitted content drafts, engagement distribution, and budget execution.",
+                "target": "business",
+                "type": "campaign"
+            },
+            {
+                "question": "What happens if a creator misses a delivery deadline?",
+                "answer": "If a creator fails to submit content within the agreed timeline, you can request an extension, open a support ticket for mediation, or cancel the agreement to refund escrow funds to your account.",
+                "target": "business",
+                "type": "campaign"
+            },
+            {
+                "question": "How can I update my Business Profile or company branding?",
+                "answer": "Go to Account Settings > Profile. You can update your brand logo, business contact details, default currency, and invoice address.",
+                "target": "business",
+                "type": "profile"
+            },
+            {
+                "question": "How do I link my Instagram, TikTok, or YouTube accounts?",
+                "answer": "Navigate to Profile Settings > Social Accounts, select your platform, and input your verified username. Our system automatically syncs your engagement rates and audience metrics.",
+                "target": "creator",
+                "type": "profile"
+            },
+            {
+                "question": "When and how do I get paid for completed work?",
+                "answer": "Once the brand approves your submitted deliverable, funds are instantly unlocked from escrow into your platform balance. You can request direct payouts to your bank account or PayPal.",
+                "target": "creator",
+                "type": "payment"
+            },
+            {
+                "question": "How do campaign proposals and rate cards work?",
+                "answer": "Brands browse your published rate card prices or send direct campaign requests. You can accept the offer, submit a counter-price proposal, or decline based on your availability.",
+                "target": "creator",
+                "type": "campaign"
+            },
+            {
+                "question": "What is the revision policy for submitted content?",
+                "answer": "Brands can request up to 2-3 standard revision rounds per deliverable if the content does not match the agreed brief. Always review feedback notes carefully in your workspace before resubmitting.",
+                "target": "creator",
+                "type": "campaign"
+            },
+            {
+                "question": "How do I improve my Creator Rating and get featured?",
+                "answer": "Deliver high-quality content on time, maintain active communication with brands, and maintain high approval rates to earn top ratings and get featured on brand discovery feeds.",
+                "target": "creator",
+                "type": "profile"
+            },
+            {
+                "question": "What is the platform service fee structure?",
+                "answer": "We charge a standard 5% platform service fee on successfully completed transactions to cover secure escrow hosting, instant payment processing, and dispute resolution protection.",
+                "target": "both",
+                "type": "payment"
+            },
+            {
+                "question": "How do I contact customer support if I face an issue?",
+                "answer": "Click Support in your dashboard sidebar to open a support ticket or start a live chat session with our customer support team. Average response time is under 4 hours.",
+                "target": "both",
+                "type": "all"
             }
         ]
         for faq in faqs_data:
@@ -479,6 +532,7 @@ class Command(BaseCommand):
                 question=faq["question"],
                 answer=faq["answer"],
                 target_audience=faq["target"],
+                type=faq.get("type", "all"),
                 is_active=True
             )
         self.stdout.write("FAQs seeded.")

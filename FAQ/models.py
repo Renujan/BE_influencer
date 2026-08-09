@@ -9,6 +9,13 @@ class FAQ(models.Model):
         ("both", "Both"),
     )
 
+    TYPE_CHOICES = (
+        ("all", "All"),
+        ("payment", "Payment"),
+        ("campaign", "Campaign"),
+        ("profile", "Profile"),
+    )
+
     faq_id = models.CharField(
         max_length=50,
         unique=True,
@@ -22,6 +29,12 @@ class FAQ(models.Model):
         choices=TARGET_CHOICES,
         default="both",
         help_text="Determine whether this FAQ shows for businesses, creators, or both.",
+    )
+    type = models.CharField(
+        max_length=50,
+        choices=TYPE_CHOICES,
+        default="all",
+        help_text="Choose which type of campaign this FAQ applies to.",
     )
     is_active = models.BooleanField(
         default=True,
