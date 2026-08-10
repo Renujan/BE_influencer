@@ -29,7 +29,10 @@ class WorkspaceInstallmentSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.receipt_image.url)
-            return obj.receipt_image.url
+            url = obj.receipt_image.url
+            if not url.startswith('http'):
+                return f"http://127.0.0.1:8000{url if url.startswith('/') else '/' + url}"
+            return url
         return None
 
 

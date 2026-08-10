@@ -173,7 +173,7 @@ def create_installments(request):
         )
         created_objs.append(obj)
 
-    serializer = WorkspaceInstallmentSerializer(created_objs, many=True)
+    serializer = WorkspaceInstallmentSerializer(created_objs, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -219,7 +219,7 @@ def update_installment(request):
 
     installment.save()
 
-    serializer = WorkspaceInstallmentSerializer(installment)
+    serializer = WorkspaceInstallmentSerializer(installment, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -246,7 +246,7 @@ def upload_installment_receipt(request):
     installment.status = 'payment_submitted'
     installment.save()
 
-    serializer = WorkspaceInstallmentSerializer(installment)
+    serializer = WorkspaceInstallmentSerializer(installment, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -277,7 +277,7 @@ def verify_installment(request):
 
     installment.save()
 
-    serializer = WorkspaceInstallmentSerializer(installment)
+    serializer = WorkspaceInstallmentSerializer(installment, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -285,6 +285,6 @@ def verify_installment(request):
 @permission_classes([AllowAny])
 def get_installments(request, campaign_id):
     installments = WorkspaceInstallment.objects.filter(campaign_id=campaign_id).order_by('id')
-    serializer = WorkspaceInstallmentSerializer(installments, many=True)
+    serializer = WorkspaceInstallmentSerializer(installments, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 

@@ -74,5 +74,13 @@ class WorkspaceInstallment(models.Model):
                 self.paid_date = timezone.now().date()
         super().save(*args, **kwargs)
 
+    @property
+    def milestone_name(self):
+        return self.title
+
+    @milestone_name.setter
+    def milestone_name(self, value):
+        self.title = value
+
     def __str__(self):
         return f"{self.title} - Campaign {self.campaign_id} (${self.amount}) - {self.status} (Paid: {self.is_paid})"

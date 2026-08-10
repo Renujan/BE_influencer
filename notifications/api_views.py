@@ -25,19 +25,19 @@ def get_notifications(request):
         is_creator = is_authenticated and not is_business and not is_admin
 
         if is_admin:
-            qs = Notification.objects.all().order_by('-created_at')[:30]
+            qs = Notification.objects.all().order_by('-created_at')[:50]
         elif is_business:
             qs = Notification.objects.filter(
-                Q(user=req_user) | Q(target_role__in=["business", "all"])
-            ).exclude(target_role="admin").order_by('-created_at')[:30]
+                Q(user=req_user) | Q(user__isnull=True, target_role__in=["business", "all"])
+            ).exclude(target_role="admin").order_by('-created_at')[:50]
         elif is_creator:
             qs = Notification.objects.filter(
-                Q(user=req_user) | Q(target_role__in=["creator", "all"])
-            ).exclude(target_role="admin").order_by('-created_at')[:30]
+                Q(user=req_user) | Q(user__isnull=True, target_role__in=["creator", "all"])
+            ).exclude(target_role="admin").order_by('-created_at')[:50]
         else:
             qs = Notification.objects.filter(
-                target_role__in=["business", "all"]
-            ).exclude(target_role="admin").order_by('-created_at')[:30]
+                user__isnull=True, target_role__in=["business", "all"]
+            ).exclude(target_role="admin").order_by('-created_at')[:50]
 
         data = []
         for n in qs:

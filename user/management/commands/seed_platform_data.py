@@ -608,40 +608,11 @@ class Command(BaseCommand):
             )
         self.stdout.write("Complaints seeded.")
 
-        # 12. Clear and Seed Notifications
+        # 12. Clear Notifications
         Notification.objects.all().delete()
-        notifications_data = [
-            {
-                "title": "New Business Registration",
-                "message": "Business user 'alex' registered Acme Inc. and is awaiting verification.",
-                "category": "signup",
-                "icon": "fas fa-user-plus",
-                "target_url": "/admin/businessprofile/"
-            },
-            {
-                "title": "Campaign Created: Summer Drop 2026",
-                "message": "Acme Inc. created a new campaign 'Summer Drop 2026' with a budget of $4200.00.",
-                "category": "campaign",
-                "icon": "fas fa-bullhorn",
-                "target_url": "/admin/snippets/campegin/campaign/"
-            },
-            {
-                "title": "Dispute Filed on Escrow",
-                "message": "Maya Chen filed a dispute regarding escrow payment release delays.",
-                "category": "compliance",
-                "icon": "fas fa-gavel",
-                "target_url": "/admin/snippets/complaint/complaint/"
-            }
-        ]
-        for notif in notifications_data:
-            Notification.objects.create(
-                title=notif["title"],
-                message=notif["message"],
-                category=notif["category"],
-                icon=notif["icon"],
-                target_url=notif["target_url"]
-            )
-        self.stdout.write("Notifications seeded.")
+        self.stdout.write("Notifications cleared.")
+
+        self.stdout.write("Campaigns and safety workflows seeded.")
 
         self.stdout.write("Campaigns and safety workflows seeded.")
         self.stdout.write(self.style.SUCCESS("Database seeding completed successfully."))

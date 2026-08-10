@@ -3,6 +3,8 @@ from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
 from user.models import BusinessProfile, CreatorProfile
 from campegin.models import Campaign, AdminComplianceTicket, PaymentInstallment, Pitch, WorkspaceMessage
+from complaint.models import Complaint
+from WorkspacePayment.models import WorkspacePaymentNegotiation, WorkspaceInstallment
 from portfolio.models import PortfolioItem
 from chat_monitor.models import ChatReview
 from notifications.models import Notification
@@ -113,6 +115,18 @@ def create_campaign_notification(sender, instance, created, **kwargs):
                     category="campaign",
                     icon=icon_txt,
                     target_url="/creator/campaigns"
+                )
+        else:
+            # Campaign details edited
+            if instance.brand:
+                Notification.objects.create(
+                    user=instance.brand,
+                    target_role="business",
+                    title="Campaign Updated",
+                    message=f"Campaign '{instance.name}' details were updated.",
+                    category="campaign",
+                    icon="fas fa-edit",
+                    target_url="/dashboard/campaigns"
                 )
 
 @receiver(post_delete, sender=Campaign)
@@ -282,6 +296,31 @@ def create_compliance_notification(sender, instance, created, **kwargs):
             target_url="/dashboard/support" if t_role == "business" else "/creator/support"
         )
 
+@receiver(post_save, sender=Complaint)
+def create_complaint_notification(sender, instance, created, **kwargs):
+    user = instance.user
+    t_role = "creator" if hasattr(user, 'creator_profile') else ("business" if hasattr(user, 'business_profile') else "all")
+    if created:
+        Notification.objects.create(
+            user=user,
+            target_role=t_role,
+            title="Support Ticket Created",
+            message=f"Support ticket #{instance.id} ('{instance.get_category_display()}') has been opened.",
+            category="compliance",
+            icon="fas fa-ticket-alt",
+            target_url="/dashboard/support" if t_role == "business" else "/creator/support"
+        )
+    else:
+        Notification.objects.create(
+            user=user,
+            target_role=t_role,
+            title=f"Support Ticket {instance.get_status_display()}",
+            message=f"Ticket #{instance.id} status updated to {instance.get_status_display()}.",
+            category="compliance",
+            icon="fas fa-ticket-alt",
+            target_url="/dashboard/support" if t_role == "business" else "/creator/support"
+        )
+
 @receiver(post_save, sender=ChatReview)
 def create_chat_review_notification(sender, instance, created, **kwargs):
     if created and instance.campaign:
@@ -332,6 +371,58 @@ def create_payment_notification(sender, instance, created, **kwargs):
                 message=f"Payment of ${instance.amount:,.2f} for '{instance.campaign.name}' milestone '{instance.milestone_name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-wallet",
+                target_url="/creator/earnings"
+            )
+
+@receiver(post_save, sender=WorkspacePaymentNegotiation)
+def create_workspace_payment_negotiation_notification(sender, instance, created, **kwargs):
+    if instance.campaign:
+        camp = instance.campaign
+        if camp.brand:
+            Notification.objects.create(
+                user=camp.brand,
+                target_role="business",
+                title="Payment Negotiation Update",
+                message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: ${instance.final_price:,.2f}.",
+                category="payment",
+                icon="fas fa-hand-holding-usd",
+                target_url="/dashboard/payments"
+            )
+        if camp.creator:
+            Notification.objects.create(
+                user=camp.creator,
+                target_role="creator",
+                title="Payment Negotiation Update",
+                message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: ${instance.final_price:,.2f}.",
+                category="payment",
+                icon="fas fa-hand-holding-usd",
+                target_url="/creator/earnings"
+            )
+
+@receiver(post_save, sender=WorkspaceInstallment)
+def create_workspace_installment_notification(sender, instance, created, **kwargs):
+    camp = getattr(instance, 'campaign', None) or (instance.negotiation.campaign if instance.negotiation else None)
+    if camp:
+        status_text = "released" if str(instance.status).lower() in ["released", "paid"] else ("funded in escrow" if str(instance.status).lower() in ["funded", "in_escrow"] else "updated")
+        milestone_title = getattr(instance, 'title', None) or getattr(instance, 'milestone_name', 'Installment')
+        if camp.brand:
+            Notification.objects.create(
+                user=camp.brand,
+                target_role="business",
+                title="Installment Payment Action",
+                message=f"Installment '{milestone_title}' (${instance.amount:,.2f}) for '{camp.name}' was {status_text}.",
+                category="payment",
+                icon="fas fa-file-invoice-dollar",
+                target_url="/dashboard/payments"
+            )
+        if camp.creator:
+            Notification.objects.create(
+                user=camp.creator,
+                target_role="creator",
+                title="Installment Payment Action",
+                message=f"Installment '{milestone_title}' (${instance.amount:,.2f}) for '{camp.name}' was {status_text}.",
+                category="payment",
+                icon="fas fa-file-invoice-dollar",
                 target_url="/creator/earnings"
             )
 

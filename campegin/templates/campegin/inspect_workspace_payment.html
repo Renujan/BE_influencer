@@ -364,9 +364,15 @@
                     </td>
                     <td>
                         {% if inst.receipt_image %}
-                            <div><a href="{{ inst.receipt_image.url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Proof Image</a></div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <a href="{{ inst.receipt_image.url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Proof</a>
+                                <a href="{{ inst.receipt_image.url }}" download target="_blank" style="color: #059669; font-weight: 600; text-decoration: underline;">Download</a>
+                            </div>
                         {% elif inst.receipt_url %}
-                            <div><a href="{{ inst.receipt_url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Proof Link</a></div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <a href="{{ inst.receipt_url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Proof</a>
+                                <a href="{{ inst.receipt_url }}" download target="_blank" style="color: #059669; font-weight: 600; text-decoration: underline;">Download</a>
+                            </div>
                         {% else %}
                             <div style="color: #94a3b8;">No proof uploaded by business</div>
                         {% endif %}

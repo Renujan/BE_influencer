@@ -1323,9 +1323,21 @@ class CreatorEarningsView(APIView):
         active_statuses = {"active", "live", "completed", "approved", "in_progress", "payment_verified", "accepted"}
         dropped_statuses = {"declined", "rejected", "cancelled"}
 
+        released_sum = 0.0
+        pending_sum = 0.0
+
         for c in campaigns:
             st = str(c.status or "").strip().lower()
-            camp_amount = float(c.counter_price or c.per_creator_budget or c.budget or 0)
+            neg_final = 0.0
+            try:
+                from WorkspacePayment.models import WorkspacePaymentNegotiation
+                neg_obj = WorkspacePaymentNegotiation.objects.filter(campaign=c).order_by('-id').first()
+                if neg_obj and neg_obj.final_price and float(neg_obj.final_price) > 0:
+                    neg_final = float(neg_obj.final_price)
+            except Exception:
+                pass
+
+            camp_amount = neg_final if neg_final > 0 else float(c.counter_price or c.per_creator_budget or c.budget or 0)
             brand_name = c.brand.username if c.brand else "Brand"
 
             if st in dropped_statuses:
@@ -1333,8 +1345,15 @@ class CreatorEarningsView(APIView):
 
             if st in active_statuses:
                 total_earned += camp_amount
-            else:
-                in_escrow += camp_amount
+                if st == "completed":
+                    date_val = c.start_date or c.created_at or c.due_date
+                    if date_val:
+                        try:
+                            m_idx = date_val.month - 1
+                            if 0 <= m_idx <= 11:
+                                default_months[m_idx]["v"] += camp_amount
+                        except Exception:
+                            pass
 
             payments = c.payments.all()
             if payments.exists():
@@ -1344,7 +1363,8 @@ class CreatorEarningsView(APIView):
                     if p_st in dropped_statuses:
                         continue
                     
-                    if p_st in ("released", "paid") or st in active_statuses:
+                    if p_st in ("released", "paid"):
+                        released_sum += amount_val
                         if p.payment_date:
                             try:
                                 parts = str(p.payment_date).split('-')
@@ -1359,12 +1379,13 @@ class CreatorEarningsView(APIView):
                             "campaign": c.name,
                             "brand": brand_name,
                             "amount": amount_val,
-                            "date": str(p.payment_date or "Active"),
+                            "date": str(p.payment_date or "Paid"),
                             "status": "paid",
                             "type": "credit",
                             "period": "Monthly",
                         })
                     else:
+                        pending_sum += amount_val
                         transactions.append({
                             "id": p.id + c.id * 10000,
                             "campaign": c.name,
@@ -1376,18 +1397,20 @@ class CreatorEarningsView(APIView):
                             "period": "Monthly",
                         })
             else:
-                if st in active_statuses:
+                if st == "completed":
+                    released_sum += camp_amount
                     transactions.append({
                         "id": c.id * 10000,
                         "campaign": c.name,
                         "brand": brand_name,
                         "amount": camp_amount,
-                        "date": "Active",
+                        "date": "Completed",
                         "status": "paid",
                         "type": "credit",
                         "period": "Monthly",
                     })
                 else:
+                    pending_sum += camp_amount
                     transactions.append({
                         "id": c.id * 10000,
                         "campaign": c.name,
@@ -1400,6 +1423,7 @@ class CreatorEarningsView(APIView):
                     })
                 
         transactions.sort(key=lambda x: x["id"], reverse=True)
+        in_escrow = pending_sum
         
         return Response({
             "totalEarned": round(total_earned, 2),
