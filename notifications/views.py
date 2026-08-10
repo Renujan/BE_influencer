@@ -3,16 +3,17 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from notifications.models import Notification
+from notifications.utils import resolve_admin_redirect_url
 
 @csrf_exempt
 def mark_all_read(request):
     """
-    AJAX endpoint to mark all notifications as read or clear them.
-    This dynamically updates backend state so the unread count becomes 0.
+    AJAX endpoint to dismiss all notifications from the admin bell dropdown.
+    Marks every unread notification as read so they stay hidden after refresh.
     """
     if request.method == "POST":
         Notification.objects.filter(is_read=False).update(is_read=True)
-        return JsonResponse({"status": "success", "message": "All notifications marked as read."})
+        return JsonResponse({"status": "success", "message": "All notifications cleared."})
     return JsonResponse({"status": "error", "message": "Invalid request method."}, status=400)
 
 @login_required
@@ -24,7 +25,5 @@ def read_and_redirect(request, pk):
     notification.is_read = True
     notification.save()
     
-    if notification.target_url:
-        return redirect(notification.target_url)
-    return redirect("/admin/")
-
+    redirect_url = resolve_admin_redirect_url(notification)
+    return redirect(redirect_url)

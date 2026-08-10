@@ -45,9 +45,9 @@ def dashboard_metrics(request):
     top_campaigns = Campaign.objects.select_related('brand', 'creator').order_by('-budget')[:5]
     top_creators = CreatorSocialAccount.objects.select_related('user').order_by('-engagement_rate')[:5]
 
-    # 6. Notifications tracking
+    # 6. Notifications tracking — only show unread in the admin bell dropdown
     unread_notifications_count = Notification.objects.filter(is_read=False).count()
-    recent_notifications = Notification.objects.all().order_by('-id')[:10]
+    recent_notifications = Notification.objects.filter(is_read=False).order_by('-id')[:10]
 
     # 7. Weekly statistics mockup for the performance chart
     # Build chart data mapping campaigns by status or budget allocation
