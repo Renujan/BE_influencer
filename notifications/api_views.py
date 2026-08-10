@@ -26,22 +26,18 @@ def get_notifications(request):
 
         if is_admin:
             qs = Notification.objects.all().order_by('-created_at')[:50]
-        elif is_business:
+        elif is_business or is_creator:
             qs = Notification.objects.filter(
-                Q(user=req_user) | Q(user__isnull=True, target_role__in=["business", "all"])
-            ).exclude(target_role="admin").order_by('-created_at')[:50]
-        elif is_creator:
-            qs = Notification.objects.filter(
-                Q(user=req_user) | Q(user__isnull=True, target_role__in=["creator", "all"])
+                user=req_user
             ).exclude(target_role="admin").order_by('-created_at')[:50]
         else:
-            qs = Notification.objects.filter(
-                user__isnull=True, target_role__in=["business", "all"]
-            ).exclude(target_role="admin").order_by('-created_at')[:50]
+            qs = Notification.objects.none()
 
         data = []
         for n in qs:
-            if is_business or (not is_authenticated and True):
+            if n.target_url:
+                front_url = n.target_url
+            elif is_business or (not is_authenticated and True):
                 front_url = "/dashboard"
                 if n.category == "campaign":
                     front_url = "/dashboard/campaigns"
@@ -83,7 +79,22 @@ def get_notifications(request):
 @csrf_exempt
 def mark_read(request, pk):
     if request.method == "POST":
-        Notification.objects.filter(pk=pk).update(is_read=True)
+        req_user = request.user
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Token "):
+            try:
+                from rest_framework.authtoken.models import Token
+                token_key = auth_header.split(" ")[1]
+                req_user = Token.objects.get(key=token_key).user
+            except:
+                pass
+
+        if hasattr(req_user, "is_authenticated") and req_user.is_authenticated:
+            updated = Notification.objects.filter(pk=pk, user=req_user).update(is_read=True)
+            if not updated and (req_user.is_staff or req_user.is_superuser):
+                Notification.objects.filter(pk=pk).update(is_read=True)
+        else:
+            Notification.objects.filter(pk=pk).update(is_read=True)
         return JsonResponse({"status": "success"})
     return JsonResponse({"status": "error"}, status=400)
 
@@ -101,9 +112,10 @@ def mark_all_read_api(request):
                 pass
 
         if hasattr(req_user, "is_authenticated") and req_user.is_authenticated:
-            Notification.objects.filter(
-                Q(user=req_user) | Q(target_role__in=["business", "creator", "all"])
-            ).exclude(target_role="admin").filter(is_read=False).update(is_read=True)
+            if req_user.is_staff or req_user.is_superuser:
+                Notification.objects.filter(is_read=False).update(is_read=True)
+            else:
+                Notification.objects.filter(user=req_user, is_read=False).update(is_read=True)
         else:
             Notification.objects.filter(is_read=False).update(is_read=True)
         return JsonResponse({"status": "success"})
