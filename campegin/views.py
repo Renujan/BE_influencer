@@ -573,8 +573,12 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):
         campaign = self.get_object()
-        if campaign.status == "Business_Countered" and campaign.counter_price:
+        if campaign.counter_price:
             campaign.budget = campaign.counter_price
+        elif campaign.counter_history and len(campaign.counter_history) > 0:
+            last_p = campaign.counter_history[-1].get("price")
+            if last_p:
+                campaign.budget = last_p
         campaign.status = "Live"
         campaign.save()
         return Response(CampaignSerializer(campaign).data)
@@ -646,6 +650,10 @@ class RequestViewSet(viewsets.ModelViewSet):
         campaign = self.get_object()
         if campaign.counter_price:
             campaign.budget = campaign.counter_price
+        elif campaign.counter_history and len(campaign.counter_history) > 0:
+            last_p = campaign.counter_history[-1].get("price")
+            if last_p:
+                campaign.budget = last_p
         campaign.status = "Live"
         campaign.save()
         
@@ -1148,6 +1156,12 @@ class PitchViewSet(viewsets.ModelViewSet):
     def accept(self, request, pk=None):
         """Business accepts pitch → status becomes accepted_by_business (pending admin conversion)"""
         pitch = self.get_object()
+        if pitch.counter_offer:
+            pitch.budget = pitch.counter_offer
+        elif pitch.counter_history and len(pitch.counter_history) > 0:
+            last_p = pitch.counter_history[-1].get("price")
+            if last_p:
+                pitch.budget = last_p
         pitch.status = "accepted_by_business"
         pitch.save()
         return Response(PitchSerializer(pitch).data)
@@ -1217,6 +1231,9 @@ class PitchViewSet(viewsets.ModelViewSet):
     def convert_to_campaign(self, request, pk=None):
         """Business accepts pitch → create Live campaign with created_via=pitch"""
         pitch = self.get_object()
+        last_price = (pitch.counter_history[-1].get("price") if pitch.counter_history else None) or pitch.counter_offer or pitch.budget
+        final_budget = request.data.get("budget") or last_price
+        pitch.budget = final_budget
         pitch.status = "accepted"
         pitch.save()
 
@@ -1225,7 +1242,9 @@ class PitchViewSet(viewsets.ModelViewSet):
             name=request.data.get("name") or pitch.campaign_name,
             brand=pitch.brand,
             creator=pitch.creator,
-            budget=request.data.get("budget") or pitch.budget,
+            budget=final_budget,
+            counter_price=pitch.counter_offer or last_price,
+            counter_history=pitch.counter_history,
             brief=request.data.get("brief") or pitch.description or f"Campaign proposal based on pitch: {pitch.campaign_name}",
             status="Live",
             start_date=request.data.get("start_date") or pitch.sent_date or "2026-08-01",
@@ -1240,6 +1259,12 @@ class PitchViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def accept_counter(self, request, pk=None):
         pitch = self.get_object()
+        if pitch.counter_offer:
+            pitch.budget = pitch.counter_offer
+        elif pitch.counter_history and len(pitch.counter_history) > 0:
+            last_p = pitch.counter_history[-1].get("price")
+            if last_p:
+                pitch.budget = last_p
         pitch.status = "accepted_by_business"
         pitch.save()
         return Response(PitchSerializer(pitch).data)

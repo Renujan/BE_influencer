@@ -178,7 +178,7 @@ class CampaignSerializer(serializers.ModelSerializer):
             "id", "name", "brand", "brand_name", "creator", "creator_name",
             "status", "budget", "min_budget", "max_budget", "per_creator_budget", "min_price", "max_price", "rate_card_id", "start_date", "end_date", "progress", "brief", "admin_review",
             "category", "delivery_language", "country", "province", "district", "medium", "voice_brief", "screenshare_brief", "video_brief",
-            "counter_price", "counter_note", "counter_round", "decline_reason", "created_via", "created_time", "created_at",
+            "counter_price", "counter_note", "counter_round", "counter_history", "decline_reason", "created_via", "created_time", "created_at",
             "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews", "creator_rating"
         ]
         read_only_fields = ["brand"]
@@ -222,6 +222,6 @@ class PitchSerializer(serializers.ModelSerializer):
         fields = [
             "id", "creator", "creator_name", "brand", "brand_name",
             "campaign_name", "budget", "sent_date", "tags", "status",
-            "description", "deliverables", "counter_offer", "counter_note", "counter_count", "attachment", "decline_reason"
+            "description", "deliverables", "counter_offer", "counter_note", "counter_count", "counter_history", "attachment", "decline_reason"
         ]
         read_only_fields = ["creator"]
