@@ -5,6 +5,7 @@ from .views import (
     NicheViewSet, BusinessTypeViewSet, CountryViewSet, MediumViewSet, CreatorViewSet, BusinessViewSet, PendingUsersView, ApproveUserView, RestrictUserView,
     SubmitVerificationView, CreatorSubmitVerificationView, WithdrawFundsView, toggle_save_brand
 )
+from .geo_views import external_countries, currency, states, cities
 
 router = DefaultRouter()
 router.register(r"niches", NicheViewSet, basename="niche")
@@ -27,7 +28,12 @@ urlpatterns = [
     path("auth/creator/submit-verification/", CreatorSubmitVerificationView.as_view(), name="creator_submit_verification"),
     path("auth/withdraw/", WithdrawFundsView.as_view(), name="withdraw"),
 
-    
+    # Geo Proxy endpoints
+    path("geo/countries/", external_countries, name="external_countries"),
+    path("currency/<str:country_name>/", currency, name="geo_currency"),
+    path("states/<str:country_name>/", states, name="geo_states"),
+    path("cities/<str:country_name>/<str:state_name>/", cities, name="geo_cities"),
+
     # Admin Moderation endpoints
     path("admin/pending-users/", PendingUsersView.as_view(), name="admin_pending_users"),
     path("admin/approve-user/", ApproveUserView.as_view(), name="admin_approve_user"),

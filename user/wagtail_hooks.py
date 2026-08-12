@@ -209,6 +209,31 @@ class BusinessTypeViewSet(ModelViewSet):
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
 
+from django import forms
+from wagtail.admin.forms.models import WagtailAdminModelForm
+from .models import Province
+
+class FlexibleModelChoiceField(forms.ModelChoiceField):
+    def to_python(self, value):
+        if not value:
+            return None
+        if isinstance(value, Province):
+            return value
+        val_str = str(value).strip() if isinstance(value, str) else str(value)
+        if val_str.isdigit():
+            p = Province.objects.filter(pk=int(val_str)).first()
+            if p:
+                return p
+        p = Province.objects.filter(name__iexact=val_str).first()
+        if p:
+            return p
+        return Province(name=val_str)
+
+    def validate(self, value):
+        if self.required and not value:
+            raise forms.ValidationError(self.error_messages['required'], code='required')
+        return True
+
 # 5. Country Admin Viewset
 class CountryViewSet(ModelViewSet):
     model = Country
@@ -217,8 +242,59 @@ class CountryViewSet(ModelViewSet):
     menu_icon = "globe"
     menu_item_name = "countries"
     add_to_admin_menu = False
-    list_display = ("name",)
-    search_fields = ("name",)
+    list_display = ("name", "currency", "country_code")
+    search_fields = ("name", "currency", "country_code")
+    edit_template_name = "wagtailadmin/country_edit_premium.html"
+    create_template_name = "wagtailadmin/country_edit_premium.html"
+
+    def get_form_class(self, for_update=False):
+        BaseFormClass = super().get_form_class(for_update=for_update)
+        
+        class CustomCountryAdminForm(BaseFormClass):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                if hasattr(self, 'formsets') and 'districts' in self.formsets:
+                    districts_fs = self.formsets['districts']
+                    for f in list(districts_fs.forms) + ([districts_fs.empty_form] if hasattr(districts_fs, 'empty_form') else []):
+                        if 'province' in f.fields:
+                            f.fields['province'] = FlexibleModelChoiceField(queryset=Province.objects.all(), required=False)
+
+            def save(self, commit=True):
+                districts_fs = self.formsets.pop('districts', None) if hasattr(self, 'formsets') else None
+
+                country = super().save(commit=commit)
+
+                if districts_fs is not None:
+                    self.formsets['districts'] = districts_fs
+                    districts_fs.instance = country
+
+                prov_map = {}
+                for p in country.provinces.all():
+                    prov_map[str(p.id)] = p
+                    prov_map[p.name.strip().lower()] = p
+
+                if districts_fs is not None:
+                    for f in districts_fs.forms:
+                        f.instance.country = country
+                        if hasattr(f, 'cleaned_data') and not f.cleaned_data.get('DELETE'):
+                            raw_prov = f.cleaned_data.get('province') or f.data.get(f.add_prefix('province'))
+                            if raw_prov:
+                                raw_str = raw_prov.name if isinstance(raw_prov, Province) else str(raw_prov).strip()
+                                prov_obj = prov_map.get(raw_str.lower()) or prov_map.get(raw_str)
+                                if not prov_obj and raw_str.isdigit():
+                                    prov_obj = Province.objects.filter(pk=int(raw_str)).first()
+                                if not prov_obj and country.pk:
+                                    prov_obj = Province.objects.create(country=country, name=raw_str)
+                                
+                                if prov_obj:
+                                    f.instance.province = prov_obj
+                                    f.cleaned_data['province'] = prov_obj
+
+                    districts_fs.save(commit=commit)
+                    
+                return country
+
+        return CustomCountryAdminForm
 
 # 6. Medium Admin Viewset
 class MediumViewSet(ModelViewSet):

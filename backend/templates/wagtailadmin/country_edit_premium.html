@@ -1,0 +1,558 @@
+{% extends "wagtailadmin/base.html" %}
+{% load i18n wagtailadmin_tags %}
+
+{% block titletag %}Country Management - {{ instance|default:"New Country" }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+{{ media.css }}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    .custom-inspect-wrapper {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 24px;
+        background-color: #f8fafc;
+        min-height: 100vh;
+    }
+
+    .custom-header-bar {
+        background-color: #1e293b;
+        padding: 24px 32px;
+        color: #ffffff;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .custom-header-title h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+    }
+
+    .custom-header-title p {
+        font-size: 14px;
+        color: #cbd5e1;
+        margin: 6px 0 0 0;
+    }
+
+    .btn-header-secondary {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-header-primary {
+        background-color: #06b6d4;
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-header-primary:hover {
+        background-color: #0891b2;
+    }
+
+    .custom-body-card {
+        background: #ffffff;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        border: 1px solid #e2e8f0;
+        padding: 32px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    /* Combobox dropdown card styling */
+    .combobox-card {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05);
+        max-height: 220px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        padding: 4px 0;
+    }
+
+    .combobox-item {
+        padding: 8px 14px;
+        font-size: 13px;
+        color: #334155;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background 0.15s;
+    }
+
+    .combobox-item:hover {
+        background: #f1f5f9;
+    }
+
+    .custom-footer-actions {
+        display: flex;
+        gap: 12px;
+        padding-top: 24px;
+        border-top: 1px solid #e2e8f0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="custom-inspect-wrapper">
+    <div class="custom-header-bar">
+        <div class="custom-header-title">
+            <h1>{% if instance %}Edit Country: {{ instance.name }}{% else %}Add Country{% endif %}</h1>
+            <p>Name, Currency, Country Code, Medium, Province (API States), and District (API Cities)</p>
+        </div>
+        <div class="custom-header-actions">
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-header-secondary">Back to List</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="POST" action="{{ action_url }}" class="custom-body-card" novalidate {% if form_is_multipart or form.is_multipart %}enctype="multipart/form-data"{% endif %}>
+        {% csrf_token %}
+
+        {% if panel %}
+            {{ panel.render_form_content }}
+        {% else %}
+            {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+            <div class="custom-form-grid">
+                {% for field in form.visible_fields %}
+                    <div class="custom-form-group">
+                        <label class="custom-form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div style="color: #ef4444; font-size: 13px; margin-top: 6px;">{{ field.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="custom-footer-actions">
+            <button type="submit" class="btn-header-primary" style="border: none; cursor: pointer;">Save Country</button>
+            {% if view.index_url_name %}
+                <a href="{% url view.index_url_name %}" class="btn-header-secondary" style="color: #334155 !important;">Cancel</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{{ media.js }}
+<script>
+// Saved provinces specifically for THIS country instance
+const savedCountryProvinces = [
+    {% if instance and instance.pk %}
+        {% for p in instance.provinces.all %}
+            { id: "{{ p.id }}", name: "{{ p.name|escapejs }}" },
+        {% endfor %}
+    {% endif %}
+];
+
+document.addEventListener("DOMContentLoaded", function () {
+    const nameInput = document.querySelector('input[name="name"]');
+    const currencyInput = document.querySelector('input[name="currency"]');
+    const codeInput = document.querySelector('input[name="country_code"]');
+
+    let geoCountries = [];
+    let apiStatesList = [];
+    let citiesCache = {};
+    let isUpdatingDropdowns = false;
+
+    // Function to update all District parent province dropdowns to ONLY show provinces added in the Provinces section above
+    function updateDistrictProvinceDropdowns() {
+        if (isUpdatingDropdowns) return;
+        isUpdatingDropdowns = true;
+
+        try {
+            const countryProvinces = [];
+
+            // 1. Include saved provinces specifically for THIS country instance
+            if (typeof savedCountryProvinces !== 'undefined' && Array.isArray(savedCountryProvinces)) {
+                savedCountryProvinces.forEach(p => {
+                    if (p.name && !countryProvinces.some(cp => cp.name === p.name)) {
+                        countryProvinces.push({ id: p.id, name: p.name });
+                    }
+                });
+            }
+
+            // 2. Read ONLY the typed/added provinces from the Provinces formset above
+            const provInputs = document.querySelectorAll('input[name*="provinces-"][name$="-name"]');
+            provInputs.forEach(input => {
+                if (input.name && input.name.includes("__prefix__")) return;
+                const val = input.value.trim();
+                if (val) {
+                    const rowPrefix = input.name.substring(0, input.name.lastIndexOf("-"));
+                    const idInput = document.querySelector(`input[name="${rowPrefix}-id"]`);
+                    const provId = idInput ? idInput.value : "";
+                    if (!countryProvinces.some(cp => cp.name === val)) {
+                        countryProvinces.push({ id: provId, name: val });
+                    }
+                }
+            });
+
+            // 3. Update every district province select dropdown element to ONLY show added provinces from above
+            const districtProvSelects = document.querySelectorAll('select[name*="districts-"][name$="-province"]');
+
+            districtProvSelects.forEach(selectEl => {
+                const currentSelectedText = selectEl.options[selectEl.selectedIndex] ? selectEl.options[selectEl.selectedIndex].text.trim() : '';
+                const currentSelectedVal = selectEl.value;
+
+                selectEl.innerHTML = '';
+                
+                const defaultOpt = document.createElement("option");
+                defaultOpt.value = "";
+                defaultOpt.textContent = "---------";
+                selectEl.appendChild(defaultOpt);
+
+                countryProvinces.forEach(p => {
+                    const opt = document.createElement("option");
+                    opt.value = p.id || p.name;
+                    opt.textContent = p.name;
+                    
+                    if (p.id === currentSelectedVal || p.name === currentSelectedVal || p.name === currentSelectedText) {
+                        opt.selected = true;
+                    }
+                    selectEl.appendChild(opt);
+                });
+            });
+        } finally {
+            isUpdatingDropdowns = false;
+        }
+    }
+
+    // Run update on load & on timing intervals
+    updateDistrictProvinceDropdowns();
+    setTimeout(updateDistrictProvinceDropdowns, 200);
+
+    // Event listeners for typing/changing in Provinces formset
+    document.addEventListener("keyup", function(e) {
+        if (e.target && e.target.name && e.target.name.includes("provinces")) {
+            updateDistrictProvinceDropdowns();
+        }
+    });
+
+    document.addEventListener("input", function(e) {
+        if (e.target && e.target.name && e.target.name.includes("provinces")) {
+            updateDistrictProvinceDropdowns();
+        }
+    });
+
+    document.addEventListener("change", function(e) {
+        if (e.target && e.target.name && e.target.name.includes("provinces")) {
+            updateDistrictProvinceDropdowns();
+        }
+    });
+
+    // Event listeners for clicking/focusing District Province select box
+    document.addEventListener("focusin", function(e) {
+        if (e.target && e.target.name && e.target.name.includes("districts") && e.target.name.endsWith("-province")) {
+            updateDistrictProvinceDropdowns();
+        }
+    });
+
+    document.addEventListener("mousedown", function(e) {
+        if (e.target && e.target.name && e.target.name.includes("districts") && e.target.name.endsWith("-province")) {
+            updateDistrictProvinceDropdowns();
+        }
+    });
+
+    // MutationObserver to detect dynamic formset row additions ("+ Add Provinces" / "+ Add Districts") without infinite loops
+    const observer = new MutationObserver(function(mutations) {
+        if (isUpdatingDropdowns) return;
+        let hasNewFormsetRow = false;
+        for (const m of mutations) {
+            if (m.addedNodes && m.addedNodes.length > 0) {
+                m.addedNodes.forEach(node => {
+                    if (node.nodeType === 1 && !node.classList.contains("combobox-card") && !node.classList.contains("combobox-item")) {
+                        if (node.querySelector && (node.querySelector('input[name*="provinces-"]') || node.querySelector('select[name*="districts-"]'))) {
+                            hasNewFormsetRow = true;
+                        }
+                    }
+                });
+            }
+        }
+        if (hasNewFormsetRow) {
+            updateDistrictProvinceDropdowns();
+        }
+    });
+
+    const formCard = document.querySelector('.custom-body-card') || document.body;
+    observer.observe(formCard, { childList: true, subtree: true });
+
+    // Robust Helper to attach combobox dropdown to any input field
+    function createCombobox(inputEl, getOptionsFn, onSelectFn) {
+        if (!inputEl) return;
+
+        let card;
+        let wrapper;
+
+        if (inputEl.dataset.hasCombobox) {
+            wrapper = inputEl.parentNode;
+            card = wrapper ? wrapper.querySelector('.combobox-card') : null;
+            inputEl._getOptionsFn = getOptionsFn;
+            inputEl._onSelectFn = onSelectFn;
+            if (card && (document.activeElement === inputEl || inputEl.dataset.isFocused === "true")) {
+                renderCardContent(card, inputEl);
+                card.style.display = "block";
+            }
+            return;
+        }
+
+        inputEl.dataset.hasCombobox = "true";
+        inputEl._getOptionsFn = getOptionsFn;
+        inputEl._onSelectFn = onSelectFn;
+
+        wrapper = document.createElement("div");
+        wrapper.style.position = "relative";
+        wrapper.style.width = "100%";
+        inputEl.parentNode.insertBefore(wrapper, inputEl);
+        wrapper.appendChild(inputEl);
+
+        card = document.createElement("div");
+        card.className = "combobox-card";
+        wrapper.appendChild(card);
+
+        function renderCard() {
+            renderCardContent(card, inputEl);
+        }
+
+        inputEl.addEventListener("focus", function () {
+            inputEl.dataset.isFocused = "true";
+            renderCard();
+            card.style.display = "block";
+        });
+
+        inputEl.addEventListener("blur", function () {
+            inputEl.dataset.isFocused = "false";
+        });
+
+        inputEl.addEventListener("input", function () {
+            renderCard();
+            card.style.display = "block";
+            updateDistrictProvinceDropdowns();
+        });
+
+        document.addEventListener("click", function (e) {
+            if (!wrapper.contains(e.target)) {
+                card.style.display = "none";
+            }
+        });
+
+        // Open immediately if element is currently active/focused when created
+        if (document.activeElement === inputEl) {
+            renderCard();
+            card.style.display = "block";
+        }
+    }
+
+    function renderCardContent(cardEl, inputEl) {
+        if (!cardEl || !inputEl) return;
+        cardEl.innerHTML = "";
+        const currentGetOptions = inputEl._getOptionsFn || function() { return []; };
+        const options = currentGetOptions(inputEl.value);
+
+        if (!options || options.length === 0) {
+            const noMatch = document.createElement("div");
+            noMatch.style.padding = "8px 14px";
+            noMatch.style.fontSize = "12px";
+            noMatch.style.color = "#94a3b8";
+            noMatch.style.fontStyle = "italic";
+            noMatch.textContent = "No API options available. Type manually.";
+            cardEl.appendChild(noMatch);
+            return;
+        }
+
+        options.forEach(opt => {
+            const label = typeof opt === "string" ? opt : opt.name;
+            const extra = typeof opt === "object" ? (opt.dial_code || opt.code || '') : '';
+            const item = document.createElement("div");
+            item.className = "combobox-item";
+            item.innerHTML = `<span>${label}</span>${extra ? `<span style="font-size:11px;color:#64748b;">${extra}</span>` : ''}`;
+            item.addEventListener("mousedown", function (e) {
+                e.preventDefault();
+                inputEl.value = label;
+                cardEl.style.display = "none";
+                const currentOnSelect = inputEl._onSelectFn;
+                if (currentOnSelect) currentOnSelect(opt);
+                updateDistrictProvinceDropdowns();
+            });
+            cardEl.appendChild(item);
+        });
+    }
+
+    // Attach combobox to Country Name input (API Countries)
+    if (nameInput) {
+        createCombobox(
+            nameInput,
+            function (q) {
+                const query = (q || "").toLowerCase().trim();
+                return geoCountries.filter(c => 
+                    c.name.toLowerCase().includes(query) || (c.code && c.code.toLowerCase().includes(query))
+                );
+            },
+            function (selectedCountry) {
+                if (codeInput && (selectedCountry.dial_code || selectedCountry.code)) {
+                    codeInput.value = selectedCountry.dial_code || selectedCountry.code;
+                }
+                onCountryChosen(selectedCountry.name);
+            }
+        );
+
+        if (nameInput.value) {
+            onCountryChosen(nameInput.value);
+        }
+    }
+
+    // Fetch API countries list
+    fetch('/api/geo/countries/')
+        .then(r => r.json())
+        .then(res => {
+            if (res && res.data) {
+                geoCountries = res.data;
+            }
+        })
+        .catch(err => console.error("Error fetching geo countries:", err));
+
+    function onCountryChosen(countryName) {
+        if (!countryName) return;
+
+        // Auto-fetch Currency
+        fetch('/api/currency/' + encodeURIComponent(countryName) + '/')
+            .then(r => r.json())
+            .then(res => {
+                if (res && res.data && res.data.currency && currencyInput) {
+                    currencyInput.value = res.data.currency;
+                }
+            });
+
+        // Auto-fetch States/Provinces for the Province field
+        fetch('/api/states/' + encodeURIComponent(countryName) + '/')
+            .then(r => r.json())
+            .then(res => {
+                let rawStates = [];
+                if (res && res.data) {
+                    if (Array.isArray(res.data)) {
+                        rawStates = res.data;
+                    } else if (res.data.states && Array.isArray(res.data.states)) {
+                        rawStates = res.data.states;
+                    }
+                }
+
+                // Filter according to the word "Province"
+                const provOnly = rawStates.filter(s => {
+                    const sName = typeof s === 'string' ? s : (s.name || '');
+                    return sName.toLowerCase().includes('province');
+                });
+
+                apiStatesList = provOnly.length > 0 ? provOnly : rawStates;
+            })
+            .catch(err => console.error("Error fetching states:", err));
+    }
+
+    // Dynamically attach comboboxes to Province input fields (API States) & District input fields (API Cities)
+    document.addEventListener("focusin", function (e) {
+        const target = e.target;
+        if (!target) return;
+
+        // Province input field -> API States (/api/states/<country_name>/)
+        if (target.name && target.name.includes("provinces-") && target.name.endsWith("-name")) {
+            createCombobox(
+                target,
+                function (q) {
+                    const query = (q || "").toLowerCase().trim();
+                    if (!apiStatesList || apiStatesList.length === 0) return [];
+                    return apiStatesList.filter(s => {
+                        const sName = typeof s === 'string' ? s : (s.name || '');
+                        return sName.toLowerCase().includes(query);
+                    });
+                },
+                function() {
+                    updateDistrictProvinceDropdowns();
+                }
+            );
+        }
+
+        // District input field -> API Cities (/api/cities/<country_name>/<state_name>/)
+        if (target.name && target.name.includes("districts-") && target.name.endsWith("-name")) {
+            const rowPrefix = target.name.substring(0, target.name.lastIndexOf("-"));
+            const provSelect = document.querySelector(`select[name="${rowPrefix}-province"]`);
+            
+            let provName = "";
+            if (provSelect && provSelect.selectedIndex >= 0) {
+                provName = provSelect.options[provSelect.selectedIndex].text.trim();
+            }
+
+            const cName = nameInput ? nameInput.value.trim() : "";
+            if (cName && provName && provName !== "---------") {
+                const cacheKey = `${cName}::${provName}`;
+                if (citiesCache[cacheKey]) {
+                    attachDistrictCombobox(target, citiesCache[cacheKey]);
+                } else {
+                    fetch('/api/cities/' + encodeURIComponent(cName) + '/' + encodeURIComponent(provName) + '/')
+                        .then(r => r.json())
+                        .then(res => {
+                            let rawCities = [];
+                            if (res && res.data) {
+                                if (Array.isArray(res.data)) {
+                                    rawCities = res.data;
+                                } else if (res.data.cities && Array.isArray(res.data.cities)) {
+                                    rawCities = res.data.cities;
+                                }
+                            }
+                            citiesCache[cacheKey] = rawCities;
+                            attachDistrictCombobox(target, rawCities);
+                        })
+                        .catch(err => console.error("Error fetching cities:", err));
+                }
+            }
+        }
+    });
+
+    function attachDistrictCombobox(inputEl, citiesList) {
+        createCombobox(
+            inputEl,
+            function (q) {
+                const query = (q || "").toLowerCase().trim();
+                return citiesList.filter(c => (c || "").toLowerCase().includes(query));
+            }
+        );
+    }
+});
+</script>
+{% endblock %}

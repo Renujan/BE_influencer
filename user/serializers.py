@@ -38,6 +38,93 @@ class CountrySerializer(serializers.ModelSerializer):
         model = Country
         fields = ["id", "name", "currency", "country_code", "provinces", "mediums", "districts"]
 
+    def create(self, validated_data):
+        provinces_data = self.initial_data.get('provinces', [])
+        mediums_data = self.initial_data.get('mediums', [])
+        districts_data = self.initial_data.get('districts', [])
+
+        country = Country.objects.create(**validated_data)
+        self._sync_children(country, provinces_data, mediums_data, districts_data)
+        return country
+
+    def update(self, instance, validated_data):
+        provinces_data = self.initial_data.get('provinces', None)
+        mediums_data = self.initial_data.get('mediums', None)
+        districts_data = self.initial_data.get('districts', None)
+
+        instance.name = validated_data.get('name', instance.name)
+        instance.currency = validated_data.get('currency', instance.currency)
+        instance.country_code = validated_data.get('country_code', instance.country_code)
+        instance.save()
+
+        self._sync_children(instance, provinces_data, mediums_data, districts_data)
+        return instance
+
+    def _sync_children(self, country, provinces_data, mediums_data, districts_data):
+        if provinces_data is not None:
+            existing_provs = {p.name: p for p in country.provinces.all()}
+            province_map = {}
+            for prov in provinces_data:
+                p_name = prov.get('name') if isinstance(prov, dict) else str(prov).strip()
+                if p_name:
+                    if p_name in existing_provs:
+                        province_map[p_name] = existing_provs[p_name]
+                    else:
+                        province_obj = Province.objects.create(country=country, name=p_name)
+                        province_map[p_name] = province_obj
+
+            if isinstance(provinces_data, list):
+                prov_names_set = set(province_map.keys())
+                country.provinces.exclude(name__in=prov_names_set).delete()
+
+        if mediums_data is not None:
+            existing_meds = {m.name: m for m in country.mediums.all()}
+            med_objs = []
+            for med in mediums_data:
+                m_name = med.get('name') if isinstance(med, dict) else str(med).strip()
+                if m_name:
+                    if m_name not in existing_meds:
+                        med_objs.append(Medium.objects.create(country=country, name=m_name))
+                    else:
+                        med_objs.append(existing_meds[m_name])
+            if isinstance(mediums_data, list):
+                med_names_set = set(m.name for m in med_objs)
+                country.mediums.exclude(name__in=med_names_set).delete()
+
+        if districts_data is not None:
+            prov_lookup = {p.name: p for p in country.provinces.all()}
+            existing_districts = {d.name: d for d in country.districts.all()}
+            kept_district_ids = []
+            for dist in districts_data:
+                if isinstance(dist, dict):
+                    d_name = dist.get('name', '').strip()
+                    prov_ref = dist.get('province')
+                else:
+                    d_name = str(dist).strip()
+                    prov_ref = None
+
+                if d_name:
+                    prov_obj = None
+                    if isinstance(prov_ref, int):
+                        prov_obj = country.provinces.filter(id=prov_ref).first()
+                    elif isinstance(prov_ref, str):
+                        prov_obj = prov_lookup.get(prov_ref)
+                    if not prov_obj and country.provinces.exists():
+                        prov_obj = country.provinces.first()
+
+                    if prov_obj:
+                        if d_name in existing_districts:
+                            d_obj = existing_districts[d_name]
+                            d_obj.province = prov_obj
+                            d_obj.save()
+                            kept_district_ids.append(d_obj.id)
+                        else:
+                            d_obj = District.objects.create(country=country, province=prov_obj, name=d_name)
+                            kept_district_ids.append(d_obj.id)
+
+            if isinstance(districts_data, list):
+                country.districts.exclude(id__in=kept_district_ids).delete()
+
 
 class CreatorRateSerializer(serializers.ModelSerializer):
     class Meta:

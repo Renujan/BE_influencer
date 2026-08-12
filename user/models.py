@@ -61,6 +61,12 @@ class District(Orderable):
         FieldPanel("name"),
     ]
 
+    def clean_fields(self, exclude=None):
+        if exclude is None:
+            exclude = []
+        exclude = list(exclude) + ["province"]
+        super().clean_fields(exclude=exclude)
+
     def __str__(self):
         return self.name
 
