@@ -259,15 +259,55 @@
         </div>
     </div>
 
+    <!-- Platform Charge & Fee Calculation Panel -->
+    <div class="divide-section" style="border-left: 4px solid #2563eb; background: #eff6ff;">
+        <div class="section-title" style="color: #1e40af;">
+            <span>% Platform Charge & Fee Breakdown</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+            <form method="POST" style="display: flex; align-items: center; gap: 8px;">
+                {% csrf_token %}
+                <input type="hidden" name="action_type" value="update_platform_charge">
+                <label style="font-size: 13px; font-weight: 600; color: #1e293b;">Platform Charge %:</label>
+                <input type="number" step="0.1" name="platform_charge" value="{{ platform_charge_pct }}" style="width: 70px; padding: 4px 8px; font-weight: bold; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <button type="submit" class="btn-action" style="padding: 4px 10px; font-size: 12px;">Update %</button>
+            </form>
+
+            <div style="font-size: 13px; color: #1e293b;">
+                Calculated Platform Fee: <strong style="color: #2563eb; font-size: 15px;">{{ formatted_charge_amt }}</strong>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b;">Business Total Payment</div>
+                <div style="font-size: 18px; font-weight: 800; color: #0f172a; font-family: monospace;">{{ formatted_business_total }}</div>
+                <div style="font-size: 11px; color: #64748b;">{{ formatted_final_price }} + {{ platform_charge_pct }}% ({{ formatted_charge_amt }})</div>
+            </div>
+
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b;">Creator Net Received</div>
+                <div style="font-size: 18px; font-weight: 800; color: #16a34a; font-family: monospace;">{{ formatted_creator_net }}</div>
+                <div style="font-size: 11px; color: #64748b;">{{ formatted_final_price }} - {{ platform_charge_pct }}% ({{ formatted_charge_amt }})</div>
+            </div>
+
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #bfdbfe; background-color: #f0f9ff;">
+                <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #1d4ed8;">Total Platform Revenue</div>
+                <div style="font-size: 18px; font-weight: 800; color: #1d4ed8; font-family: monospace;">{{ formatted_total_platform_fee }}</div>
+                <div style="font-size: 11px; color: #64748b;">Business Fee ({{ formatted_charge_amt }}) + Creator Fee ({{ formatted_charge_amt }})</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Divide Final Price into Installments Panel -->
     <div class="divide-section">
         <div class="section-title">
-            <span>⚡ Quick Divide Final Price into Milestone Installments</span>
+            <span>⚡ Quick Divide Creator Net Payout into Milestone Installments</span>
         </div>
         <form method="POST" style="margin-bottom: 16px;">
             {% csrf_token %}
             <input type="hidden" name="action_type" value="divide_installments">
-            <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Choose a preset or submit to divide the final price ({{ formatted_final_price }}) into milestone installments for this campaign:</p>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Choose a preset or submit to divide the creator net payout pool (<strong>{{ formatted_creator_net }}</strong>) into milestone installments for this campaign:</p>
             <button type="submit" name="preset" value="3_milestones" class="btn-action-emerald">Divide into 3 Milestones (Kickoff 30%, Drafts 40%, Final 30%)</button>
             <button type="submit" name="preset" value="50_50" class="btn-action">Divide into 2 Milestones (50% / 50%)</button>
         </form>
@@ -278,7 +318,7 @@
         <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <span>💳 Milestone Installments Payout Breakdown</span>
             <span style="font-size: 13px; font-weight: 600;">
-                Total Divided: <strong>{{ formatted_total_allocated }}</strong> / Accepted Final Price: <strong>{{ formatted_final_price }}</strong>
+                Total Divided: <strong>{{ formatted_total_allocated }}</strong> / Creator Net Received: <strong>{{ formatted_creator_net }}</strong>
                 {% if is_fully_allocated %}
                     <span class="badge-blue" style="background-color: #dcfce7; color: #15803d; border-color: #bbf7d0; margin-left: 6px;">Fully Allocated</span>
                 {% else %}

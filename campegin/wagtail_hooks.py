@@ -466,14 +466,32 @@ class WorkspacePaymentInspectView(InspectView):
         except (ValueError, TypeError):
             cr_min_val, cr_max_val, min_budg_val, max_budg_val, final_val = 20000, 49000, 10000, 51000, 0
 
+        platform_charge_pct = float(negotiation.platform_charge if negotiation.platform_charge is not None else 2.5)
+        charge_amt = float(negotiation.platform_charge_amount)
+        business_total = float(negotiation.business_total_payment)
+        creator_net = float(negotiation.creator_net_received)
+        total_platform_fee = float(negotiation.total_platform_fee)
+
+        context['platform_charge_pct'] = platform_charge_pct
+        context['formatted_platform_charge'] = f"{platform_charge_pct}%"
+        context['charge_amt'] = charge_amt
+        context['formatted_charge_amt'] = f"{symbol}{charge_amt:,.2f}"
+        context['business_total'] = business_total
+        context['formatted_business_total'] = f"{symbol}{business_total:,.2f}"
+        context['creator_net'] = creator_net
+        context['formatted_creator_net'] = f"{symbol}{creator_net:,.2f}"
+        context['total_platform_fee'] = total_platform_fee
+        context['formatted_total_platform_fee'] = f"{symbol}{total_platform_fee:,.2f}"
+
         context['creator_rate_range'] = f"{symbol}{cr_min_val:,.0f} – {symbol}{cr_max_val:,.0f}"
         context['business_budget_range'] = f"{symbol}{min_budg_val:,.0f} – {symbol}{max_budg_val:,.0f}"
         context['formatted_final_price'] = f"{symbol}{final_val:,.2f}"
         
         installments = negotiation.installments.all().order_by('id')
         total_allocated = sum(float(inst.amount or 0) for inst in installments)
-        remaining_amount = max(0.0, final_val - total_allocated)
-        is_fully_allocated = (final_val > 0 and (total_allocated >= final_val or abs(total_allocated - final_val) < 0.01))
+        target_creator_pool = creator_net if creator_net > 0 else final_val
+        remaining_amount = max(0.0, target_creator_pool - total_allocated)
+        is_fully_allocated = (target_creator_pool > 0 and (total_allocated >= target_creator_pool or abs(total_allocated - target_creator_pool) < 0.01))
 
         context['installments'] = installments
         context['total_allocated'] = total_allocated
@@ -489,23 +507,35 @@ class WorkspacePaymentInspectView(InspectView):
         campaign = negotiation.campaign
         action_type = request.POST.get('action_type')
 
-        if action_type == 'divide_installments':
+        if action_type == 'update_platform_charge':
+            charge_val = request.POST.get('platform_charge')
+            if charge_val is not None:
+                try:
+                    c_val = float(str(charge_val).replace('%', '').strip())
+                    negotiation.platform_charge = c_val
+                    negotiation.save(update_fields=['platform_charge'])
+                    messages.success(request, f"Successfully updated platform charge to {c_val}%.")
+                except ValueError:
+                    messages.error(request, "Invalid platform charge percentage.")
+            return redirect(request.path)
+
+        elif action_type == 'divide_installments':
             preset = request.POST.get('preset')
-            final_price = float(negotiation.final_price or 0)
+            creator_net_price = float(negotiation.creator_net_received or negotiation.final_price or 0)
             from WorkspacePayment.models import WorkspaceInstallment
 
             WorkspaceInstallment.objects.filter(campaign=campaign).delete()
 
             if preset == '3_milestones':
                 items = [
-                    ('Kickoff payment', final_price * 0.3),
-                    ('Drafts approved', final_price * 0.4),
-                    ('Final delivery', final_price * 0.3),
+                    ('Kickoff payment', creator_net_price * 0.3),
+                    ('Drafts approved', creator_net_price * 0.4),
+                    ('Final delivery', creator_net_price * 0.3),
                 ]
             else:
                 items = [
-                    ('Installment 1 (50%)', final_price * 0.5),
-                    ('Installment 2 (50%)', final_price * 0.5),
+                    ('Installment 1 (50%)', creator_net_price * 0.5),
+                    ('Installment 2 (50%)', creator_net_price * 0.5),
                 ]
 
             for title, amt in items:
@@ -516,7 +546,7 @@ class WorkspacePaymentInspectView(InspectView):
                     amount=amt,
                     status='in_escrow'
                 )
-            messages.success(request, f"Divided final price for '{campaign.name}' into milestone installments.")
+            messages.success(request, f"Divided net price for '{campaign.name}' into milestone installments.")
 
         elif action_type == 'add_installment_manual':
             final_price = float(negotiation.final_price or 0)
@@ -614,9 +644,21 @@ class WorkspacePaymentViewSet(SnippetViewSet):
     inspect_view_enabled = True
     inspect_view_class = WorkspacePaymentInspectView
     inspect_template_name = "campegin/inspect_workspace_payment.html"
-    list_display = ("campaign", "final_price", "status", "revision_reason", "updated_at")
+    list_display = ("campaign", "final_price", "get_platform_charge_display", "get_platform_fee_display", "get_creator_net_display", "status", "updated_at")
     list_filter = ("status",)
     search_fields = ("campaign__name", "revision_reason")
+
+    def get_platform_charge_display(self, obj):
+        return f"{obj.platform_charge if obj.platform_charge is not None else 2.5}%"
+    get_platform_charge_display.short_description = "Platform Charge %"
+
+    def get_platform_fee_display(self, obj):
+        return f"${obj.platform_charge_amount:,.2f}"
+    get_platform_fee_display.short_description = "Calculated Platform Fee"
+
+    def get_creator_net_display(self, obj):
+        return f"${obj.creator_net_received:,.2f}"
+    get_creator_net_display.short_description = "Creator Net Received"
 
     def get_queryset(self, request=None):
         try:
