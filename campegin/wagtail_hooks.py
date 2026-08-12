@@ -607,7 +607,8 @@ class WorkspacePaymentInspectView(InspectView):
 class WorkspacePaymentViewSet(SnippetViewSet):
     model = WorkspacePaymentNegotiation
     menu_label = "Workspace Payment"
-    icon = "credit-card"
+    icon = "order"
+    menu_icon = "order"
     menu_name = "workspace_payment"
     index_view_class = WorkspacePaymentIndexView
     inspect_view_enabled = True

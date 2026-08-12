@@ -7,6 +7,7 @@ urlpatterns = [
     path('negotiation/<int:campaign_id>/', views.get_negotiation, name='get-negotiation'),
     path('all-negotiations/', views.list_all_negotiations, name='list-all-negotiations'),
     path('admin-approve/', views.admin_approve_negotiation, name='admin-approve-negotiation'),
+    path('update-platform-charge/', views.update_platform_charge, name='update-platform-charge'),
     path('create-installments/', views.create_installments, name='create-installments'),
     path('update-installment/', views.update_installment, name='update-installment'),
     path('upload-installment-receipt/', views.upload_installment_receipt, name='upload-installment-receipt'),

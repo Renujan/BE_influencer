@@ -16,6 +16,7 @@ class WorkspacePaymentNegotiation(ClusterableModel):
 
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='payment_negotiations')
     final_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    platform_charge = models.DecimalField(max_digits=5, decimal_places=2, default=2.50)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending_creator_approval')
     revision_reason = models.TextField(blank=True, null=True)
 
@@ -28,6 +29,7 @@ class WorkspacePaymentNegotiation(ClusterableModel):
     panels = [
         FieldPanel('campaign'),
         FieldPanel('final_price'),
+        FieldPanel('platform_charge'),
         FieldPanel('status'),
         FieldPanel('revision_reason'),
         FieldPanel('proposed_by'),
@@ -35,8 +37,28 @@ class WorkspacePaymentNegotiation(ClusterableModel):
         InlinePanel('installments', label="Milestone Installments Payout Breakdown"),
     ]
 
+    @property
+    def platform_charge_amount(self):
+        fp = float(self.final_price or 0)
+        pc = float(self.platform_charge if self.platform_charge is not None else 2.5)
+        return round(fp * (pc / 100.0), 2)
+
+    @property
+    def business_total_payment(self):
+        fp = float(self.final_price or 0)
+        return round(fp + self.platform_charge_amount, 2)
+
+    @property
+    def creator_net_received(self):
+        fp = float(self.final_price or 0)
+        return round(fp - self.platform_charge_amount, 2)
+
+    @property
+    def total_platform_fee(self):
+        return round(self.platform_charge_amount * 2, 2)
+
     def __str__(self):
-        return f"Campaign {self.campaign_id} - Price: {self.final_price} ({self.status})"
+        return f"Campaign {self.campaign_id} - Price: {self.final_price} (Platform Charge: {self.platform_charge}%) ({self.status})"
 
 
 class WorkspaceInstallment(models.Model):

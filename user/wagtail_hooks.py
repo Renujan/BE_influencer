@@ -322,7 +322,7 @@ def register_custom_user_profiles_menu():
     creator_menu = Menu(items=[
         MenuItem("Creator Profiles", creator_prof.menu_url, icon_name="user"),
         MenuItem("Niches", niche.menu_url, icon_name="tag"),
-        MenuItem("Rating", creator_rating_view.menu_url, icon_name="star"),
+        MenuItem("Rating", creator_rating_view.menu_url, icon_name="pick"),
         MenuItem("Connected Account", social_acc_view.menu_url, icon_name="link"),
     ])
     creator_submenu = SubmenuMenuItem(

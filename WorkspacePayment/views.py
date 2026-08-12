@@ -135,6 +135,36 @@ def admin_approve_negotiation(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def update_platform_charge(request):
+    campaign_id = request.data.get('campaign_id')
+    negotiation_id = request.data.get('negotiation_id')
+    platform_charge = request.data.get('platform_charge')
+
+    if platform_charge is None:
+        return Response({'error': 'platform_charge is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    negotiation = None
+    if negotiation_id:
+        negotiation = WorkspacePaymentNegotiation.objects.filter(id=negotiation_id).first()
+    elif campaign_id:
+        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign_id=campaign_id).first()
+
+    if not negotiation:
+        return Response({'error': 'Payment negotiation entry not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        charge_val = float(str(platform_charge).replace('%', '').strip())
+        negotiation.platform_charge = charge_val
+        negotiation.save()
+    except ValueError:
+        return Response({'error': 'Invalid platform_charge format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = WorkspacePaymentNegotiationSerializer(negotiation)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def create_installments(request):
     campaign_id = request.data.get('campaign_id')
     installments_data = request.data.get('installments', [])

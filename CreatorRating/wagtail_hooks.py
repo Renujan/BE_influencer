@@ -5,8 +5,8 @@ from .models import CreatorRating
 class CreatorRatingViewSet(ModelViewSet):
     model = CreatorRating
     menu_label = "Rating"
-    icon = "star"
-    menu_icon = "star"
+    icon = "pick"
+    menu_icon = "pick"
     menu_item_name = "creator_ratings"
     add_to_admin_menu = False
 
