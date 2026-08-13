@@ -213,9 +213,47 @@ class CampaignPlatformSerializer(serializers.ModelSerializer):
                 return str(obj.logo)
         return ""
 
+class FlexibleJSONField(serializers.JSONField):
+    def to_internal_value(self, data):
+        if data is None:
+            return []
+        if isinstance(data, str):
+            data_str = data.strip()
+            if not data_str:
+                return []
+            try:
+                import json
+                parsed = json.loads(data_str)
+                if isinstance(parsed, list):
+                    return parsed
+                elif isinstance(parsed, (dict, int, float, bool)):
+                    return [parsed]
+                else:
+                    return [str(parsed)]
+            except Exception:
+                return [d.strip() for d in data_str.split(",") if d.strip()]
+        if isinstance(data, list):
+            res = []
+            for item in data:
+                if isinstance(item, str):
+                    try:
+                        import json
+                        parsed = json.loads(item)
+                        if isinstance(parsed, list):
+                            res.extend(parsed)
+                        else:
+                            res.append(parsed)
+                    except Exception:
+                        res.append(item)
+                else:
+                    res.append(item)
+            return res
+        return super().to_internal_value(data)
+
 class PitchSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source="brand.username", read_only=True)
     creator_name = serializers.CharField(source="creator.username", read_only=True)
+    deliverables = FlexibleJSONField(required=False, allow_null=True, default=list)
 
     class Meta:
         model = Pitch

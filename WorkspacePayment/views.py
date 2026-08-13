@@ -11,6 +11,7 @@ from .serializers import WorkspacePaymentNegotiationSerializer, WorkspaceInstall
 def propose_final_price(request):
     campaign_id = request.data.get('campaign_id')
     final_price = request.data.get('final_price')
+    role = (request.data.get('role') or request.data.get('proposed_by_role') or '').lower().strip()
 
     if not campaign_id or final_price is None:
         return Response({'error': 'campaign_id and final_price are required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -25,20 +26,38 @@ def propose_final_price(request):
     except ValueError:
         return Response({'error': 'Invalid final_price format.'}, status=status.HTTP_400_BAD_REQUEST)
 
+    min_b = float(getattr(campaign, 'min_budget', None) or getattr(campaign, 'min_price', None) or 10000)
+    max_b = float(getattr(campaign, 'max_budget', None) or getattr(campaign, 'max_price', None) or 50000)
+    c_min = float(getattr(campaign, 'creator_min_price', None) or getattr(campaign, 'min_price', None) or 20000)
+    c_max = float(getattr(campaign, 'creator_max_price', None) or getattr(campaign, 'max_price', None) or 49000)
+
+    overall_min = min(min_b, c_min)
+    overall_max = max(max_b, c_max)
+
+    if price_val < overall_min or price_val > overall_max:
+        return Response({
+            'error': f'Proposed final price ({price_val:,.0f}) must be within the overall allowed range ({overall_min:,.0f} - {overall_max:,.0f}).'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    user = request.user if (request.user and request.user.is_authenticated) else None
+    is_creator_role = (role == 'creator') or (user and (user == getattr(campaign, 'creator', None) or hasattr(user, 'creator_profile')))
+
+    target_status = 'pending_business_approval' if is_creator_role else 'pending_creator_approval'
+
     negotiation = WorkspacePaymentNegotiation.objects.filter(campaign=campaign).first()
     if not negotiation:
         negotiation = WorkspacePaymentNegotiation(
             campaign=campaign,
             final_price=price_val,
-            status='pending_creator_approval'
+            status=target_status
         )
     else:
         negotiation.final_price = price_val
-        negotiation.status = 'pending_creator_approval'
+        negotiation.status = target_status
         negotiation.revision_reason = None
 
-    if request.user and request.user.is_authenticated:
-        negotiation.proposed_by = request.user
+    if user:
+        negotiation.proposed_by = user
 
     negotiation.save()
 
@@ -64,6 +83,11 @@ def creator_action(request):
     if action == 'accept':
         negotiation.status = 'creator_accepted'
         negotiation.revision_reason = None
+        # Sync campaign budget and counter_price with accepted final_price
+        campaign = negotiation.campaign
+        campaign.budget = negotiation.final_price
+        campaign.counter_price = negotiation.final_price
+        campaign.save()
     elif action == 'revise':
         if not revision_reason or not str(revision_reason).strip():
             return Response({'error': 'A reason is required when requesting a revision.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -75,7 +99,20 @@ def creator_action(request):
             try:
                 p_val = float(str(requested_price).replace(',', '').replace('$', '').replace('Rs', '').strip())
                 if p_val > 0:
+                    min_b = float(getattr(negotiation.campaign, 'min_budget', None) or getattr(negotiation.campaign, 'min_price', None) or 10000)
+                    max_b = float(getattr(negotiation.campaign, 'max_budget', None) or getattr(negotiation.campaign, 'max_price', None) or 50000)
+                    c_min = float(getattr(negotiation.campaign, 'creator_min_price', None) or getattr(negotiation.campaign, 'min_price', None) or 20000)
+                    c_max = float(getattr(negotiation.campaign, 'creator_max_price', None) or getattr(negotiation.campaign, 'max_price', None) or 49000)
+                    overall_min = min(min_b, c_min)
+                    overall_max = max(max_b, c_max)
+
+                    if p_val < overall_min or p_val > overall_max:
+                        return Response({
+                            'error': f'Requested price ({p_val:,.0f}) must be within the overall allowed range ({overall_min:,.0f} - {overall_max:,.0f}).'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
                     reason_str = f"Requested Price: ${p_val:,.2f} — Reason: {reason_str}"
+                    negotiation.final_price = p_val
             except Exception:
                 pass
                 
@@ -94,11 +131,40 @@ def creator_action(request):
 @permission_classes([AllowAny])
 def get_negotiation(request, campaign_id):
     try:
-        negotiation = WorkspacePaymentNegotiation.objects.get(campaign_id=campaign_id)
+        from campegin.models import Campaign
+        campaign = Campaign.objects.filter(id=campaign_id).first()
+        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign_id=campaign_id).first()
+        
+        created_via = str(campaign.created_via or '').lower().strip() if campaign else ''
+
+        if not negotiation and campaign:
+            if created_via == 'pitch':
+                last_price = campaign.counter_price or campaign.budget
+                negotiation = WorkspacePaymentNegotiation.objects.create(
+                    campaign=campaign,
+                    final_price=last_price,
+                    status='creator_accepted'
+                )
+            else:
+                negotiation = WorkspacePaymentNegotiation.objects.create(
+                    campaign=campaign,
+                    final_price=None,
+                    status='pending_proposal'
+                )
+        elif negotiation and campaign and created_via != 'pitch':
+            # For direct request campaigns, if status was auto-set to creator_accepted without manual proposal, reset it to pending_proposal
+            if negotiation.status == 'creator_accepted' and not negotiation.proposed_by and not negotiation.action_by:
+                negotiation.final_price = None
+                negotiation.status = 'pending_proposal'
+                negotiation.save()
+
+        if not negotiation:
+            return Response({'error': 'No payment negotiation found for this campaign.'}, status=status.HTTP_404_NOT_FOUND)
+
         serializer = WorkspacePaymentNegotiationSerializer(negotiation)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except WorkspacePaymentNegotiation.DoesNotExist:
-        return Response({}, status=status.HTTP_200_OK)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['GET'])

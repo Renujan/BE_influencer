@@ -630,14 +630,14 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def counter(self, request, pk=None):
         campaign = self.get_object()
-        if (campaign.counter_round or 0) >= 2:
-            return Response({"error": "Maximum 2 counter offer rounds reached."}, status=status.HTTP_400_BAD_REQUEST)
+        if (campaign.counter_round or 0) >= 4:
+            return Response({"error": "Maximum counter offer rounds reached."}, status=status.HTTP_400_BAD_REQUEST)
         counter_price = request.data.get("price")
         counter_note = request.data.get("note")
         campaign.counter_price = counter_price
         campaign.counter_note = counter_note
         campaign.counter_round = (campaign.counter_round or 0) + 1
-        campaign.status = "Countered_Pending"
+        campaign.status = "Countered"
 
         history = list(campaign.counter_history or [])
         history.append({
@@ -646,14 +646,14 @@ class RequestViewSet(viewsets.ModelViewSet):
             "sender_name": campaign.creator.username if campaign.creator else "Creator",
             "price": str(counter_price),
             "note": counter_note or "",
-            "status": "Countered_Pending"
+            "status": "Countered"
         })
         campaign.counter_history = history
         campaign.save()
         
         Notification.objects.create(
             title="Campaign Counter Offer",
-            message=f"A creator counter offer was submitted for campaign '{campaign.name}'. Requires Admin Approval.",
+            message=f"A creator counter offer of {counter_price} was submitted for campaign '{campaign.name}'.",
             category="campaign",
             icon="fas fa-handshake",
             target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
@@ -669,12 +669,12 @@ class RequestViewSet(viewsets.ModelViewSet):
             last_p = campaign.counter_history[-1].get("price")
             if last_p:
                 campaign.budget = last_p
-        campaign.status = "Live"
+        campaign.status = "Accepted_Pending_Admin"
         campaign.save()
         
         Notification.objects.create(
-            title="Campaign Counter Accepted",
-            message=f"The counter offer for campaign '{campaign.name}' was accepted. Campaign is now Live.",
+            title="Campaign Counter Accepted - Awaiting Admin Approval",
+            message=f"The counter offer for campaign '{campaign.name}' was accepted and is awaiting Admin Approval to become Live.",
             category="campaign",
             icon="fas fa-check-circle",
             target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
@@ -717,7 +717,7 @@ class RequestViewSet(viewsets.ModelViewSet):
         counter_note = request.data.get("note")
         campaign.counter_price = counter_price
         campaign.counter_note = counter_note
-        campaign.status = "Business_Counter_Pending"
+        campaign.status = "Business_Countered"
 
         history = list(campaign.counter_history or [])
         history.append({
@@ -726,18 +726,25 @@ class RequestViewSet(viewsets.ModelViewSet):
             "sender_name": campaign.brand.username if campaign.brand else "Business",
             "price": str(counter_price),
             "note": counter_note or "",
-            "status": "Business_Counter_Pending"
+            "status": "Business_Countered"
         })
         campaign.counter_history = history
         campaign.save()
         
         Notification.objects.create(
             title="Campaign Counter Reply",
-            message=f"A business reply counter offer was sent for campaign '{campaign.name}'. Requires Admin Approval.",
+            message=f"A business counter offer of {counter_price} was sent for campaign '{campaign.name}'.",
             category="campaign",
             icon="fas fa-exchange-alt",
             target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
         )
+        return Response(CampaignSerializer(campaign).data)
+
+    @action(detail=True, methods=["post"])
+    def admin_approve(self, request, pk=None):
+        campaign = self.get_object()
+        campaign.status = "Live"
+        campaign.save()
         return Response(CampaignSerializer(campaign).data)
 
     @action(detail=True, methods=["post"])
@@ -1112,6 +1119,79 @@ class BusinessAnalyticsView(APIView):
             "budget_vs_spend": budget_vs_spend,
         })
 
+def populate_deliverables_from_pitch(campaign, pitch):
+    if not pitch or not pitch.deliverables:
+        return
+
+    deliv_raw = pitch.deliverables
+    deliv_list = []
+
+    if isinstance(deliv_raw, str):
+        try:
+            import json
+            parsed = json.loads(deliv_raw)
+            if isinstance(parsed, list):
+                deliv_list = parsed
+            elif isinstance(parsed, str):
+                deliv_list = [d.strip() for d in parsed.split(",") if d.strip()]
+            else:
+                deliv_list = [str(parsed)]
+        except Exception:
+            deliv_list = [d.strip() for d in deliv_raw.split(",") if d.strip()]
+    elif isinstance(deliv_raw, list):
+        deliv_list = deliv_raw
+    else:
+        deliv_list = [str(deliv_raw)]
+
+    import re
+    for d in deliv_list:
+        if not d:
+            continue
+
+        if isinstance(d, str):
+            item_text = d.strip()
+            item_brief = ""
+        elif isinstance(d, dict):
+            item_text = (d.get("text") or d.get("name") or d.get("title") or "Deliverable").strip()
+            item_brief = (d.get("brief") or d.get("description") or "").strip()
+        else:
+            item_text = str(d).strip()
+            item_brief = ""
+
+        if not item_text:
+            continue
+
+        multiplier = 1
+        mult_match = re.match(r'^(\d+)\s*[×xX]\s*(.+)$', item_text)
+        if mult_match:
+            multiplier = int(mult_match.group(1))
+            raw_title = mult_match.group(2).strip()
+        else:
+            raw_title = item_text
+
+        raw_low = raw_title.lower()
+        if "reel" in raw_low:
+            d_type = "reel"
+        elif "story" in raw_low:
+            d_type = "story"
+        elif "video" in raw_low or "tiktok" in raw_low or "youtube" in raw_low:
+            d_type = "video"
+        elif "post" in raw_low or "photo" in raw_low or "static" in raw_low:
+            d_type = "post"
+        else:
+            d_type = "post"
+
+        for i in range(max(1, multiplier)):
+            deliv_name = f"{raw_title} #{i + 1}" if multiplier > 1 else raw_title
+            if not Deliverable.objects.filter(campaign=campaign, name=deliv_name).exists():
+                Deliverable.objects.create(
+                    campaign=campaign,
+                    name=deliv_name,
+                    type=d_type,
+                    status="Pending Review",
+                    brief=item_brief
+                )
+
 class PitchViewSet(viewsets.ModelViewSet):
     queryset = Pitch.objects.all()
     serializer_class = PitchSerializer
@@ -1166,6 +1246,11 @@ class PitchViewSet(viewsets.ModelViewSet):
         else:
             serializer.save(creator=self.request.user, status="pending_admin")
 
+    def perform_destroy(self, instance):
+        if instance.brand and instance.creator:
+            Campaign.objects.filter(brand=instance.brand, creator=instance.creator, created_via="pitch", name=instance.campaign_name).delete()
+        instance.delete()
+
     @action(detail=True, methods=["post"])
     def admin_approve(self, request, pk=None):
         """Admin approves initial pitch → forward to business (status: pending)"""
@@ -1187,12 +1272,10 @@ class PitchViewSet(viewsets.ModelViewSet):
     def accept(self, request, pk=None):
         """Business accepts pitch → status becomes accepted_by_business (pending admin conversion)"""
         pitch = self.get_object()
-        if pitch.counter_offer:
-            pitch.budget = pitch.counter_offer
-        elif pitch.counter_history and len(pitch.counter_history) > 0:
-            last_p = pitch.counter_history[-1].get("price")
-            if last_p:
-                pitch.budget = last_p
+        last_p = (pitch.counter_history[-1].get("price") if pitch.counter_history else None) or pitch.counter_offer or pitch.budget
+        if last_p:
+            pitch.budget = last_p
+            pitch.counter_offer = last_p
         pitch.status = "accepted_by_business"
         pitch.save()
         return Response(PitchSerializer(pitch).data)
@@ -1208,12 +1291,12 @@ class PitchViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def business_counter(self, request, pk=None):
-        """Business sends counter offer → goes to biz_counter_pending (needs admin approval), max 2 rounds per side"""
+        """Business sends counter offer → goes to biz_countered (directly visible to creator)"""
         pitch = self.get_object()
         if pitch.counter_count >= 4:
-            return Response({"error": "Counter offer limit reached. Maximum 2 counter offer rounds allowed."}, status=400)
+            return Response({"error": "Counter offer limit reached. Maximum counter offer rounds allowed."}, status=400)
         pitch.counter_count += 1
-        pitch.status = "biz_counter_pending"
+        pitch.status = "biz_countered"
         offer_val = request.data.get("counter_offer") or request.data.get("counter_price")
         note_val = request.data.get("note") or request.data.get("counter_note") or ""
         pitch.counter_offer = offer_val
@@ -1226,7 +1309,7 @@ class PitchViewSet(viewsets.ModelViewSet):
             "sender_name": pitch.brand.username if pitch.brand else "Business",
             "price": str(offer_val),
             "note": note_val,
-            "status": "biz_counter_pending"
+            "status": "biz_countered"
         })
         pitch.counter_history = history
         pitch.save()
@@ -1234,12 +1317,12 @@ class PitchViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def creator_counter(self, request, pk=None):
-        """Creator sends counter offer → goes to pitch_counter_pending (needs admin approval), max 2 rounds per side"""
+        """Creator sends counter offer → goes to pitch_countered (directly visible to business)"""
         pitch = self.get_object()
         if pitch.counter_count >= 4:
-            return Response({"error": "Counter offer limit reached. Maximum 2 counter offer rounds allowed."}, status=400)
+            return Response({"error": "Counter offer limit reached. Maximum counter offer rounds allowed."}, status=400)
         pitch.counter_count += 1
-        pitch.status = "pitch_counter_pending"
+        pitch.status = "pitch_countered"
         offer_val = request.data.get("counter_offer") or request.data.get("counter_price")
         note_val = request.data.get("note") or request.data.get("counter_note") or ""
         pitch.counter_offer = offer_val
@@ -1252,7 +1335,7 @@ class PitchViewSet(viewsets.ModelViewSet):
             "sender_name": pitch.creator.username if pitch.creator else "Creator",
             "price": str(offer_val),
             "note": note_val,
-            "status": "pitch_counter_pending"
+            "status": "pitch_countered"
         })
         pitch.counter_history = history
         pitch.save()
@@ -1263,8 +1346,9 @@ class PitchViewSet(viewsets.ModelViewSet):
         """Business accepts pitch → create Live campaign with created_via=pitch"""
         pitch = self.get_object()
         last_price = (pitch.counter_history[-1].get("price") if pitch.counter_history else None) or pitch.counter_offer or pitch.budget
-        final_budget = request.data.get("budget") or last_price
+        final_budget = last_price
         pitch.budget = final_budget
+        pitch.counter_offer = final_budget
         pitch.status = "accepted"
         pitch.save()
 
@@ -1274,13 +1358,25 @@ class PitchViewSet(viewsets.ModelViewSet):
             brand=pitch.brand,
             creator=pitch.creator,
             budget=final_budget,
-            counter_price=pitch.counter_offer or last_price,
+            counter_price=final_budget,
             counter_history=pitch.counter_history,
             brief=request.data.get("brief") or pitch.description or f"Campaign proposal based on pitch: {pitch.campaign_name}",
             status="Live",
             start_date=request.data.get("start_date") or pitch.sent_date or "2026-08-01",
             created_via="pitch",
         )
+
+        try:
+            from WorkspacePayment.models import WorkspacePaymentNegotiation
+            neg, _ = WorkspacePaymentNegotiation.objects.get_or_create(campaign=campaign)
+            neg.final_price = final_budget
+            neg.status = 'creator_accepted'
+            neg.save()
+        except Exception as e:
+            print("Error creating WorkspacePaymentNegotiation:", e)
+
+        populate_deliverables_from_pitch(campaign, pitch)
+
         return Response({
             "message": "Pitch accepted and campaign created.",
             "pitch": PitchSerializer(pitch).data,
@@ -1290,12 +1386,10 @@ class PitchViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def accept_counter(self, request, pk=None):
         pitch = self.get_object()
-        if pitch.counter_offer:
-            pitch.budget = pitch.counter_offer
-        elif pitch.counter_history and len(pitch.counter_history) > 0:
-            last_p = pitch.counter_history[-1].get("price")
-            if last_p:
-                pitch.budget = last_p
+        last_p = (pitch.counter_history[-1].get("price") if pitch.counter_history else None) or pitch.counter_offer or pitch.budget
+        if last_p:
+            pitch.budget = last_p
+            pitch.counter_offer = last_p
         pitch.status = "accepted_by_business"
         pitch.save()
         return Response(PitchSerializer(pitch).data)

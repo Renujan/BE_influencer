@@ -248,8 +248,9 @@ class PitchInspectView(InspectView):
             self.object.status = "accepted"
             self.object.save()
             from .models import Campaign
-            if not Campaign.objects.filter(name=self.object.campaign_name, brand=self.object.brand).exists():
-                Campaign.objects.create(
+            campaign = Campaign.objects.filter(name=self.object.campaign_name, brand=self.object.brand).first()
+            if not campaign:
+                campaign = Campaign.objects.create(
                     name=self.object.campaign_name,
                     brand=self.object.brand,
                     creator=self.object.creator,
@@ -260,6 +261,8 @@ class PitchInspectView(InspectView):
                     start_date=self.object.sent_date or "2026-08-01",
                     created_via="pitch",
                 )
+            from .views import populate_deliverables_from_pitch
+            populate_deliverables_from_pitch(campaign, self.object)
             messages.success(request, f"Pitch '{self.object.campaign_name}' accepted and converted to Live Campaign.")
 
         elif action == "reject_pitch" or status_val == "declined":
