@@ -10,6 +10,7 @@ class WorkspaceInstallmentSerializer(serializers.ModelSerializer):
             'id',
             'campaign',
             'negotiation',
+            'installment_type',
             'title',
             'amount',
             'status',
@@ -48,6 +49,10 @@ class WorkspacePaymentNegotiationSerializer(serializers.ModelSerializer):
     creator_max_price = serializers.SerializerMethodField()
     currency = serializers.SerializerMethodField()
     country = serializers.SerializerMethodField()
+    business_fee_receipt_image_url = serializers.SerializerMethodField()
+    creator_fee_receipt_image_url = serializers.SerializerMethodField()
+    business_installments = serializers.SerializerMethodField()
+    creator_installments = serializers.SerializerMethodField()
     installments = WorkspaceInstallmentSerializer(many=True, read_only=True)
 
     class Meta:
@@ -60,10 +65,22 @@ class WorkspacePaymentNegotiationSerializer(serializers.ModelSerializer):
             'brand_name',
             'final_price',
             'platform_charge',
+            'business_platform_charge',
+            'creator_platform_charge',
             'platform_charge_amount',
+            'business_platform_charge_amount',
+            'creator_platform_charge_amount',
             'business_total_payment',
             'creator_net_received',
             'total_platform_fee',
+            'business_fee_is_paid',
+            'business_fee_paid_date',
+            'business_fee_receipt_image',
+            'business_fee_receipt_image_url',
+            'creator_fee_is_paid',
+            'creator_fee_paid_date',
+            'creator_fee_receipt_image',
+            'creator_fee_receipt_image_url',
             'status',
             'revision_reason',
             'proposed_by',
@@ -76,10 +93,42 @@ class WorkspacePaymentNegotiationSerializer(serializers.ModelSerializer):
             'creator_max_price',
             'currency',
             'country',
+            'business_installments',
+            'creator_installments',
             'installments',
             'created_at',
             'updated_at',
         ]
+
+    def get_business_fee_receipt_image_url(self, obj):
+        if obj.business_fee_receipt_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.business_fee_receipt_image.url)
+            url = obj.business_fee_receipt_image.url
+            if not url.startswith('http'):
+                return f"http://127.0.0.1:8000{url if url.startswith('/') else '/' + url}"
+            return url
+        return None
+
+    def get_creator_fee_receipt_image_url(self, obj):
+        if obj.creator_fee_receipt_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.creator_fee_receipt_image.url)
+            url = obj.creator_fee_receipt_image.url
+            if not url.startswith('http'):
+                return f"http://127.0.0.1:8000{url if url.startswith('/') else '/' + url}"
+            return url
+        return None
+
+    def get_business_installments(self, obj):
+        insts = obj.installments.filter(installment_type='business').order_by('id')
+        return WorkspaceInstallmentSerializer(insts, many=True, context=self.context).data
+
+    def get_creator_installments(self, obj):
+        insts = obj.installments.filter(installment_type='creator').order_by('id')
+        return WorkspaceInstallmentSerializer(insts, many=True, context=self.context).data
 
     def get_proposed_by_name(self, obj):
         if obj.proposed_by:

@@ -262,122 +262,232 @@
     <!-- Platform Charge & Fee Calculation Panel -->
     <div class="divide-section" style="border-left: 4px solid #2563eb; background: #eff6ff;">
         <div class="section-title" style="color: #1e40af;">
-            <span>% Platform Charge & Fee Breakdown</span>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-            <form method="POST" style="display: flex; align-items: center; gap: 8px;">
-                {% csrf_token %}
-                <input type="hidden" name="action_type" value="update_platform_charge">
-                <label style="font-size: 13px; font-weight: 600; color: #1e293b;">Platform Charge %:</label>
-                <input type="number" step="0.1" name="platform_charge" value="{{ platform_charge_pct }}" style="width: 70px; padding: 4px 8px; font-weight: bold; border: 1px solid #cbd5e1; border-radius: 6px;">
-                <button type="submit" class="btn-action" style="padding: 4px 10px; font-size: 12px;">Update %</button>
-            </form>
-
-            <div style="font-size: 13px; color: #1e293b;">
-                Calculated Platform Fee: <strong style="color: #2563eb; font-size: 15px;">{{ formatted_charge_amt }}</strong>
-            </div>
+            <span>% Platform Charge & Fee Breakdown & Tracking</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
-            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b;">Business Total Payment</div>
-                <div style="font-size: 18px; font-weight: 800; color: #0f172a; font-family: monospace;">{{ formatted_business_total }}</div>
-                <div style="font-size: 11px; color: #64748b;">{{ formatted_final_price }} + {{ platform_charge_pct }}% ({{ formatted_charge_amt }})</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <!-- Business Platform Charge Card & Tracking Row -->
+            <div style="background: white; padding: 18px; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-b pb-8;">
+                    <span style="font-size: 13px; font-weight: 800; text-transform: uppercase; color: #1e293b;">🏢 Business Platform Charge (2.5%)</span>
+                    <span class="badge-blue">Default 2.5%</span>
+                </div>
+
+                <!-- Rate Config Form -->
+                <form method="POST" style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action_type" value="update_platform_charge">
+                    <label style="font-size: 12px; font-weight: 600; color: #475569;">Business Charge %:</label>
+                    <input type="number" step="0.1" name="business_platform_charge" value="{{ business_platform_charge_pct }}" style="width: 70px; padding: 4px 8px; font-weight: bold; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <button type="submit" class="btn-action" style="padding: 4px 10px; font-size: 12px;">Update %</button>
+                </form>
+
+                <!-- Business Fee Tracking Form Row -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; margin-top: 8px;">
+                    <div style="font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                        <span>Business Platform Fee Tracking:</span>
+                        <span style="color: #2563eb; font-size: 15px; font-weight: 800;">{{ formatted_business_charge_amt }}</span>
+                    </div>
+                    <form method="POST" enctype="multipart/form-data" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action_type" value="update_business_fee_status">
+                        
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <label style="font-size: 10px; font-weight: 700; color: #64748b;">Paid Date:</label>
+                            <input type="date" name="business_fee_paid_date" value="{{ instance.business_fee_paid_date|date:'Y-m-d' }}" class="input-custom" style="padding: 4px 6px; font-size: 11px;">
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 4px; margin-top: 14px;">
+                            <label style="font-size: 12px; font-weight: 700; color: #1e293b; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                <input type="checkbox" name="business_fee_is_paid" value="true" {% if instance.business_fee_is_paid %}checked{% endif %}>
+                                {% if instance.business_fee_is_paid %}
+                                    <span style="color: #059669;">Paid (Received)</span>
+                                {% else %}
+                                    <span style="color: #ea580c;">Unpaid</span>
+                                {% endif %}
+                            </label>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 180px;">
+                            <label style="font-size: 10px; font-weight: 700; color: #64748b;">Business Fee Receipt Image:</label>
+                            {% if instance.business_fee_receipt_image %}
+                                <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 2px;">
+                                    <a href="{{ instance.business_fee_receipt_image.url }}" target="_blank" style="font-size: 11px; font-weight: 700; color: #2563eb; text-decoration: underline;">📄 View Receipt Proof</a>
+                                    <a href="{{ instance.business_fee_receipt_image.url }}" download style="font-size: 11px; font-weight: 700; color: #059669; text-decoration: underline;">⬇️ Download</a>
+                                </div>
+                            {% else %}
+                                <span style="font-size: 11px; color: #94a3b8; font-style: italic;">No fee receipt uploaded yet by business</span>
+                            {% endif %}
+                        </div>
+
+                        <div style="display: flex; gap: 4px; margin-top: 12px; margin-left: auto;">
+                            <button type="submit" class="btn-action" style="padding: 4px 10px; font-size: 11px;">Save</button>
+                    </form>
+                    <form method="POST" style="display: inline;" onsubmit="return confirm('Reset Business Fee paid status?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action_type" value="reset_business_fee">
+                        <button type="submit" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;">Delete / Reset</button>
+                    </form>
+                        </div>
+                </div>
+
+                <div style="font-size: 11px; color: #64748b; margin-top: 10px;">
+                    Business Campaign Final Price: <strong>{{ formatted_final_price }}</strong> + Platform Fee <strong>{{ formatted_business_charge_amt }}</strong>
+                </div>
             </div>
 
-            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b;">Creator Net Received</div>
-                <div style="font-size: 18px; font-weight: 800; color: #16a34a; font-family: monospace;">{{ formatted_creator_net }}</div>
-                <div style="font-size: 11px; color: #64748b;">{{ formatted_final_price }} - {{ platform_charge_pct }}% ({{ formatted_charge_amt }})</div>
-            </div>
+            <!-- Creator Platform Charge Card & Tracking Row with Upload -->
+            <div style="background: white; padding: 18px; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-b pb-8;">
+                    <span style="font-size: 13px; font-weight: 800; text-transform: uppercase; color: #166534;">🎨 Creator Platform Charge (1.5%)</span>
+                    <span class="badge-orange" style="background-color: #f0fdf4; color: #166534; border-color: #bbf7d0;">Default 1.5%</span>
+                </div>
 
-            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #bfdbfe; background-color: #f0f9ff;">
-                <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #1d4ed8;">Total Platform Revenue</div>
-                <div style="font-size: 18px; font-weight: 800; color: #1d4ed8; font-family: monospace;">{{ formatted_total_platform_fee }}</div>
-                <div style="font-size: 11px; color: #64748b;">Business Fee ({{ formatted_charge_amt }}) + Creator Fee ({{ formatted_charge_amt }})</div>
+                <!-- Rate Config Form -->
+                <form method="POST" style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action_type" value="update_platform_charge">
+                    <label style="font-size: 12px; font-weight: 600; color: #475569;">Creator Charge %:</label>
+                    <input type="number" step="0.1" name="creator_platform_charge" value="{{ creator_platform_charge_pct }}" style="width: 70px; padding: 4px 8px; font-weight: bold; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <button type="submit" class="btn-action-emerald" style="padding: 4px 10px; font-size: 12px;">Update %</button>
+                </form>
+
+                <!-- Creator Fee Tracking Form Row (with File Upload) -->
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; margin-top: 8px;">
+                    <div style="font-size: 12px; font-weight: 700; color: #166534; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                        <span>Creator Fee Deduction:</span>
+                        <span style="color: #166534; font-size: 15px; font-weight: 800;">{{ formatted_creator_charge_amt }}</span>
+                    </div>
+                    <form method="POST" enctype="multipart/form-data" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action_type" value="update_creator_fee_status">
+                        
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <label style="font-size: 10px; font-weight: 700; color: #64748b;">Paid Date:</label>
+                            <input type="date" name="creator_fee_paid_date" value="{{ instance.creator_fee_paid_date|date:'Y-m-d' }}" class="input-custom" style="padding: 4px 6px; font-size: 11px;">
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 4px; margin-top: 14px;">
+                            <label style="font-size: 12px; font-weight: 700; color: #1e293b; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                <input type="checkbox" name="creator_fee_is_paid" value="true" {% if instance.creator_fee_is_paid %}checked{% endif %}>
+                                {% if instance.creator_fee_is_paid %}
+                                    <span style="color: #059669;">Fee Confirmed</span>
+                                {% else %}
+                                    <span style="color: #ea580c;">Pending</span>
+                                {% endif %}
+                            </label>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 2px; width: 100%; margin-top: 4px;">
+                            <label style="font-size: 10px; font-weight: 700; color: #64748b;">Admin Fee Receipt Upload:</label>
+                            {% if instance.creator_fee_receipt_image %}
+                                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 2px;">
+                                    <a href="{{ instance.creator_fee_receipt_image.url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline; font-size: 11px;">View Receipt</a>
+                                    <a href="{{ instance.creator_fee_receipt_image.url }}" download target="_blank" style="color: #059669; font-weight: 600; text-decoration: underline; font-size: 11px;">Download</a>
+                                </div>
+                            {% endif %}
+                            <input type="file" name="creator_fee_receipt_image" accept="image/*,.pdf" style="font-size: 11px;">
+                        </div>
+
+                        <div style="display: flex; gap: 4px; margin-top: 6px; margin-left: auto;">
+                            <button type="submit" class="btn-action-emerald" style="padding: 4px 10px; font-size: 11px;">Save</button>
+                    </form>
+                    <form method="POST" style="display: inline;" onsubmit="return confirm('Reset Creator Fee paid status and receipt proof?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action_type" value="reset_creator_fee">
+                        <button type="submit" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;">Delete / Reset</button>
+                    </form>
+                        </div>
+                </div>
+
+                <div style="font-size: 11px; color: #64748b; margin-top: 10px;">
+                    Creator Net Received Pool: <strong>{{ formatted_creator_net }}</strong> ({{ formatted_final_price }} - {{ formatted_creator_charge_amt }})
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Platform Revenue Card -->
+        <div style="background: white; padding: 14px; border-radius: 8px; border: 1px solid #bfdbfe; background-color: #f0f9ff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+                <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #1d4ed8;">💰 Total Platform Revenue Collected</div>
+                <div style="font-size: 11px; color: #64748b;">Business Fee ({{ formatted_business_charge_amt }}) + Creator Fee ({{ formatted_creator_charge_amt }})</div>
+            </div>
+            <div style="font-size: 20px; font-weight: 800; color: #1d4ed8; font-family: monospace;">
+                {{ formatted_total_platform_fee }}
             </div>
         </div>
     </div>
 
-    <!-- Divide Final Price into Installments Panel -->
-    <div class="divide-section">
-        <div class="section-title">
-            <span>⚡ Quick Divide Creator Net Payout into Milestone Installments</span>
-        </div>
-        <form method="POST" style="margin-bottom: 16px;">
-            {% csrf_token %}
-            <input type="hidden" name="action_type" value="divide_installments">
-            <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Choose a preset or submit to divide the creator net payout pool (<strong>{{ formatted_creator_net }}</strong>) into milestone installments for this campaign:</p>
-            <button type="submit" name="preset" value="3_milestones" class="btn-action-emerald">Divide into 3 Milestones (Kickoff 30%, Drafts 40%, Final 30%)</button>
-            <button type="submit" name="preset" value="50_50" class="btn-action">Divide into 2 Milestones (50% / 50%)</button>
-        </form>
-    </div>
-
-    <!-- Installments Breakdown Table -->
-    <div class="divide-section">
+    <!-- 1. BUSINESS MILESTONE INSTALLMENTS SECTION -->
+    <div class="divide-section" style="border-top: 3px solid #2563eb;">
         <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <span>💳 Milestone Installments Payout Breakdown</span>
+            <span>🏢 Business Milestone Installments (Inbound Payments from Business to Admin)</span>
             <span style="font-size: 13px; font-weight: 600;">
-                Total Divided: <strong>{{ formatted_total_allocated }}</strong> / Creator Net Received: <strong>{{ formatted_creator_net }}</strong>
-                {% if is_fully_allocated %}
+                Total Divided: <strong>{{ formatted_total_allocated_business }}</strong> / Business Campaign Price: <strong>{{ formatted_target_business_pool }}</strong>
+                {% if is_fully_allocated_business %}
                     <span class="badge-blue" style="background-color: #dcfce7; color: #15803d; border-color: #bbf7d0; margin-left: 6px;">Fully Allocated</span>
                 {% else %}
-                    <span style="color: #ea580c; font-size: 12px; margin-left: 6px;">(Remaining: {{ formatted_remaining_amount }})</span>
+                    <span style="color: #ea580c; font-size: 12px; margin-left: 6px;">(Remaining: {{ formatted_remaining_business }})</span>
                 {% endif %}
             </span>
         </div>
 
+        <!-- Quick Divide for Business -->
+        <form method="POST" style="margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            {% csrf_token %}
+            <input type="hidden" name="action_type" value="divide_installments">
+            <input type="hidden" name="installment_type" value="business">
+            <p style="font-size: 12px; color: #64748b; margin-bottom: 8px;">Quick Divide Business Campaign Pool (<strong>{{ formatted_target_business_pool }}</strong>) into Inbound Milestones:</p>
+            <button type="submit" name="preset" value="3_milestones" class="btn-action">Divide into 3 Milestones (30% / 40% / 30%)</button>
+            <button type="submit" name="preset" value="50_50" class="btn-preset">Divide into 2 Milestones (50% / 50%)</button>
+        </form>
+
         <table class="table-custom">
             <thead>
                 <tr>
-                    <th>Installment Name</th>
-                    <th>Price / Amount</th>
+                    <th>Installment Title</th>
+                    <th>Amount</th>
                     <th>Paid Date</th>
-                    <th>Is Paid? / Status</th>
-                    <th>Receipt Proof Image</th>
+                    <th>Status / Paid</th>
+                    <th>Business Payment Proof</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <!-- Form Row for Adding Manual Installment -->
-                <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0; {% if is_fully_allocated %}opacity: 0.6;{% endif %}">
+                <!-- Add Manual Business Installment Form Row -->
+                <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                     <form method="POST">
                         {% csrf_token %}
                         <input type="hidden" name="action_type" value="add_installment_manual">
+                        <input type="hidden" name="installment_type" value="business">
                         <td>
-                            <input type="text" name="title" placeholder="e.g. Kickoff 30%" class="input-custom" style="width: 160px;" required {% if is_fully_allocated %}disabled{% endif %}>
+                            <input type="text" name="title" placeholder="e.g. Milestone 1 (Business)" class="input-custom" style="width: 160px;" required>
                         </td>
                         <td>
-                            <input type="number" step="0.01" name="amount" placeholder="{% if is_fully_allocated %}0.00{% else %}{{ remaining_amount }}{% endif %}" class="input-custom" style="width: 100px; font-family: monospace;" required {% if is_fully_allocated %}disabled{% endif %}>
+                            <input type="number" step="0.01" name="amount" placeholder="{{ remaining_business }}" class="input-custom" style="width: 100px; font-family: monospace;" required>
                         </td>
                         <td>
-                            <input type="date" name="paid_date" class="input-custom" {% if is_fully_allocated %}disabled{% endif %}>
+                            <input type="date" name="paid_date" class="input-custom">
                         </td>
                         <td>
                             <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px; color: #475569;">
-                                <input type="checkbox" name="is_paid" value="true" {% if is_fully_allocated %}disabled{% endif %}>
-                                Paid
+                                <input type="checkbox" name="is_paid" value="true">
+                                Approved
                             </label>
                         </td>
                         <td>
                             <span style="font-size: 11px; color: #94a3b8;">Uploaded by Business</span>
                         </td>
                         <td>
-                            {% if is_fully_allocated %}
-                                <button type="button" class="btn-action" disabled style="background-color: #94a3b8; cursor: not-allowed; display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px;" title="Final price is fully allocated into milestone installments">
-                                    <span>Fully Allocated</span>
-                                </button>
-                            {% else %}
-                                <button type="submit" class="btn-action-emerald" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                    <span>Add Installment</span>
-                                </button>
-                            {% endif %}
+                            <button type="submit" class="btn-action" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <span>Add Business Installment</span>
+                            </button>
                         </td>
                     </form>
                 </tr>
 
-                {% for inst in installments %}
+                {% for inst in business_installments %}
                 <tr>
                     <td>
                         <form method="POST" style="display: flex; gap: 8px; align-items: center;">
@@ -387,20 +497,22 @@
                             <input type="text" name="title" value="{{ inst.title }}" class="input-custom" style="width: 160px;">
                     </td>
                     <td>
-                            <input type="text" name="amount" value="{{ inst.amount }}" class="input-custom" style="width: 100px; font-family: monospace;">
+                        <input type="text" name="amount" value="{{ inst.amount }}" class="input-custom" style="width: 100px; font-family: monospace;">
                     </td>
                     <td>
-                            <input type="date" name="paid_date" value="{{ inst.paid_date|date:'Y-m-d' }}" class="input-custom">
+                        <input type="date" name="paid_date" value="{{ inst.paid_date|date:'Y-m-d' }}" class="input-custom">
                     </td>
                     <td>
-                            <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
-                                <input type="checkbox" name="is_paid" value="true" {% if inst.is_paid or inst.status == 'released' %}checked{% endif %}>
-                                {% if inst.is_paid or inst.status == 'released' %}
-                                    <span style="color: #059669;">Released (Paid)</span>
-                                {% else %}
-                                    <span style="color: #d97706;">In Escrow</span>
-                                {% endif %}
-                            </label>
+                        <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                            <input type="checkbox" name="is_paid" value="true" {% if inst.is_paid or inst.status == 'released' %}checked{% endif %}>
+                            {% if inst.is_paid or inst.status == 'released' %}
+                                <span style="color: #059669;">Approved (Paid)</span>
+                            {% elif inst.status == 'payment_submitted' %}
+                                <span style="color: #2563eb;">Proof Submitted</span>
+                            {% else %}
+                                <span style="color: #d97706;">In Escrow</span>
+                            {% endif %}
+                        </label>
                     </td>
                     <td>
                         {% if inst.receipt_image %}
@@ -414,14 +526,14 @@
                                 <a href="{{ inst.receipt_url }}" download target="_blank" style="color: #059669; font-weight: 600; text-decoration: underline;">Download</a>
                             </div>
                         {% else %}
-                            <div style="color: #94a3b8;">No proof uploaded by business</div>
+                            <span style="color: #94a3b8; font-size: 11px;">No proof uploaded by business</span>
                         {% endif %}
                     </td>
                     <td>
                         <div style="display: flex; gap: 6px; align-items: center;">
                             <button type="submit" class="btn-action">Save</button>
                         </form>
-                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this installment?');">
+                        <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this business installment?');">
                             {% csrf_token %}
                             <input type="hidden" name="action_type" value="delete_installment_row">
                             <input type="hidden" name="installment_id" value="{{ inst.id }}">
@@ -433,7 +545,139 @@
                 {% empty %}
                 <tr>
                     <td colspan="6" style="font-size: 13px; color: #64748b; padding: 16px; text-align: center;">
-                        No custom milestone installments created yet. Fill out the form above with the <strong>+ Add Installment</strong> button or use a quick divide preset above.
+                        No business installments created yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 2. CREATOR MILESTONE INSTALLMENTS SECTION -->
+    <div class="divide-section" style="border-top: 3px solid #059669;">
+        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span>🎨 Creator Milestone Installments (Outbound Payments from Admin to Creator)</span>
+            <span style="font-size: 13px; font-weight: 600;">
+                Total Divided: <strong>{{ formatted_total_allocated_creator }}</strong> / Creator Net Received: <strong>{{ formatted_target_creator_pool }}</strong>
+                {% if is_fully_allocated_creator %}
+                    <span class="badge-blue" style="background-color: #dcfce7; color: #15803d; border-color: #bbf7d0; margin-left: 6px;">Fully Allocated</span>
+                {% else %}
+                    <span style="color: #ea580c; font-size: 12px; margin-left: 6px;">(Remaining: {{ formatted_remaining_creator }})</span>
+                {% endif %}
+            </span>
+        </div>
+
+        <!-- Quick Divide for Creator -->
+        <form method="POST" style="margin-bottom: 16px; background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0;">
+            {% csrf_token %}
+            <input type="hidden" name="action_type" value="divide_installments">
+            <input type="hidden" name="installment_type" value="creator">
+            <p style="font-size: 12px; color: #166534; margin-bottom: 8px;">Quick Divide Creator Net Pool (<strong>{{ formatted_target_creator_pool }}</strong>) into Outbound Milestones:</p>
+            <button type="submit" name="preset" value="3_milestones" class="btn-action-emerald">Divide into 3 Milestones (30% / 40% / 30%)</button>
+            <button type="submit" name="preset" value="50_50" class="btn-preset">Divide into 2 Milestones (50% / 50%)</button>
+        </form>
+
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Installment Title</th>
+                    <th>Amount</th>
+                    <th>Paid Date</th>
+                    <th>Verification Status</th>
+                    <th>Admin Payout Receipt Proof</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Add Manual Creator Installment Form Row -->
+                <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="action_type" value="add_installment_manual">
+                        <input type="hidden" name="installment_type" value="creator">
+                        <td>
+                            <input type="text" name="title" placeholder="e.g. Kickoff 30%" class="input-custom" style="width: 160px;" required>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" name="amount" placeholder="{{ remaining_creator }}" class="input-custom" style="width: 100px; font-family: monospace;" required>
+                        </td>
+                        <td>
+                            <input type="date" name="paid_date" class="input-custom">
+                        </td>
+                        <td>
+                            <span style="color: #64748b; font-size: 11px; font-style: italic;">Verified by Creator</span>
+                        </td>
+                        <td>
+                            <input type="file" name="receipt_image" accept="image/*,.pdf" style="font-size: 11px; width: 170px;">
+                        </td>
+                        <td>
+                            <button type="submit" class="btn-action-emerald" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <span>Add Creator Installment</span>
+                            </button>
+                        </td>
+                    </form>
+                </tr>
+
+                {% for inst in creator_installments %}
+                <tr>
+                    <td>
+                        <form method="POST" enctype="multipart/form-data" style="display: flex; gap: 8px; align-items: center;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action_type" value="update_installment_row">
+                            <input type="hidden" name="installment_id" value="{{ inst.id }}">
+                            <input type="text" name="title" value="{{ inst.title }}" class="input-custom" style="width: 160px;">
+                    </td>
+                    <td>
+                        <input type="text" name="amount" value="{{ inst.amount }}" class="input-custom" style="width: 100px; font-family: monospace;">
+                    </td>
+                    <td>
+                        <input type="date" name="paid_date" value="{{ inst.paid_date|date:'Y-m-d' }}" class="input-custom">
+                    </td>
+                    <td>
+                        {% if inst.is_paid or inst.status == 'released' %}
+                            <span style="color: #059669; font-weight: 700; font-size: 11px;">✓ Released & Verified by Creator</span>
+                        {% elif inst.receipt_image or inst.receipt_url %}
+                            <span style="color: #2563eb; font-weight: 700; font-size: 11px;">⌛ Awaiting Creator Verification</span>
+                        {% else %}
+                            <span style="color: #d97706; font-weight: 700; font-size: 11px;">In Escrow</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            {% if inst.receipt_image %}
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <a href="{{ inst.receipt_image.url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Proof</a>
+                                    <a href="{{ inst.receipt_image.url }}" download target="_blank" style="color: #059669; font-weight: 600; text-decoration: underline;">Download</a>
+                                </div>
+                            {% elif inst.receipt_url %}
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <a href="{{ inst.receipt_url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Proof</a>
+                                    <a href="{{ inst.receipt_url }}" download target="_blank" style="color: #059669; font-weight: 600; text-decoration: underline;">Download</a>
+                                </div>
+                            {% else %}
+                                <span style="color: #94a3b8; font-size: 11px;">No admin receipt uploaded</span>
+                            {% endif %}
+                            <input type="file" name="receipt_image" accept="image/*,.pdf" style="font-size: 11px; width: 160px;">
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <button type="submit" class="btn-action">Save</button>
+                        </form>
+                        <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this creator installment?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action_type" value="delete_installment_row">
+                            <input type="hidden" name="installment_id" value="{{ inst.id }}">
+                            <button type="submit" style="background-color: #ef4444; color: #ffffff; padding: 6px 10px; border-radius: 6px; font-weight: 600; font-size: 12px; border: none; cursor: pointer;">Delete</button>
+                        </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="font-size: 13px; color: #64748b; padding: 16px; text-align: center;">
+                        No creator installments created yet.
                     </td>
                 </tr>
                 {% endfor %}

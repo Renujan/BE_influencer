@@ -48,7 +48,7 @@ class WorkspaceMessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WorkspaceMessage
-        fields = ["id", "sender", "sender_name", "text", "file_attachment", "time", "message_type"]
+        fields = ["id", "sender", "sender_name", "text", "file_attachment", "time", "message_type", "is_pinned"]
 
 class AdminComplianceTicketSerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(source="sender.username", read_only=True)

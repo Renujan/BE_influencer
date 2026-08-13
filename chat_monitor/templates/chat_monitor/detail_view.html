@@ -520,6 +520,7 @@
        ROW 3: Chat History + Admin Reviews
   ════════════════════════════════════════════ -->
   <div class="section-divider">Chat & Reviews</div>
+
   <div class="cm-grid-2">
 
     <!-- Chat History -->
@@ -538,8 +539,8 @@
                 {{ msg.sender.username|slice:":1"|upper }}
               </div>
               <div class="msg-content">
-                <span class="sender-name">{{ msg.sender.username }} {% if msg.message_type != 'main' %}<small style="color:#6366f1;font-weight:600;">({{ msg.message_type|title }})</small>{% endif %}</span>
-                <div class="bubble">
+                <span class="sender-name">{% if msg.is_pinned %}📌 {% endif %}{{ msg.sender.username }} {% if msg.message_type != 'main' %}<small style="color:#6366f1;font-weight:600;">({{ msg.message_type|title }})</small>{% endif %}</span>
+                <div class="bubble" style="{% if msg.is_pinned %}background:#fef9c3;color:#1e293b;border:1px solid #fde047;{% endif %}">
                   {{ msg.text }}
                   {% if msg.file_attachment %}
                     <div style="margin-top:6px;padding:4px 8px;background:rgba(0,0,0,0.06);border-radius:6px;font-size:0.78rem;">

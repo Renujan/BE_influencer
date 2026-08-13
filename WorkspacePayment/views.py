@@ -139,9 +139,8 @@ def update_platform_charge(request):
     campaign_id = request.data.get('campaign_id')
     negotiation_id = request.data.get('negotiation_id')
     platform_charge = request.data.get('platform_charge')
-
-    if platform_charge is None:
-        return Response({'error': 'platform_charge is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    business_platform_charge = request.data.get('business_platform_charge')
+    creator_platform_charge = request.data.get('creator_platform_charge')
 
     negotiation = None
     if negotiation_id:
@@ -153,13 +152,45 @@ def update_platform_charge(request):
         return Response({'error': 'Payment negotiation entry not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     try:
-        charge_val = float(str(platform_charge).replace('%', '').strip())
-        negotiation.platform_charge = charge_val
+        biz_val = business_platform_charge if business_platform_charge is not None else platform_charge
+        if biz_val is not None:
+            charge_val = float(str(biz_val).replace('%', '').strip())
+            negotiation.platform_charge = charge_val
+
+        if creator_platform_charge is not None:
+            creator_val = float(str(creator_platform_charge).replace('%', '').strip())
+            negotiation.creator_platform_charge = creator_val
+
+        if request.data.get('business_fee_is_paid') is not None:
+            negotiation.business_fee_is_paid = str(request.data.get('business_fee_is_paid')).lower() in ['true', '1']
+        if request.data.get('business_fee_paid_date') is not None:
+            negotiation.business_fee_paid_date = request.data.get('business_fee_paid_date') or None
+        if request.FILES.get('business_fee_receipt_image'):
+            negotiation.business_fee_receipt_image = request.FILES.get('business_fee_receipt_image')
+            if not negotiation.business_fee_paid_date:
+                from django.utils import timezone
+                negotiation.business_fee_paid_date = timezone.now().date()
+        if str(request.data.get('reset_business_fee')).lower() in ['true', '1']:
+            negotiation.business_fee_is_paid = False
+            negotiation.business_fee_paid_date = None
+            negotiation.business_fee_receipt_image = None
+
+        if request.data.get('creator_fee_is_paid') is not None:
+            negotiation.creator_fee_is_paid = str(request.data.get('creator_fee_is_paid')).lower() in ['true', '1']
+        if request.data.get('creator_fee_paid_date') is not None:
+            negotiation.creator_fee_paid_date = request.data.get('creator_fee_paid_date') or None
+        if request.FILES.get('creator_fee_receipt_image'):
+            negotiation.creator_fee_receipt_image = request.FILES.get('creator_fee_receipt_image')
+        if str(request.data.get('reset_creator_fee')).lower() in ['true', '1']:
+            negotiation.creator_fee_is_paid = False
+            negotiation.creator_fee_paid_date = None
+            negotiation.creator_fee_receipt_image = None
+
         negotiation.save()
     except ValueError:
-        return Response({'error': 'Invalid platform_charge format.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Invalid format.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = WorkspacePaymentNegotiationSerializer(negotiation)
+    serializer = WorkspacePaymentNegotiationSerializer(negotiation, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -168,6 +199,7 @@ def update_platform_charge(request):
 def create_installments(request):
     campaign_id = request.data.get('campaign_id')
     installments_data = request.data.get('installments', [])
+    installment_type = request.data.get('installment_type', 'creator')
 
     if not campaign_id or not installments_data:
         return Response({'error': 'campaign_id and installments array are required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -179,7 +211,7 @@ def create_installments(request):
 
     negotiation = WorkspacePaymentNegotiation.objects.filter(campaign=campaign).first()
 
-    WorkspaceInstallment.objects.filter(campaign=campaign).delete()
+    WorkspaceInstallment.objects.filter(campaign=campaign, installment_type=installment_type).delete()
 
     created_objs = []
     for idx, item in enumerate(installments_data, start=1):
@@ -195,6 +227,7 @@ def create_installments(request):
         obj = WorkspaceInstallment.objects.create(
             campaign=campaign,
             negotiation=negotiation,
+            installment_type=installment_type,
             title=title,
             amount=amount_val,
             status='released' if is_paid_val else 'in_escrow',

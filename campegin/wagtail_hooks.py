@@ -466,16 +466,30 @@ class WorkspacePaymentInspectView(InspectView):
         except (ValueError, TypeError):
             cr_min_val, cr_max_val, min_budg_val, max_budg_val, final_val = 20000, 49000, 10000, 51000, 0
 
-        platform_charge_pct = float(negotiation.platform_charge if negotiation.platform_charge is not None else 2.5)
-        charge_amt = float(negotiation.platform_charge_amount)
+        business_platform_charge_pct = float(negotiation.platform_charge if negotiation.platform_charge is not None else 2.5)
+        creator_platform_charge_pct = float(negotiation.creator_platform_charge if negotiation.creator_platform_charge is not None else 1.5)
+
+        business_charge_amt = float(negotiation.business_platform_charge_amount)
+        creator_charge_amt = float(negotiation.creator_platform_charge_amount)
+
         business_total = float(negotiation.business_total_payment)
         creator_net = float(negotiation.creator_net_received)
         total_platform_fee = float(negotiation.total_platform_fee)
 
-        context['platform_charge_pct'] = platform_charge_pct
-        context['formatted_platform_charge'] = f"{platform_charge_pct}%"
-        context['charge_amt'] = charge_amt
-        context['formatted_charge_amt'] = f"{symbol}{charge_amt:,.2f}"
+        context['platform_charge_pct'] = business_platform_charge_pct
+        context['business_platform_charge_pct'] = business_platform_charge_pct
+        context['creator_platform_charge_pct'] = creator_platform_charge_pct
+        context['formatted_platform_charge'] = f"{business_platform_charge_pct}%"
+        context['formatted_business_platform_charge'] = f"{business_platform_charge_pct}%"
+        context['formatted_creator_platform_charge'] = f"{creator_platform_charge_pct}%"
+
+        context['charge_amt'] = business_charge_amt
+        context['business_charge_amt'] = business_charge_amt
+        context['formatted_charge_amt'] = f"{symbol}{business_charge_amt:,.2f}"
+        context['formatted_business_charge_amt'] = f"{symbol}{business_charge_amt:,.2f}"
+        context['creator_charge_amt'] = creator_charge_amt
+        context['formatted_creator_charge_amt'] = f"{symbol}{creator_charge_amt:,.2f}"
+
         context['business_total'] = business_total
         context['formatted_business_total'] = f"{symbol}{business_total:,.2f}"
         context['creator_net'] = creator_net
@@ -486,19 +500,46 @@ class WorkspacePaymentInspectView(InspectView):
         context['creator_rate_range'] = f"{symbol}{cr_min_val:,.0f} – {symbol}{cr_max_val:,.0f}"
         context['business_budget_range'] = f"{symbol}{min_budg_val:,.0f} – {symbol}{max_budg_val:,.0f}"
         context['formatted_final_price'] = f"{symbol}{final_val:,.2f}"
-        
-        installments = negotiation.installments.all().order_by('id')
-        total_allocated = sum(float(inst.amount or 0) for inst in installments)
-        target_creator_pool = creator_net if creator_net > 0 else final_val
-        remaining_amount = max(0.0, target_creator_pool - total_allocated)
-        is_fully_allocated = (target_creator_pool > 0 and (total_allocated >= target_creator_pool or abs(total_allocated - target_creator_pool) < 0.01))
 
-        context['installments'] = installments
-        context['total_allocated'] = total_allocated
-        context['formatted_total_allocated'] = f"{symbol}{total_allocated:,.2f}"
-        context['remaining_amount'] = remaining_amount
-        context['formatted_remaining_amount'] = f"{symbol}{remaining_amount:,.2f}"
-        context['is_fully_allocated'] = is_fully_allocated
+        # Business Installments (Inbound Payments from Business to Admin)
+        business_installments = negotiation.installments.filter(installment_type='business').order_by('id')
+        total_allocated_business = sum(float(inst.amount or 0) for inst in business_installments)
+        target_business_pool = final_val  # 55000 rupees base accepted final price
+        remaining_business = max(0.0, target_business_pool - total_allocated_business)
+        is_fully_allocated_business = (target_business_pool > 0 and (total_allocated_business >= target_business_pool or abs(total_allocated_business - target_business_pool) < 0.01))
+
+        context['business_installments'] = business_installments
+        context['target_business_pool'] = target_business_pool
+        context['formatted_target_business_pool'] = f"{symbol}{target_business_pool:,.2f}"
+        context['total_allocated_business'] = total_allocated_business
+        context['formatted_total_allocated_business'] = f"{symbol}{total_allocated_business:,.2f}"
+        context['remaining_business'] = remaining_business
+        context['formatted_remaining_business'] = f"{symbol}{remaining_business:,.2f}"
+        context['is_fully_allocated_business'] = is_fully_allocated_business
+
+        # Creator Installments (Outbound Payments from Admin to Creator)
+        creator_installments = negotiation.installments.filter(installment_type='creator').order_by('id')
+        total_allocated_creator = sum(float(inst.amount or 0) for inst in creator_installments)
+        target_creator_pool = creator_net if creator_net > 0 else final_val  # 54175 rupees net received pool
+        remaining_creator = max(0.0, target_creator_pool - total_allocated_creator)
+        is_fully_allocated_creator = (target_creator_pool > 0 and (total_allocated_creator >= target_creator_pool or abs(total_allocated_creator - target_creator_pool) < 0.01))
+
+        context['creator_installments'] = creator_installments
+        context['target_creator_pool'] = target_creator_pool
+        context['formatted_target_creator_pool'] = f"{symbol}{target_creator_pool:,.2f}"
+        context['total_allocated_creator'] = total_allocated_creator
+        context['formatted_total_allocated_creator'] = f"{symbol}{total_allocated_creator:,.2f}"
+        context['remaining_creator'] = remaining_creator
+        context['formatted_remaining_creator'] = f"{symbol}{remaining_creator:,.2f}"
+        context['is_fully_allocated_creator'] = is_fully_allocated_creator
+
+        # Backward compatibility context
+        context['installments'] = creator_installments
+        context['total_allocated'] = total_allocated_creator
+        context['formatted_total_allocated'] = f"{symbol}{total_allocated_creator:,.2f}"
+        context['remaining_amount'] = remaining_creator
+        context['formatted_remaining_amount'] = f"{symbol}{remaining_creator:,.2f}"
+        context['is_fully_allocated'] = is_fully_allocated_creator
 
         return context
 
@@ -508,57 +549,135 @@ class WorkspacePaymentInspectView(InspectView):
         action_type = request.POST.get('action_type')
 
         if action_type == 'update_platform_charge':
-            charge_val = request.POST.get('platform_charge')
-            if charge_val is not None:
+            biz_charge_val = request.POST.get('business_platform_charge') or request.POST.get('platform_charge')
+            creator_charge_val = request.POST.get('creator_platform_charge')
+
+            updated_fields = []
+            if biz_charge_val is not None:
                 try:
-                    c_val = float(str(charge_val).replace('%', '').strip())
+                    c_val = float(str(biz_charge_val).replace('%', '').strip())
                     negotiation.platform_charge = c_val
-                    negotiation.save(update_fields=['platform_charge'])
-                    messages.success(request, f"Successfully updated platform charge to {c_val}%.")
+                    updated_fields.append('platform_charge')
                 except ValueError:
-                    messages.error(request, "Invalid platform charge percentage.")
+                    messages.error(request, "Invalid Business platform charge percentage.")
+
+            if creator_charge_val is not None:
+                try:
+                    cr_val = float(str(creator_charge_val).replace('%', '').strip())
+                    negotiation.creator_platform_charge = cr_val
+                    updated_fields.append('creator_platform_charge')
+                except ValueError:
+                    messages.error(request, "Invalid Creator platform charge percentage.")
+
+            if updated_fields:
+                negotiation.save(update_fields=updated_fields)
+                messages.success(request, f"Successfully updated platform charges (Business: {negotiation.platform_charge}%, Creator: {negotiation.creator_platform_charge}%).")
+
+            return redirect(request.path)
+
+        elif action_type == 'update_business_fee_status':
+            is_paid = request.POST.get('business_fee_is_paid') == 'true'
+            paid_date = request.POST.get('business_fee_paid_date')
+            negotiation.business_fee_is_paid = is_paid
+            if paid_date:
+                negotiation.business_fee_paid_date = paid_date
+            elif is_paid and not negotiation.business_fee_paid_date:
+                from django.utils import timezone
+                negotiation.business_fee_paid_date = timezone.now().date()
+            if request.FILES.get('business_fee_receipt_image'):
+                negotiation.business_fee_receipt_image = request.FILES.get('business_fee_receipt_image')
+            negotiation.save()
+            messages.success(request, "Updated Business Platform Fee payment status and receipt.")
+            return redirect(request.path)
+
+        elif action_type == 'reset_business_fee':
+            negotiation.business_fee_is_paid = False
+            negotiation.business_fee_paid_date = None
+            negotiation.business_fee_receipt_image = None
+            negotiation.save()
+            messages.warning(request, "Reset Business Platform Fee status to unpaid.")
+            return redirect(request.path)
+
+        elif action_type == 'update_creator_fee_status':
+            is_paid = request.POST.get('creator_fee_is_paid') == 'true'
+            paid_date = request.POST.get('creator_fee_paid_date')
+            receipt_file = request.FILES.get('creator_fee_receipt_image')
+            negotiation.creator_fee_is_paid = is_paid
+            if paid_date:
+                negotiation.creator_fee_paid_date = paid_date
+            elif is_paid and not negotiation.creator_fee_paid_date:
+                from django.utils import timezone
+                negotiation.creator_fee_paid_date = timezone.now().date()
+            if receipt_file:
+                negotiation.creator_fee_receipt_image = receipt_file
+
+            negotiation.save()
+            messages.success(request, "Updated Creator Platform Fee payment status & receipt proof.")
+            return redirect(request.path)
+
+        elif action_type == 'reset_creator_fee':
+            negotiation.creator_fee_is_paid = False
+            negotiation.creator_fee_paid_date = None
+            negotiation.creator_fee_receipt_image = None
+            negotiation.save()
+            messages.warning(request, "Reset Creator Platform Fee status to unpaid.")
             return redirect(request.path)
 
         elif action_type == 'divide_installments':
             preset = request.POST.get('preset')
-            creator_net_price = float(negotiation.creator_net_received or negotiation.final_price or 0)
+            installment_type = request.POST.get('installment_type', 'creator')
+
+            if installment_type == 'business':
+                target_pool = float(negotiation.final_price or 0)
+            else:
+                target_pool = float(negotiation.creator_net_received or negotiation.final_price or 0)
+
             from WorkspacePayment.models import WorkspaceInstallment
 
-            WorkspaceInstallment.objects.filter(campaign=campaign).delete()
+            WorkspaceInstallment.objects.filter(campaign=campaign, installment_type=installment_type).delete()
 
             if preset == '3_milestones':
                 items = [
-                    ('Kickoff payment', creator_net_price * 0.3),
-                    ('Drafts approved', creator_net_price * 0.4),
-                    ('Final delivery', creator_net_price * 0.3),
+                    ('Kickoff payment', target_pool * 0.3),
+                    ('Drafts approved', target_pool * 0.4),
+                    ('Final delivery', target_pool * 0.3),
                 ]
             else:
                 items = [
-                    ('Installment 1 (50%)', creator_net_price * 0.5),
-                    ('Installment 2 (50%)', creator_net_price * 0.5),
+                    ('Installment 1 (50%)', target_pool * 0.5),
+                    ('Installment 2 (50%)', target_pool * 0.5),
                 ]
 
             for title, amt in items:
                 WorkspaceInstallment.objects.create(
                     campaign=campaign,
                     negotiation=negotiation,
+                    installment_type=installment_type,
                     title=title,
                     amount=amt,
                     status='in_escrow'
                 )
-            messages.success(request, f"Divided net price for '{campaign.name}' into milestone installments.")
+            party_label = "Business" if installment_type == 'business' else "Creator"
+            messages.success(request, f"Divided {party_label} pool ({target_pool:,.2f}) into milestone installments.")
 
         elif action_type == 'add_installment_manual':
-            final_price = float(negotiation.final_price or 0)
-            current_total = sum(float(inst.amount or 0) for inst in negotiation.installments.all())
-            if final_price > 0 and (current_total >= final_price or abs(current_total - final_price) < 0.01):
-                messages.warning(request, "Cannot add installment: final price is already fully allocated.")
+            installment_type = request.POST.get('installment_type', 'creator')
+            if installment_type == 'business':
+                target_pool = float(negotiation.final_price or 0)
+                current_total = sum(float(inst.amount or 0) for inst in negotiation.installments.filter(installment_type='business'))
+            else:
+                target_pool = float(negotiation.creator_net_received or negotiation.final_price or 0)
+                current_total = sum(float(inst.amount or 0) for inst in negotiation.installments.filter(installment_type='creator'))
+
+            if target_pool > 0 and (current_total >= target_pool or abs(current_total - target_pool) < 0.01):
+                messages.warning(request, f"Cannot add installment: target pool amount ({target_pool:,.2f}) is already fully allocated.")
                 return redirect(request.path)
 
             title = request.POST.get('title', '').strip() or 'Installment'
             amount_str = request.POST.get('amount', '0')
             paid_date = request.POST.get('paid_date')
             is_paid = request.POST.get('is_paid') == 'true'
+            receipt_file = request.FILES.get('receipt_image')
 
             try:
                 amount = float(amount_str)
@@ -571,11 +690,15 @@ class WorkspacePaymentInspectView(InspectView):
             inst = WorkspaceInstallment(
                 campaign=campaign,
                 negotiation=negotiation,
+                installment_type=installment_type,
                 title=title,
                 amount=amount,
                 status=status,
                 is_paid=is_paid,
             )
+            if receipt_file:
+                inst.receipt_image = receipt_file
+
             if paid_date:
                 inst.paid_date = paid_date
             elif is_paid:
@@ -602,6 +725,7 @@ class WorkspacePaymentInspectView(InspectView):
             amount = request.POST.get('amount')
             paid_date = request.POST.get('paid_date')
             is_paid = request.POST.get('is_paid') == 'true'
+            receipt_file = request.FILES.get('receipt_image')
 
             from WorkspacePayment.models import WorkspaceInstallment
             try:
@@ -614,6 +738,9 @@ class WorkspacePaymentInspectView(InspectView):
                     except ValueError:
                         pass
                 inst.is_paid = is_paid
+                if receipt_file:
+                    inst.receipt_image = receipt_file
+
                 if is_paid:
                     inst.status = 'released'
                     if paid_date:
@@ -649,15 +776,21 @@ class WorkspacePaymentViewSet(SnippetViewSet):
     search_fields = ("campaign__name", "revision_reason")
 
     def get_platform_charge_display(self, obj):
-        return f"{obj.platform_charge if obj.platform_charge is not None else 2.5}%"
+        if hasattr(obj, "get_platform_charge_display"):
+            return obj.get_platform_charge_display()
+        return f"{obj.platform_charge if getattr(obj, 'platform_charge', None) is not None else 2.5}%"
     get_platform_charge_display.short_description = "Platform Charge %"
 
     def get_platform_fee_display(self, obj):
-        return f"${obj.platform_charge_amount:,.2f}"
+        if hasattr(obj, "get_platform_fee_display"):
+            return obj.get_platform_fee_display()
+        return f"${getattr(obj, 'platform_charge_amount', 0):,.2f}"
     get_platform_fee_display.short_description = "Calculated Platform Fee"
 
     def get_creator_net_display(self, obj):
-        return f"${obj.creator_net_received:,.2f}"
+        if hasattr(obj, "get_creator_net_display"):
+            return obj.get_creator_net_display()
+        return f"${getattr(obj, 'creator_net_received', 0):,.2f}"
     get_creator_net_display.short_description = "Creator Net Received"
 
     def get_queryset(self, request=None):

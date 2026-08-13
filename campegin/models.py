@@ -400,6 +400,7 @@ class WorkspaceMessage(models.Model):
         ('admin_creator', 'Admin-Creator Chat'),
     )
     message_type = models.CharField(max_length=20, choices=MESSAGE_TYPE_CHOICES, default='main')
+    is_pinned = models.BooleanField(default=False)
     time = models.CharField(max_length=50) # e.g. "10:24"
 
     def __str__(self):

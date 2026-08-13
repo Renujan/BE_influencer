@@ -363,6 +363,21 @@ class CampaignViewSet(viewsets.ModelViewSet):
             return Response({"error": "Message not found or you don't have permission to delete it"}, status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=["post"])
+    def toggle_pin_message(self, request, pk=None):
+        campaign = self.get_object()
+        message_id = request.data.get("message_id")
+        if not message_id:
+            return Response({"error": "message_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            message = WorkspaceMessage.objects.get(id=message_id, campaign=campaign)
+            message.is_pinned = not message.is_pinned
+            message.save()
+            return Response(WorkspaceMessageSerializer(message).data)
+        except WorkspaceMessage.DoesNotExist:
+            return Response({"error": "Message not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=["post"])
     def upload_file(self, request, pk=None):
         campaign = self.get_object()
         file_name = request.data.get("name") or request.data.get("file_name")
@@ -958,20 +973,33 @@ class BusinessAnalyticsView(APIView):
         # Average duration calculation across all campaigns
         avg_duration_days = int(sum(durations) / len(durations)) if len(durations) > 0 else 0
 
-        # 3. Total Paid: Workspace Payment Installment Payout Breakdown (is_paid=True or status='released')
+        # 3. Total Paid: Business Workspace Payment Installments (installment_type='business', is_paid=True or status='released') + Business Platform Fee
         total_paid_amount = 0.0
         last_paid_milestone = "None"
         try:
-            from WorkspacePayment.models import WorkspaceInstallment
-            paid_insts = WorkspaceInstallment.objects.filter(campaign__brand=user, is_paid=True)
-            sum_val = float(paid_insts.aggregate(total=Sum("amount"))["total"] or 0)
-            if sum_val > 0:
-                total_paid_amount = sum_val
-                last_obj = paid_insts.order_by('-updated_at').first()
-                if last_obj:
-                    last_paid_milestone = last_obj.title
-        except Exception:
-            pass
+            from WorkspacePayment.models import WorkspaceInstallment, WorkspacePaymentNegotiation
+            from django.db.models import Sum, Q
+            paid_biz_insts = WorkspaceInstallment.objects.filter(
+                campaign__brand=user,
+                installment_type='business'
+            ).filter(Q(is_paid=True) | Q(status__iexact='released'))
+
+            biz_insts_sum = float(paid_biz_insts.aggregate(total=Sum("amount"))["total"] or 0)
+
+            paid_negs = WorkspacePaymentNegotiation.objects.filter(campaign__brand=user, business_fee_is_paid=True)
+            biz_fee_sum = 0.0
+            for neg in paid_negs:
+                biz_fee_sum += float(neg.business_platform_charge_amount or 0)
+
+            total_paid_amount = round(biz_insts_sum + biz_fee_sum, 2)
+
+            last_obj = paid_biz_insts.order_by('-updated_at').first()
+            if last_obj:
+                last_paid_milestone = last_obj.title
+            elif biz_fee_sum > 0:
+                last_paid_milestone = "Platform Fee Paid"
+        except Exception as e:
+            print("Error computing total_paid_amount:", e)
 
         if total_paid_amount == 0:
             try:
@@ -1012,6 +1040,7 @@ class BusinessAnalyticsView(APIView):
         try:
             from WorkspacePayment.models import WorkspaceInstallment, WorkspacePaymentNegotiation
             from campegin.models import Pitch
+            from django.db.models import Sum, Q
             live_statuses = ["live", "active", "admin_approved", "in_progress", "completed", "approved"]
             live_qs = [c for c in qs.order_by('id') if c.status and str(c.status).lower() in live_statuses]
             if not live_qs:
@@ -1038,12 +1067,14 @@ class BusinessAnalyticsView(APIView):
                 if f_price == 0.0:
                     f_price = float(c.budget or 0)
 
-                # 3. Funds Released (Green Bar): Sum strictly released installments from WorkspacePaymentNegotiation
+                # 3. Actual Spend / Funds Released (Green Bar): Sum paid business installments + paid business platform fee
                 f_released = 0.0
                 if neg:
-                    rel_insts = neg.installments.filter(status__iexact='released')
-                    if rel_insts.exists():
-                        f_released = float(rel_insts.aggregate(total=Sum('amount'))['total'] or 0)
+                    rel_biz_insts = neg.installments.filter(installment_type='business').filter(Q(is_paid=True) | Q(status__iexact='released'))
+                    if rel_biz_insts.exists():
+                        f_released += float(rel_biz_insts.aggregate(total=Sum('amount'))['total'] or 0)
+                    if neg.business_fee_is_paid:
+                        f_released += float(neg.business_platform_charge_amount or 0)
 
                 # Exact name string from JSON payload for X-Axis mapping
                 name_label = c.name if c.name else f"Campaign {c.id}"

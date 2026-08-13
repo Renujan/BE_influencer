@@ -170,7 +170,7 @@
     </div>
 
 <!-- Admin Workspace Console -->
-<div style="margin-top: 24px; margin-bottom: 24px;">
+<div style="margin-top: 16px; margin-bottom: 24px;">
     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;">
         
         <div style="display: flex; background: #e2e8f0; border-bottom: 1px solid #cbd5e1;">
@@ -180,7 +180,7 @@
             <button type="button" class="admin-tab-btn" data-tab="admin_creator" style="padding: 12px 20px; font-weight: 600; border: none; background: transparent; cursor: pointer;">Chat w/ Creator</button>
         </div>
         
-        <div id="admin-chat-messages" style="height: 450px; overflow-y: auto; padding: 20px; background: #fff; display: flex; flex-direction: column; gap: 12px;">
+        <div id="admin-chat-messages" style="height: 480px; overflow-y: auto; padding: 20px; background: #fff; display: flex; flex-direction: column; gap: 12px;">
             <!-- Messages will be rendered here by JS -->
             <div style="text-align: center; color: #94a3b8; font-size: 14px; margin-top: 40px;">Loading workspace messages...</div>
         </div>
@@ -238,12 +238,84 @@
         }
         const csrftoken = getCookie('csrftoken');
 
+        window.togglePinMessage = function(msgId) {
+            fetch(`/api/campegins/campaigns/${campaignId}/toggle_pin_message/`, {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ message_id: msgId })
+            })
+            .then(res => {
+                if (res.ok) return res.json();
+                throw new Error("Failed to pin/unpin message");
+            })
+            .then(updatedMsg => {
+                const idx = allMessages.findIndex(m => m.id === msgId);
+                if (idx !== -1) {
+                    allMessages[idx].is_pinned = updatedMsg.is_pinned;
+                    renderMessages();
+                }
+            })
+            .catch(err => alert("Error toggling pin status"));
+        };
+
         function renderMessages() {
             messagesContainer.innerHTML = "";
+
+            if (activeTab === "admin_note") {
+                const pinnedMessages = allMessages.filter(m => m.is_pinned);
+                const pinnedCard = document.createElement("div");
+                pinnedCard.style.background = "#fef9c3";
+                pinnedCard.style.border = "1px solid #fde047";
+                pinnedCard.style.borderRadius = "8px";
+                pinnedCard.style.padding = "14px";
+                pinnedCard.style.marginBottom = "16px";
+
+                let pinnedHtml = `
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #fef08a;">
+                        <div style="font-weight: 700; font-size: 13px; color: #854d0e; display: flex; align-items: center; gap: 6px;">
+                            <span>📌</span> Pinned Messages (${pinnedMessages.length})
+                        </div>
+                        <span style="font-size: 11px; color: #a16207; font-weight: 600;">Multi-Pin Active</span>
+                    </div>
+                `;
+
+                if (pinnedMessages.length === 0) {
+                    pinnedHtml += `<div style="font-size: 12px; color: #a16207; font-style: italic;">No pinned messages yet. Click 📌 Pin on any message in Main Chat to view here.</div>`;
+                } else {
+                    pinnedHtml += `<div style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto;">`;
+                    pinnedMessages.forEach(m => {
+                        pinnedHtml += `
+                            <div style="padding: 8px 12px; background: #ffffff; border: 1px solid #eab308; border-radius: 6px; font-size: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-weight: 700; color: #854d0e; font-size: 11px; margin-bottom: 2px;">
+                                        📌 ${m.sender_name} (${m.time}) · <span style="text-transform: uppercase;">${m.message_type || 'main'}</span>
+                                    </div>
+                                    <div style="color: #1e293b; word-break: break-word; font-size: 12px; line-height: 1.4;">${m.text || ''}</div>
+                                </div>
+                                <button onclick="togglePinMessage(${m.id})" title="Unpin message" style="background: #fde047; border: 1px solid #eab308; color: #713f12; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; shrink: 0;">📍 Unpin</button>
+                            </div>
+                        `;
+                    });
+                    pinnedHtml += `</div>`;
+                }
+
+                pinnedCard.innerHTML = pinnedHtml;
+                messagesContainer.appendChild(pinnedCard);
+            }
+
             const filtered = allMessages.filter(m => (m.message_type || 'main') === activeTab);
             
             if (filtered.length === 0) {
-                messagesContainer.innerHTML = `<div style="text-align: center; color: #94a3b8; font-size: 14px; margin-top: 40px;">No messages in this channel yet.</div>`;
+                const emptyMsg = document.createElement("div");
+                emptyMsg.style.textAlign = "center";
+                emptyMsg.style.color = "#94a3b8";
+                emptyMsg.style.fontSize = "14px";
+                emptyMsg.style.marginTop = "30px";
+                emptyMsg.textContent = activeTab === "admin_note" ? "No private notes in this channel yet." : "No messages in this channel yet.";
+                messagesContainer.appendChild(emptyMsg);
                 return;
             }
 
@@ -257,12 +329,19 @@
                 
                 const escapedText = (m.text || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
 
-                const adminActionButtons = isMe ? `
-                    <div style="display: flex; gap: 8px; margin-top: 4px; font-size: 10px; opacity: 0.85; justify-content: flex-end;">
-                        <button onclick="editMessage(${m.id}, '${escapedText}')" style="background:none;border:none;color:#e9d5ff;cursor:pointer;padding:0;font-weight:600;">✏️ Edit</button>
-                        <button onclick="deleteMessage(${m.id})" style="background:none;border:none;color:#fca5a5;cursor:pointer;padding:0;font-weight:600;">🗑️ Delete</button>
+                const pinBtnMarkup = `
+                    <button onclick="togglePinMessage(${m.id})" title="${m.is_pinned ? 'Unpin message' : 'Pin message'}" style="background:${m.is_pinned ? '#fef08a' : 'rgba(0,0,0,0.06)'};border:${m.is_pinned ? '1px solid #eab308' : 'none'};color:${m.is_pinned ? '#713f12' : (isMe ? '#e9d5ff' : '#475569')};cursor:pointer;padding:2px 8px;border-radius:4px;font-weight:700;font-size:10px;display:inline-flex;align-items:center;gap:3px;">
+                        ${m.is_pinned ? '📍 Pinned' : '📌 Pin'}
+                    </button>
+                `;
+
+                const adminActionButtons = `
+                    <div style="display: flex; gap: 8px; margin-top: 4px; font-size: 10px; opacity: 0.95; justify-content: flex-end; align-items: center;">
+                        ${pinBtnMarkup}
+                        ${isMe ? `<button onclick="editMessage(${m.id}, '${escapedText}')" style="background:none;border:none;color:${isMe ? '#e9d5ff' : '#475569'};cursor:pointer;padding:0;font-weight:600;">✏️ Edit</button>` : ''}
+                        ${isMe ? `<button onclick="deleteMessage(${m.id})" style="background:none;border:none;color:${isMe ? '#fca5a5' : '#ef4444'};cursor:pointer;padding:0;font-weight:600;">🗑️ Delete</button>` : ''}
                     </div>
-                ` : '';
+                `;
 
                 const fileAttachment = m.file_attachment || m.file;
                 let fileMarkup = "";
@@ -283,8 +362,10 @@
                 }
 
                 div.innerHTML = `
-                    <span style="font-size: 11px; color: #64748b; margin-bottom: 2px;">${m.sender_name} - ${m.time}</span>
-                    <div style="background: ${isMe ? '#8b5cf6' : '#e2e8f0'}; color: ${isMe ? 'white' : '#1e293b'}; padding: 8px 14px; border-radius: 8px; max-width: 75%; font-size: 14px; position: relative;">
+                    <span style="font-size: 11px; color: #64748b; margin-bottom: 2px;">
+                        ${m.is_pinned ? '📌 ' : ''}${m.sender_name} - ${m.time}
+                    </span>
+                    <div style="background: ${isMe ? '#8b5cf6' : (m.is_pinned ? '#fef9c3' : '#e2e8f0')}; color: ${isMe ? 'white' : '#1e293b'}; border: ${m.is_pinned ? '1px solid #fde047' : 'none'}; padding: 8px 14px; border-radius: 8px; max-width: 75%; font-size: 14px; position: relative;">
                         <div>${m.text || ''}</div>
                         ${fileMarkup}
                         ${adminActionButtons}

@@ -16,9 +16,17 @@ class WorkspacePaymentNegotiation(ClusterableModel):
 
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='payment_negotiations')
     final_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    platform_charge = models.DecimalField(max_digits=5, decimal_places=2, default=2.50)
+    platform_charge = models.DecimalField(max_digits=5, decimal_places=2, default=2.50) # Business Platform Charge %
+    creator_platform_charge = models.DecimalField(max_digits=5, decimal_places=2, default=1.50) # Creator Platform Charge %
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending_creator_approval')
     revision_reason = models.TextField(blank=True, null=True)
+
+    business_fee_is_paid = models.BooleanField(default=False)
+    business_fee_paid_date = models.DateField(null=True, blank=True)
+    business_fee_receipt_image = models.FileField(upload_to='payment_receipts/', null=True, blank=True)
+    creator_fee_is_paid = models.BooleanField(default=False)
+    creator_fee_paid_date = models.DateField(null=True, blank=True)
+    creator_fee_receipt_image = models.FileField(upload_to='payment_receipts/', null=True, blank=True)
 
     proposed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='proposed_payments')
     action_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='actioned_payments')
@@ -29,39 +37,79 @@ class WorkspacePaymentNegotiation(ClusterableModel):
     panels = [
         FieldPanel('campaign'),
         FieldPanel('final_price'),
-        FieldPanel('platform_charge'),
+        FieldPanel('platform_charge', heading="Business Platform Charge %"),
+        FieldPanel('creator_platform_charge', heading="Creator Platform Charge %"),
         FieldPanel('status'),
         FieldPanel('revision_reason'),
         FieldPanel('proposed_by'),
         FieldPanel('action_by'),
-        InlinePanel('installments', label="Milestone Installments Payout Breakdown"),
+        InlinePanel('installments', label="Milestone Installments Breakdown"),
     ]
 
     @property
-    def platform_charge_amount(self):
+    def business_platform_charge(self):
+        return self.platform_charge
+
+    @business_platform_charge.setter
+    def business_platform_charge(self, value):
+        self.platform_charge = value
+
+    @property
+    def business_platform_charge_amount(self):
         fp = float(self.final_price or 0)
         pc = float(self.platform_charge if self.platform_charge is not None else 2.5)
         return round(fp * (pc / 100.0), 2)
 
     @property
+    def creator_platform_charge_amount(self):
+        fp = float(self.final_price or 0)
+        pc = float(self.creator_platform_charge if self.creator_platform_charge is not None else 1.5)
+        return round(fp * (pc / 100.0), 2)
+
+    @property
+    def platform_charge_amount(self):
+        return self.business_platform_charge_amount
+
+    @property
     def business_total_payment(self):
         fp = float(self.final_price or 0)
-        return round(fp + self.platform_charge_amount, 2)
+        return round(fp + self.business_platform_charge_amount, 2)
 
     @property
     def creator_net_received(self):
         fp = float(self.final_price or 0)
-        return round(fp - self.platform_charge_amount, 2)
+        return round(fp - self.creator_platform_charge_amount, 2)
 
     @property
     def total_platform_fee(self):
-        return round(self.platform_charge_amount * 2, 2)
+        return round(self.business_platform_charge_amount + self.creator_platform_charge_amount, 2)
+
+    def get_platform_charge_display(self, obj=None):
+        target = obj or self
+        b_pc = target.platform_charge if target.platform_charge is not None else 2.5
+        c_pc = target.creator_platform_charge if target.creator_platform_charge is not None else 1.5
+        return f"Biz: {b_pc}% / Creator: {c_pc}%"
+    get_platform_charge_display.short_description = "Platform Charges (Biz / Creator)"
+
+    def get_platform_fee_display(self, obj=None):
+        target = obj or self
+        return f"${target.total_platform_fee:,.2f}"
+    get_platform_fee_display.short_description = "Total Platform Fee"
+
+    def get_creator_net_display(self, obj=None):
+        target = obj or self
+        return f"${target.creator_net_received:,.2f}"
+    get_creator_net_display.short_description = "Creator Net Received"
 
     def __str__(self):
-        return f"Campaign {self.campaign_id} - Price: {self.final_price} (Platform Charge: {self.platform_charge}%) ({self.status})"
+        return f"Campaign {self.campaign_id} - Price: {self.final_price} (Biz: {self.platform_charge}%, Creator: {self.creator_platform_charge}%) ({self.status})"
 
 
 class WorkspaceInstallment(models.Model):
+    INSTALLMENT_TYPE_CHOICES = (
+        ('business', 'Business Installment (Inbound)'),
+        ('creator', 'Creator Installment (Outbound)'),
+    )
     STATUS_CHOICES = (
         ('in_escrow', 'In Escrow'),
         ('payment_submitted', 'Payment Submitted'),
@@ -70,6 +118,7 @@ class WorkspaceInstallment(models.Model):
 
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='workspace_installments')
     negotiation = ParentalKey(WorkspacePaymentNegotiation, on_delete=models.CASCADE, related_name='installments', null=True, blank=True)
+    installment_type = models.CharField(max_length=20, choices=INSTALLMENT_TYPE_CHOICES, default='creator')
     title = models.CharField(max_length=255, default='Installment')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='in_escrow')
@@ -81,6 +130,7 @@ class WorkspaceInstallment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     panels = [
+        FieldPanel('installment_type'),
         FieldPanel('title'),
         FieldPanel('amount'),
         FieldPanel('paid_date'),
