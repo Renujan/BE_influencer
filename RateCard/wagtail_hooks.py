@@ -1,41 +1,30 @@
-from wagtail.snippets.views.snippets import SnippetViewSet
-from wagtail.snippets.models import register_snippet
 from wagtail import hooks
+from wagtail.admin.menu import MenuItem
+from django.urls import path, reverse
 from django.utils.safestring import mark_safe
-from .models import RateCard
+from .views import admin_ratecard_list_view, admin_ratecard_detail_view
 
 
-class RateCardViewSet(SnippetViewSet):
-    model = RateCard
-    menu_label = "Rate Cards"
-    icon = "doc-full"
-    menu_name = "rate_cards"
-    menu_order = 250
-    add_to_admin_menu = True
-
-    @property
-    def permission_policy(self):
-        from wagtail.permissions import ModelPermissionPolicy
-        
-        class NoAddPermissionPolicy(ModelPermissionPolicy):
-            def user_has_permission(self, user, action):
-                if action == "add":
-                    return False
-                return super().user_has_permission(user, action)
-        
-        return NoAddPermissionPolicy(self.model)
-
-    list_display = ("id", "creator", "creator_name", "get_niches", "get_country", "get_province", "get_district", "get_medium", "platform", "type", "display_duration", "formatted_min_price", "formatted_max_price", "is_active")
-    list_export = ("id", "creator.username", "creator_name", "get_niches", "get_country", "get_province", "get_district", "get_medium", "platform", "type", "display_duration", "price", "min_price", "max_price", "is_active")
-    list_filter = ("platform", "country", "medium", "is_active")
-    search_fields = ("creator__username", "creator_name", "country", "province", "district", "medium", "platform", "type", "description")
+@hooks.register("register_admin_urls")
+def register_ratecard_admin_urls():
+    return [
+        path("rate-cards/", admin_ratecard_list_view, name="admin_ratecard_list"),
+        path("rate-cards/<int:creator_id>/", admin_ratecard_detail_view, name="admin_ratecard_detail"),
+    ]
 
 
-register_snippet(RateCardViewSet)
+@hooks.register("register_admin_menu_item")
+def register_rate_cards_sidebar_menu():
+    return MenuItem(
+        "Rate Cards",
+        reverse("admin_ratecard_list"),
+        icon_name="doc-full",
+        order=190,
+    )
 
 
 @hooks.register("insert_global_admin_css")
-def global_admin_css():
+def rate_card_admin_css():
     return mark_safe(
         """
         <style>
@@ -59,7 +48,7 @@ def global_admin_css():
                 padding-right: 0.75rem !important;
             }
 
-            /* Hide any Add Rate Card button/link in Wagtail admin */
+            /* Hide any legacy Add Rate Card button/link in Wagtail admin */
             a[href*="/ratecard/add/"],
             a[href*="/ratecard/new/"],
             a[href*="/snippets/RateCard/ratecard/add/"],

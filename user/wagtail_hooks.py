@@ -7,6 +7,7 @@ from django.urls import reverse, path
 from .models import BusinessProfile, CreatorProfile, Niche, BusinessType, Country, Medium, CreatorSocialAccount
 from Setting.models import CreatorSettings, BusinessSettings
 from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view, admin_approve_creator_view, admin_restrict_creator_view, admin_toggle_featured_view
+from portfolio.views import admin_portfolio_list_view, admin_portfolio_detail_view
 
 from wagtail.admin.ui.tables import TitleColumn
 from django.utils.translation import gettext_lazy
@@ -337,6 +338,71 @@ class CreatorSocialAccountViewSet(ModelViewSet):
     search_fields = ("user__username", "user__email", "user__first_name", "user__last_name", "platform", "username")
     list_filter = ("platform", "is_connected", "is_verified")
 
+# 8. Creator Portfolio Admin Viewset & Index View
+class PortfolioIndexView(IndexView):
+    def _get_title_column(self, field_name, column_class=TitleColumn, **kwargs):
+        column_class = self._get_title_column_class(column_class)
+
+        def get_url(instance):
+            return reverse("admin_portfolio_detail", args=[instance.pk])
+
+        if not self.model:
+            return column_class(
+                "name",
+                label=gettext_lazy("Name"),
+                accessor=str,
+                get_url=get_url,
+            )
+        return self._get_custom_column(
+            field_name, column_class, get_url=get_url, **kwargs
+        )
+
+    def get_edit_url(self, instance):
+        return reverse("admin_portfolio_detail", args=[instance.pk])
+
+    def get_inspect_url(self, instance):
+        return reverse("admin_portfolio_detail", args=[instance.pk])
+
+    def get_list_more_buttons(self, instance):
+        return [
+            GenericMenuItem(
+                _("View"),
+                url=reverse("admin_portfolio_detail", args=[instance.pk]),
+                icon_name="view",
+                priority=10,
+            )
+        ]
+
+
+class PortfolioViewSet(ModelViewSet):
+    model = CreatorProfile
+    menu_label = "Portfolios"
+    icon = "folder-open-1"
+    menu_icon = "folder-open-1"
+    menu_item_name = "portfolios"
+    url_namespace = "creator_portfolios_admin"
+    url_prefix = "portfolios-admin"
+    add_to_admin_menu = False
+    index_view_class = PortfolioIndexView
+    create_view_enabled = False
+    inspect_view_enabled = False
+    form_fields = ["user", "phone", "location", "status"]
+
+    list_display = ("user", "location", "country", "get_status_badge")
+    search_fields = ("user__username", "user__email", "location")
+
+    @property
+    def permission_policy(self):
+        from wagtail.permissions import ModelPermissionPolicy
+
+        class NoModifyPermissionPolicy(ModelPermissionPolicy):
+            def user_has_permission(self, user, action):
+                if action in ("add", "edit", "delete"):
+                    return False
+                return super().user_has_permission(user, action)
+
+        return NoModifyPermissionPolicy(self.model)
+
 # Register Viewsets directly (without adding to sidebar directly, as we will use custom menu items)
 @hooks.register("register_admin_viewset")
 def register_business_profile_viewset():
@@ -365,6 +431,19 @@ def register_medium_viewset():
 @hooks.register("register_admin_viewset")
 def register_creator_social_account_viewset():
     return CreatorSocialAccountViewSet()
+
+@hooks.register("register_admin_viewset")
+def register_portfolio_viewset():
+    return PortfolioViewSet()
+
+@hooks.register("register_admin_menu_item")
+def register_portfolios_sidebar_menu():
+    return MenuItem(
+        "Portfolios",
+        reverse("admin_portfolio_list"),
+        icon_name="folder-open-1",
+        order=180,
+    )
 
 # Register custom nested menu items
 @hooks.register("register_admin_menu_item")
@@ -397,6 +476,8 @@ def register_custom_user_profiles_menu():
     # Creator Submenu Items
     creator_menu = Menu(items=[
         MenuItem("Creator Profiles", creator_prof.menu_url, icon_name="user"),
+        MenuItem("Portfolios", reverse("admin_portfolio_list"), icon_name="folder-open-1"),
+        MenuItem("Rate Cards", reverse("admin_ratecard_list"), icon_name="doc-full"),
         MenuItem("Niches", niche.menu_url, icon_name="tag"),
         MenuItem("Rating", creator_rating_view.menu_url, icon_name="pick"),
         MenuItem("Connected Account", social_acc_view.menu_url, icon_name="link"),
@@ -448,8 +529,8 @@ def hide_sidebar_search_css():
         """
         <style>
             /* Hide Super Admin Sidebar Search Bar & Search Form only */
-            form[action*="search"],
-            input[type="search"],
+            .w-sidebar form[action*="search"],
+            .w-sidebar input[type="search"],
             .sidebar-search,
             .sidebar-search-form,
             .w-sidebar-search,
@@ -554,6 +635,8 @@ def register_user_profile_pdf_urls():
         path("user-profiles/approve-creator/<int:profile_id>/", admin_approve_creator_view, name="wagtail_approve_creator"),
         path("user-profiles/restrict-creator/<int:profile_id>/", admin_restrict_creator_view, name="wagtail_restrict_creator"),
         path("user-profiles/toggle-featured/<str:profile_type>/<int:profile_id>/", admin_toggle_featured_view, name="wagtail_toggle_featured"),
+        path("portfolios/", admin_portfolio_list_view, name="admin_portfolio_list"),
+        path("portfolios/<int:creator_id>/", admin_portfolio_detail_view, name="admin_portfolio_detail"),
     ]
 
 

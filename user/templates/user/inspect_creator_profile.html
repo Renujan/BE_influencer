@@ -414,9 +414,14 @@
 
         <!-- Rate Card Pricing Section -->
         <div>
-            <h3 class="custom-section-title">
-                Rate Card Pricing (Base Currency: {{ settings.currency|default:"USD ($)" }})
-            </h3>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <h3 class="custom-section-title" style="margin-bottom: 0;">
+                    Rate Card Pricing (Base Currency: {{ settings.currency|default:"USD ($)" }})
+                </h3>
+                <a href="/admin/rate-cards/{{ instance.id }}/" style="font-size: 13px; font-weight: 700; color: #4f46e5; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                    View Super Admin Rate Card →
+                </a>
+            </div>
             
             {% if settings.rate_card_note %}
                 <div style="margin-bottom: 16px; padding: 12px 16px; background-color: #f8fafc; border-left: 4px solid #475569; font-size: 13px; color: #475569; border-radius: 4px;">
@@ -460,7 +465,12 @@
 
         <!-- Creator Portfolio & Past Work Section -->
         <div>
-            <h3 class="custom-section-title">Portfolio &amp; Past Work</h3>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <h3 class="custom-section-title" style="margin-bottom: 0;">Portfolio &amp; Past Work</h3>
+                <a href="/admin/portfolios/{{ instance.id }}/" style="font-size: 13px; font-weight: 700; color: #4f46e5; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                    View Super Admin Portfolio →
+                </a>
+            </div>
             <div class="custom-table-wrapper">
                 <table class="custom-data-table">
                     <thead>

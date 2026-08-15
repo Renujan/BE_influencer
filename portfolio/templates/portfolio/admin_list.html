@@ -1,0 +1,605 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block titletag %}Creator Portfolios — Wagtail Admin{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --pf-primary: #4f46e5;
+    --pf-primary-hover: #4338ca;
+    --pf-dark-header: #1e293b;
+    --pf-slate-50: #f8fafc;
+    --pf-slate-100: #f1f5f9;
+    --pf-slate-200: #e2e8f0;
+    --pf-slate-300: #cbd5e1;
+    --pf-slate-600: #475569;
+    --pf-slate-700: #334155;
+    --pf-slate-800: #1e293b;
+    --pf-slate-900: #0f172a;
+  }
+
+  .pf-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 32px 36px;
+    max-width: 1440px;
+    margin: 0 auto;
+    color: #1e293b;
+  }
+
+  /* ── Header Banner ── */
+  .pf-header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 16px;
+    padding: 28px 32px;
+    color: #ffffff;
+    margin-bottom: 28px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .pf-header-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .pf-header-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+
+  .pf-header h1 {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.02em;
+  }
+
+  .pf-header p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #94a3b8;
+  }
+
+  /* ── Metric Cards ── */
+  .pf-stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    margin-bottom: 28px;
+  }
+
+  .pf-stat-card {
+    background: #ffffff;
+    border: 1px solid var(--pf-slate-200);
+    border-radius: 14px;
+    padding: 20px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .pf-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  }
+
+  .pf-stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .pf-stat-icon.blue   { background: #eff6ff; color: #3b82f6; }
+  .pf-stat-icon.purple { background: #f5f3ff; color: #8b5cf6; }
+  .pf-stat-icon.pink   { background: #fdf2f8; color: #ec4899; }
+  .pf-stat-icon.green  { background: #f0fdf4; color: #10b981; }
+
+  .pf-stat-value {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+  }
+
+  .pf-stat-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Search & Filter Bar ── */
+  .pf-toolbar {
+    background: #ffffff;
+    border: 1px solid var(--pf-slate-200);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .pf-search-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    max-width: 520px;
+  }
+
+  .pf-search-wrapper {
+    position: relative;
+    flex: 1;
+  }
+
+  .pf-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 16px;
+    pointer-events: none;
+  }
+
+  .pf-search-input {
+    width: 100%;
+    padding: 10px 14px 10px 40px !important;
+    border: 1px solid var(--pf-slate-300) !important;
+    border-radius: 10px !important;
+    font-size: 0.88rem !important;
+    color: #0f172a !important;
+    background-color: #f8fafc !important;
+    outline: none !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .pf-search-input:focus {
+    background-color: #ffffff !important;
+    border-color: var(--pf-primary) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+  }
+
+  .pf-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: none;
+    line-height: 1.4;
+  }
+
+  .pf-btn-primary {
+    background: var(--pf-primary);
+    color: #ffffff !important;
+  }
+
+  .pf-btn-primary:hover {
+    background: var(--pf-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+  }
+
+  .pf-btn-outline {
+    background: #ffffff;
+    border: 1px solid var(--pf-slate-300);
+    color: #475569 !important;
+  }
+
+  .pf-btn-outline:hover {
+    background: #f1f5f9;
+    color: #0f172a !important;
+  }
+
+  /* ── Table Card ── */
+  .pf-table-card {
+    background: #ffffff;
+    border: 1px solid var(--pf-slate-200);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .pf-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    text-align: left;
+  }
+
+  .pf-table th {
+    background: #f8fafc;
+    padding: 14px 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--pf-slate-200);
+  }
+
+  .pf-table td {
+    padding: 16px 20px;
+    font-size: 0.88rem;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+
+  .pf-table tbody tr {
+    transition: background-color 0.15s ease;
+  }
+
+  .pf-table tbody tr:hover {
+    background-color: #f8fafc;
+  }
+
+  .pf-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* ── User Avatar & Info ── */
+  .pf-user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pf-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #e2e8f0;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    flex-shrink: 0;
+  }
+
+  .pf-avatar-placeholder {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.25);
+  }
+
+  .pf-user-name {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.92rem;
+    line-height: 1.3;
+  }
+
+  .pf-user-username {
+    font-size: 0.78rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  /* ── Badges ── */
+  .pf-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+
+  .pf-badge-niche {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+  }
+
+  .pf-badge-approved {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  .pf-badge-pending {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  .pf-badge-restricted {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .pf-stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+
+  .pf-stat-pill.reach {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+
+  .pf-stat-pill.er {
+    background: #fdf2f8;
+    color: #9d174d;
+    border: 1px solid #fbcfe8;
+  }
+
+  .pf-stat-pill.count {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+
+  .pf-btn-view {
+    background: #1e293b;
+    color: #ffffff !important;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .pf-btn-view:hover {
+    background: #4f46e5;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(79, 70, 229, 0.3);
+  }
+
+  /* ── Empty State ── */
+  .pf-empty-state {
+    padding: 60px 20px;
+    text-align: center;
+  }
+
+  .pf-empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    display: inline-block;
+  }
+
+  .pf-empty-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+  }
+
+  .pf-empty-desc {
+    color: #64748b;
+    font-size: 0.88rem;
+    max-width: 400px;
+    margin: 0 auto 16px auto;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pf-container">
+
+  <!-- Header Banner -->
+  <div class="pf-header">
+    <div class="pf-header-title">
+      <div class="pf-header-icon">📁</div>
+      <div>
+        <h1>Creator Portfolios</h1>
+        <p>Explore creator showcase media, post metrics, engagement rates, and analytics proofs.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Overview Stats -->
+  <div class="pf-stats-row">
+    <div class="pf-stat-card">
+      <div class="pf-stat-icon blue">👥</div>
+      <div>
+        <div class="pf-stat-value">{{ total_creators }}</div>
+        <div class="pf-stat-label">Active Creators</div>
+      </div>
+    </div>
+    <div class="pf-stat-card">
+      <div class="pf-stat-icon purple">📸</div>
+      <div>
+        <div class="pf-stat-value">{{ total_posts }}</div>
+        <div class="pf-stat-label">Showcase Posts</div>
+      </div>
+    </div>
+    <div class="pf-stat-card">
+      <div class="pf-stat-icon green">🚀</div>
+      <div>
+        <div class="pf-stat-value">{{ total_reach }}</div>
+        <div class="pf-stat-label">Combined Reach</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Toolbar -->
+  <div class="pf-toolbar">
+    <form method="get" action="" class="pf-search-form">
+      <div class="pf-search-wrapper">
+        <span class="pf-search-icon">🔍</span>
+        <input 
+          type="text" 
+          name="q" 
+          value="{{ search_query }}" 
+          placeholder="Search by creator username, name, country, or location..." 
+          class="pf-search-input"
+          autocomplete="off"
+        >
+      </div>
+      <button type="submit" class="pf-btn pf-btn-primary" style="height: 42px; display: inline-flex; align-items: center; gap: 6px;">
+        <span>🔍</span> Search
+      </button>
+      {% if search_query %}
+        <a href="?" class="pf-btn pf-btn-outline" style="height: 42px; display: inline-flex; align-items: center;">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Creators Table Card -->
+  <div class="pf-table-card">
+    <table class="pf-table">
+      <thead>
+        <tr>
+          <th>Creator</th>
+          <th>Location</th>
+          <th>Niches</th>
+          <th>Posts</th>
+          <th>Avg Engagement</th>
+          <th>Total Reach</th>
+          <th>Status</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in creators %}
+        <tr>
+          <td>
+            <div class="pf-user-cell">
+              {% if c.avatar_url %}
+                <img src="{{ c.avatar_url }}" alt="{{ c.username }}" class="pf-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="pf-avatar-placeholder" style="display: none;">{{ c.username|slice:":1"|upper }}</div>
+              {% else %}
+                <div class="pf-avatar-placeholder">{{ c.username|slice:":1"|upper }}</div>
+              {% endif %}
+              <div>
+                <div class="pf-user-name">{{ c.full_name }}</div>
+                <div class="pf-user-username">@{{ c.username }}</div>
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <span style="font-size: 0.85rem; color: #475569; font-weight: 500;">
+              📍 {{ c.location }}
+            </span>
+          </td>
+
+          <td>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 220px;">
+              {% for n in c.niches|slice:":3" %}
+                <span class="pf-badge pf-badge-niche">{{ n }}</span>
+              {% empty %}
+                <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
+              {% endfor %}
+              {% if c.niches|length > 3 %}
+                <span class="pf-badge pf-badge-niche">+{{ c.niches|length|add:"-3" }}</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <td>
+            <span class="pf-stat-pill count">
+              📁 {{ c.post_count }}
+            </span>
+          </td>
+
+          <td>
+            <span class="pf-stat-pill er">
+              📈 {{ c.avg_engagement }}
+            </span>
+          </td>
+
+          <td>
+            <span class="pf-stat-pill reach">
+              👁️ {{ c.total_reach }}
+            </span>
+          </td>
+
+          <td>
+            {% if c.status == "approved" %}
+              <span class="pf-badge pf-badge-approved">● Approved</span>
+            {% elif c.status == "restricted" %}
+              <span class="pf-badge pf-badge-restricted">● Restricted</span>
+            {% else %}
+              <span class="pf-badge pf-badge-pending">● Pending</span>
+            {% endif %}
+          </td>
+
+          <td style="text-align: right;">
+            <a href="/admin/portfolios/{{ c.id }}/" class="pf-btn-view">
+              View Portfolio →
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="pf-empty-state">
+              <div class="pf-empty-icon">🔍</div>
+              <h3 class="pf-empty-title">No creators found</h3>
+              <p class="pf-empty-desc">
+                {% if search_query %}
+                  No creator matching "{{ search_query }}". Try adjusting your search keywords.
+                {% else %}
+                  No creator profiles registered in the system yet.
+                {% endif %}
+              </p>
+              {% if search_query %}
+                <a href="?" class="pf-btn pf-btn-primary">View All Creators</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

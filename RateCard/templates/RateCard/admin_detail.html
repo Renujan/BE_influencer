@@ -1,0 +1,640 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block titletag %}Rate Card — {{ creator.user.username }} | Wagtail Admin{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --rc-dark-header: #1e293b;
+    --rc-dark-bg: #0f172a;
+    --rc-primary: #4f46e5;
+    --rc-primary-hover: #4338ca;
+    --rc-slate-100: #f1f5f9;
+    --rc-slate-200: #e2e8f0;
+    --rc-slate-300: #cbd5e1;
+    --rc-slate-600: #475569;
+    --rc-slate-700: #334155;
+    --rc-slate-800: #1e293b;
+    --rc-slate-900: #0f172a;
+  }
+
+  .rc-detail-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 28px 32px 60px 32px;
+    max-width: 1440px;
+    margin: 0 auto;
+    color: #1e293b;
+  }
+
+  /* ── 1. Premium Dark Header (#1e293b) ── */
+  .rc-dark-header {
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 28px 32px;
+    color: #ffffff;
+    margin-bottom: 28px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .rc-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .rc-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #94a3b8;
+  }
+
+  .rc-breadcrumb a {
+    color: #94a3b8;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .rc-breadcrumb a:hover {
+    color: #ffffff;
+  }
+
+  .rc-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .rc-dark-header h1 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .rc-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .rc-btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff !important;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.2s ease;
+  }
+
+  .rc-btn-back:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(-2px);
+  }
+
+  /* ── 2. Profile Overview Card ── */
+  .rc-profile-card {
+    background: #ffffff;
+    border: 1px solid var(--rc-slate-200);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 28px;
+    align-items: center;
+  }
+
+  @media (max-width: 900px) {
+    .rc-profile-card {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+  }
+
+  .rc-avatar-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    object-fit: cover;
+    background: #e2e8f0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .rc-avatar-large-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 2rem;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  }
+
+  .rc-profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .rc-profile-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .rc-profile-top h2 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  .rc-profile-username {
+    font-size: 0.9rem;
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  .rc-profile-bio {
+    font-size: 0.88rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 4px 0;
+    max-width: 650px;
+  }
+
+  .rc-profile-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    color: #64748b;
+  }
+
+  .rc-profile-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Account Status Badges */
+  .rc-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .rc-status-badge.approved   { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+  .rc-status-badge.pending    { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+  .rc-status-badge.restricted { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+  /* Creator Quick Stats */
+  .rc-profile-stats {
+    display: flex;
+    gap: 16px;
+    background: #f8fafc;
+    border: 1px solid var(--rc-slate-200);
+    border-radius: 12px;
+    padding: 14px 20px;
+  }
+
+  .rc-stat-item {
+    text-align: center;
+    padding: 0 10px;
+  }
+
+  .rc-stat-item:not(:last-child) {
+    border-right: 1px solid var(--rc-slate-200);
+  }
+
+  .rc-stat-num {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+  }
+
+  .rc-stat-lbl {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── 3. 3-Column Responsive Card Grid ── */
+  .rc-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .rc-section-heading h3 {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .rc-rates-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  @media (max-width: 1100px) {
+    .rc-rates-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 650px) {
+    .rc-rates-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── Rate Card Deliverable Box ── */
+  .rc-card {
+    background: #ffffff;
+    border: 1px solid var(--rc-slate-200);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rc-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Card Header */
+  .rc-card-top {
+    padding: 18px 20px 14px 20px;
+    border-bottom: 1px solid var(--rc-slate-100);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* Platform Badges */
+  .rc-platform-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .rc-platform-badge.instagram {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  }
+
+  .rc-platform-badge.youtube {
+    background: #ef4444;
+  }
+
+  .rc-platform-badge.tiktok {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .rc-platform-badge.facebook {
+    background: #1877f2;
+  }
+
+  .rc-platform-badge.general {
+    background: #6366f1;
+  }
+
+  .rc-duration-pill {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+  }
+
+  /* Card Body */
+  .rc-card-body {
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .rc-card-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 12px 0;
+    line-height: 1.35;
+  }
+
+  /* Pricing Container */
+  .rc-card-pricing {
+    background: #f8fafc;
+    border: 1px solid var(--rc-slate-200);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .rc-price-val {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .rc-price-lbl {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* Description / Notes */
+  .rc-card-desc {
+    font-size: 0.85rem;
+    color: #475569;
+    line-height: 1.5;
+    background: #ffffff;
+    border: 1px dashed var(--rc-slate-200);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    flex: 1;
+  }
+
+  /* Card Footer */
+  .rc-card-footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid var(--rc-slate-100);
+  }
+
+  .rc-active-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .rc-active-pill.active {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  .rc-active-pill.inactive {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+
+  /* Empty State */
+  .rc-empty-grid {
+    background: #ffffff;
+    border: 2px dashed var(--rc-slate-300);
+    border-radius: 16px;
+    padding: 60px 20px;
+    text-align: center;
+    grid-column: 1 / -1;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rc-detail-container">
+
+  <!-- 1. Premium Dark Header (#1e293b) -->
+  <div class="rc-dark-header">
+    <div class="rc-header-left">
+      <div class="rc-breadcrumb">
+        <a href="/admin/rate-cards/">Rate Cards</a>
+        <span>/</span>
+        <span>@{{ creator.user.username }}</span>
+      </div>
+      <div class="rc-header-title">
+        <h1>Creator Rate Card — @{{ creator.user.username }}</h1>
+      </div>
+    </div>
+    <div class="rc-header-actions">
+      <a href="/admin/rate-cards/" class="rc-btn-back">
+        ← Back to Rate Cards
+      </a>
+      <a href="/admin/portfolios/{{ creator.id }}/" class="rc-btn-back" style="background: rgba(99, 102, 241, 0.25); border-color: rgba(129, 140, 248, 0.4);">
+        📁 View Portfolio →
+      </a>
+    </div>
+  </div>
+
+  <!-- 2. Profile Overview Card -->
+  <div class="rc-profile-card">
+    <div>
+      {% if creator.avatar_url %}
+        <img src="{{ creator.avatar_url }}" alt="{{ creator.user.username }}" class="rc-avatar-large" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="rc-avatar-large-placeholder" style="display: none;">{{ creator.user.username|slice:":1"|upper }}</div>
+      {% else %}
+        <div class="rc-avatar-large-placeholder">{{ creator.user.username|slice:":1"|upper }}</div>
+      {% endif %}
+    </div>
+
+    <div class="rc-profile-info">
+      <div class="rc-profile-top">
+        <h2>{{ creator.user.first_name }} {{ creator.user.last_name }}</h2>
+        <span class="rc-profile-username">@{{ creator.user.username }}</span>
+        
+        <!-- Account Status Badge -->
+        {% if creator.status == "approved" %}
+          <span class="rc-status-badge approved">● Approved</span>
+        {% elif creator.status == "restricted" %}
+          <span class="rc-status-badge restricted">● Restricted</span>
+        {% else %}
+          <span class="rc-status-badge pending">● Pending</span>
+        {% endif %}
+      </div>
+
+      <div class="rc-profile-bio">
+        {{ creator.bio|default:"No creator biography provided yet." }}
+      </div>
+
+      <div class="rc-profile-meta">
+        <span>📍 {{ location_display }}</span>
+        {% if country_name %}
+          <span>🌍 {{ country_name }}</span>
+        {% endif %}
+        {% if niches %}
+          <span>🏷️ {{ niches|join:", " }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Stats summary pill -->
+    <div class="rc-profile-stats">
+      <div class="rc-stat-item">
+        <div class="rc-stat-num">{{ stats.total_packages }}</div>
+        <div class="rc-stat-lbl">Packages</div>
+      </div>
+      <div class="rc-stat-item">
+        <div class="rc-stat-num">{{ stats.min_price }}</div>
+        <div class="rc-stat-lbl">Min Price</div>
+      </div>
+      <div class="rc-stat-item">
+        <div class="rc-stat-num">{{ stats.max_price }}</div>
+        <div class="rc-stat-lbl">Max Price</div>
+      </div>
+      <div class="rc-stat-item">
+        <div class="rc-stat-num">{{ stats.platforms_count }}</div>
+        <div class="rc-stat-lbl">Platforms</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Rate Card Packages Section -->
+  <div class="rc-section-heading">
+    <h3>
+      <span>📦</span> Commercial Packages & Deliverables ({{ stats.total_packages }})
+    </h3>
+  </div>
+
+  <!-- 3-Column Responsive Card Grid -->
+  <div class="rc-rates-grid">
+    {% for rc in rate_cards %}
+    <div class="rc-card">
+      
+      <!-- Card Header -->
+      <div class="rc-card-top">
+        <div>
+          {% if "instagram" in rc.platform|lower %}
+            <span class="rc-platform-badge instagram">📸 Instagram</span>
+          {% elif "youtube" in rc.platform|lower %}
+            <span class="rc-platform-badge youtube">🎥 YouTube</span>
+          {% elif "tiktok" in rc.platform|lower %}
+            <span class="rc-platform-badge tiktok">📱 TikTok</span>
+          {% elif "facebook" in rc.platform|lower %}
+            <span class="rc-platform-badge facebook">👥 Facebook</span>
+          {% else %}
+            <span class="rc-platform-badge general">🌐 {{ rc.platform }}</span>
+          {% endif %}
+        </div>
+
+        <span class="rc-duration-pill">
+          ⏱️ {{ rc.display_duration|default:rc.duration|default:"Per Deliverable" }}
+        </span>
+      </div>
+
+      <!-- Card Body -->
+      <div class="rc-card-body">
+        <h4 class="rc-card-title">{{ rc.type }}</h4>
+
+        <!-- Pricing Grid -->
+        <div class="rc-card-pricing">
+          <div>
+            <div class="rc-price-lbl">Standard Rate</div>
+            <div class="rc-price-val">
+              {{ rc.formatted_display_price }}
+            </div>
+          </div>
+          {% if rc.has_range %}
+            <span style="font-size: 0.75rem; font-weight: 600; color: #166534; background: #dcfce7; padding: 2px 8px; border-radius: 6px;">
+              Range
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- Description / Notes -->
+        <div class="rc-card-desc">
+          {% if rc.description %}
+            {{ rc.description }}
+          {% else %}
+            <span style="color: #94a3b8; font-style: italic;">No specific deliverable terms noted.</span>
+          {% endif %}
+        </div>
+
+        <!-- Card Footer -->
+        <div class="rc-card-footer">
+          <span style="font-size: 0.78rem; color: #64748b; font-weight: 500;">
+            Platform: <strong>{{ rc.platform }}</strong>
+          </span>
+
+          {% if rc.is_active %}
+            <span class="rc-active-pill active">● Active</span>
+          {% else %}
+            <span class="rc-active-pill inactive">○ Inactive</span>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+    {% empty %}
+    <div class="rc-empty-grid">
+      <div style="font-size: 48px; margin-bottom: 12px;">📄</div>
+      <h3 style="font-size: 1.2rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">No rate card packages found</h3>
+      <p style="color: #64748b; font-size: 0.9rem; margin: 0;">This creator has not configured any commercial rate packages yet.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}
