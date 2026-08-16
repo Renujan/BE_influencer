@@ -154,5 +154,9 @@ class WorkspaceInstallment(models.Model):
     def milestone_name(self, value):
         self.title = value
 
+    @property
+    def payment_date(self):
+        return self.paid_date
+
     def __str__(self):
         return f"{self.title} - Campaign {self.campaign_id} (${self.amount}) - {self.status} (Paid: {self.is_paid})"

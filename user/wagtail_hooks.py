@@ -8,6 +8,12 @@ from .models import BusinessProfile, CreatorProfile, Niche, BusinessType, Countr
 from Setting.models import CreatorSettings, BusinessSettings
 from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view, admin_approve_creator_view, admin_restrict_creator_view, admin_toggle_featured_view
 from portfolio.views import admin_portfolio_list_view, admin_portfolio_detail_view
+from .social_views import (
+    admin_social_account_list_view,
+    admin_social_account_detail_view,
+    admin_toggle_social_account_verified_view,
+    admin_toggle_social_account_connected_view,
+)
 
 from wagtail.admin.ui.tables import TitleColumn
 from django.utils.translation import gettext_lazy
@@ -313,13 +319,37 @@ class MediumViewSet(ModelViewSet):
 
 # Custom Index View for Social Accounts to ensure Inspect / View action is prominent
 class SocialAccountIndexView(IndexView):
+    def _get_title_column(self, field_name, column_class=TitleColumn, **kwargs):
+        column_class = self._get_title_column_class(column_class)
+
+        def get_url(instance):
+            creator = getattr(instance.user, "creator_profile", None)
+            if creator:
+                return reverse("admin_social_accounts_detail", args=[creator.pk])
+            return reverse("admin_social_accounts_list")
+
+        if not self.model:
+            return column_class(
+                "name",
+                label=gettext_lazy("Name"),
+                accessor=str,
+                get_url=get_url,
+            )
+        return self._get_custom_column(
+            field_name, column_class, get_url=get_url, **kwargs
+        )
+
     def get_list_more_buttons(self, instance):
-        buttons = super().get_list_more_buttons(instance)
-        for item in buttons:
-            if hasattr(item, "label") and (str(item.label) == "Inspect" or item.label == _("Inspect")):
-                item.label = _("View")
-                item.icon_name = "view"
-        return buttons
+        creator = getattr(instance.user, "creator_profile", None)
+        detail_url = reverse("admin_social_accounts_detail", args=[creator.pk]) if creator else reverse("admin_social_accounts_list")
+        return [
+            GenericMenuItem(
+                _("View"),
+                url=detail_url,
+                icon_name="view",
+                priority=10,
+            )
+        ]
 
 # 7. Creator Connected Social Accounts Viewset
 class CreatorSocialAccountViewSet(ModelViewSet):
@@ -458,10 +488,15 @@ def register_custom_user_profiles_menu():
     niche = NicheViewSet()
     country_viewset = CountryViewSet()
 
+    from CreatorRating.wagtail_hooks import CreatorRatingViewSet, BusinessRatingViewSet
+    creator_rating_view = CreatorRatingViewSet()
+    biz_rating_view = BusinessRatingViewSet()
+
     # Business Submenu Items
     business_menu = Menu(items=[
         MenuItem("Business Profiles", biz_prof.menu_url, icon_name="user"),
         MenuItem("Business Types", biz_type.menu_url, icon_name="list-ul"),
+        MenuItem("Rating", biz_rating_view.menu_url, icon_name="pick"),
     ])
     business_submenu = SubmenuMenuItem(
         label="Business",
@@ -469,18 +504,14 @@ def register_custom_user_profiles_menu():
         icon_name="folder-open-1",
     )
 
-    from CreatorRating.wagtail_hooks import CreatorRatingViewSet
-    creator_rating_view = CreatorRatingViewSet()
     social_acc_view = CreatorSocialAccountViewSet()
 
     # Creator Submenu Items
     creator_menu = Menu(items=[
         MenuItem("Creator Profiles", creator_prof.menu_url, icon_name="user"),
-        MenuItem("Portfolios", reverse("admin_portfolio_list"), icon_name="folder-open-1"),
-        MenuItem("Rate Cards", reverse("admin_ratecard_list"), icon_name="doc-full"),
+        MenuItem("Connected Accounts", reverse("admin_social_accounts_list"), icon_name="link"),
         MenuItem("Niches", niche.menu_url, icon_name="tag"),
         MenuItem("Rating", creator_rating_view.menu_url, icon_name="pick"),
-        MenuItem("Connected Account", social_acc_view.menu_url, icon_name="link"),
     ])
     creator_submenu = SubmenuMenuItem(
         label="Creator",
@@ -511,10 +542,26 @@ def register_main_admin_menu_item():
         order=1
     )
 
+from wagtail.admin.search import admin_search_areas
+admin_search_areas.search_items_for_request = lambda request: []
+
 @hooks.register('construct_main_menu')
 def hide_unwanted_menu_items(request, menu_items):
     # Hide search, reports, images, documents, help, explorer (Pages), and snippets items from the main menu sidebar
     menu_items[:] = [item for item in menu_items if item.name not in ['search', 'wagtailadmin_search', 'reports', 'images', 'documents', 'help', 'explorer', 'snippets']]
+
+    # Remove Wagtail version / footer_text from all submenu items including Settings
+    for item in menu_items:
+        if hasattr(item, 'render_component'):
+            orig_render = item.render_component
+            def make_clean_render(orig_fn):
+                def clean_render(req):
+                    comp = orig_fn(req)
+                    if hasattr(comp, 'footer_text'):
+                        comp.footer_text = ""
+                    return comp
+                return clean_render
+            item.render_component = make_clean_render(orig_render)
 
 @hooks.register('construct_settings_menu')
 def hide_unwanted_settings_menu_items(request, menu_items):
@@ -524,27 +571,49 @@ def hide_unwanted_settings_menu_items(request, menu_items):
 from django.utils.safestring import mark_safe
 
 @hooks.register("insert_global_admin_css")
-def hide_sidebar_search_css():
+def hide_sidebar_search_and_version_css():
     return mark_safe(
         """
         <style>
-            /* Hide Super Admin Sidebar Search Bar & Search Form only */
+            /* Hide Super Admin Sidebar Search Bar & Search Container */
             .w-sidebar form[action*="search"],
             .w-sidebar input[type="search"],
+            .w-sidebar [role="search"],
+            .w-sidebar input[name="menu-search-q"],
             .sidebar-search,
             .sidebar-search-form,
             .w-sidebar-search,
+            .w-sidebar__search,
+            .w-sidebar-search-form,
+            .sidebar-search__input,
             [data-wagtail-sidebar-search],
             [data-sidebar-search],
             .sidebar-menu-item--search,
-            .w-sidebar__search,
-            .w-sidebar-search-form,
-            .sidebar-search__input {
+            .w-sidebar [class*="search"] {
                 display: none !important;
+            }
+
+            /* Hide Wagtail version in sidebar settings expansion & footer */
+            .sidebar-sub-menu-panel__footer,
+            .sidebar-sub-menu__footer,
+            .sidebar-footer__version,
+            .w-sidebar-footer__version,
+            .w-version,
+            [class*="sub-menu-panel__footer"],
+            [class*="sub-menu__footer"],
+            .w-sidebar__footer-version,
+            .sidebar-main-menu--open-footer {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                opacity: 0 !important;
             }
         </style>
         """
     )
+
 
 
 from django.contrib.auth.signals import user_logged_in
@@ -637,6 +706,10 @@ def register_user_profile_pdf_urls():
         path("user-profiles/toggle-featured/<str:profile_type>/<int:profile_id>/", admin_toggle_featured_view, name="wagtail_toggle_featured"),
         path("portfolios/", admin_portfolio_list_view, name="admin_portfolio_list"),
         path("portfolios/<int:creator_id>/", admin_portfolio_detail_view, name="admin_portfolio_detail"),
+        path("social-accounts/", admin_social_account_list_view, name="admin_social_accounts_list"),
+        path("social-accounts/<int:creator_id>/", admin_social_account_detail_view, name="admin_social_accounts_detail"),
+        path("social-accounts/toggle-verify/<int:account_id>/", admin_toggle_social_account_verified_view, name="admin_social_accounts_toggle_verify"),
+        path("social-accounts/toggle-connect/<int:account_id>/", admin_toggle_social_account_connected_view, name="admin_social_accounts_toggle_connect"),
     ]
 
 

@@ -2,7 +2,8 @@ from django.db.models import Sum, Count
 from django.contrib.auth.models import User
 from django.conf import settings
 from user.models import CreatorProfile, BusinessProfile, CreatorSocialAccount
-from campegin.models import Campaign, Deliverable, PaymentInstallment, AdminComplianceTicket
+from campegin.models import Campaign, Deliverable, PaymentInstallment
+from complaint.models import Complaint
 from notifications.models import Notification
 import decimal
 
@@ -28,11 +29,12 @@ def dashboard_metrics(request):
     
     total_escrow_balance = float(escrow_payments) + float(funded_payments)
 
-    # 3. Compliance and dispute tickets
-    total_tickets = AdminComplianceTicket.objects.count()
-    pending_tickets = AdminComplianceTicket.objects.filter(status="Pending Review").count()
-    resolved_tickets = AdminComplianceTicket.objects.filter(status="Resolved").count()
-    approved_tickets = AdminComplianceTicket.objects.filter(status="Approved").count()
+    # 3. Complaints and support dispute tickets
+    total_tickets = Complaint.objects.count()
+    pending_tickets = Complaint.objects.filter(status="pending").count()
+    resolved_tickets = Complaint.objects.filter(status="resolved").count()
+    investigating_tickets = Complaint.objects.filter(status="investigating").count()
+    approved_tickets = resolved_tickets
 
     # 4. Deliverables breakdown
     total_deliverables = Deliverable.objects.count()
@@ -41,9 +43,9 @@ def dashboard_metrics(request):
     revision_deliverables = Deliverable.objects.filter(status="Revision Requested").count()
 
     # 5. Lists for tables
-    recent_tickets = AdminComplianceTicket.objects.select_related('campaign').order_by('-id')[:5]
+    recent_tickets = Complaint.objects.select_related('user', 'campaign').order_by('-id')[:5]
     top_campaigns = Campaign.objects.select_related('brand', 'creator').order_by('-budget')[:5]
-    top_creators = CreatorSocialAccount.objects.select_related('user').order_by('-engagement_rate')[:5]
+    top_creators = CreatorSocialAccount.objects.select_related('user', 'user__creator_profile').order_by('-is_connected', '-followers_count', '-id')[:5]
 
     # 6. Notifications tracking — only show unread in the admin bell dropdown
     unread_notifications_count = Notification.objects.filter(is_read=False).count()
@@ -56,6 +58,34 @@ def dashboard_metrics(request):
     for camp in Campaign.objects.order_by('-budget')[:6]:
         chart_budgets.append(float(camp.budget))
         chart_names.append(camp.name[:15] + '...' if len(camp.name) > 15 else camp.name)
+
+    # 8. User's currency format & symbol determination
+    from campegin.models import extract_currency_symbol
+    user_currency_symbol = "Rs"
+    user_currency_format = "LKR (Rs)"
+    if request and hasattr(request, "user") and request.user and request.user.is_authenticated:
+        try:
+            if hasattr(request.user, "creator_profile") and request.user.creator_profile:
+                cp = request.user.creator_profile
+                if hasattr(cp, "settings") and cp.settings and cp.settings.currency:
+                    user_currency_format = cp.settings.currency
+                    user_currency_symbol = extract_currency_symbol(cp.settings.currency) or "Rs"
+                elif cp.country and cp.country.currency:
+                    user_currency_format = cp.country.currency
+                    user_currency_symbol = extract_currency_symbol(cp.country.currency) or "Rs"
+        except Exception:
+            pass
+        try:
+            if hasattr(request.user, "business_profile") and request.user.business_profile:
+                bp = request.user.business_profile
+                if hasattr(bp, "settings") and bp.settings and bp.settings.currency:
+                    user_currency_format = bp.settings.currency
+                    user_currency_symbol = extract_currency_symbol(bp.settings.currency) or "Rs"
+                elif bp.country and bp.country.currency:
+                    user_currency_format = bp.country.currency
+                    user_currency_symbol = extract_currency_symbol(bp.country.currency) or "Rs"
+        except Exception:
+            pass
 
     return {
         'total_campaigns': total_campaigns,
@@ -72,6 +102,7 @@ def dashboard_metrics(request):
         'pending_tickets': pending_tickets,
         'resolved_tickets': resolved_tickets,
         'approved_tickets': approved_tickets,
+        'investigating_tickets': investigating_tickets,
         'total_deliverables': total_deliverables,
         'approved_deliverables': approved_deliverables,
         'published_deliverables': published_deliverables,
@@ -81,6 +112,9 @@ def dashboard_metrics(request):
         'top_creators': top_creators,
         'chart_budgets': chart_budgets,
         'chart_names': chart_names,
+        'user_currency_symbol': user_currency_symbol,
+        'user_currency_format': user_currency_format,
+        'currency_symbol': user_currency_symbol,
         'unread_notifications_count': unread_notifications_count,
         'recent_notifications': recent_notifications,
         'FRONTEND_URL': getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),

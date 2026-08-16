@@ -161,6 +161,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         return ChatReviewSerializer(qs, many=True).data
 
     creator_rating = serializers.SerializerMethodField()
+    business_rating = serializers.SerializerMethodField()
 
     def get_creator_rating(self, obj):
         if hasattr(obj, "rating") and obj.rating:
@@ -172,6 +173,16 @@ class CampaignSerializer(serializers.ModelSerializer):
             }
         return None
 
+    def get_business_rating(self, obj):
+        if hasattr(obj, "business_rating") and obj.business_rating:
+            return {
+                "id": obj.business_rating.id,
+                "rating": obj.business_rating.rating,
+                "review": obj.business_rating.review,
+                "created_at": obj.business_rating.created_at,
+            }
+        return None
+
     class Meta:
         model = Campaign
         fields = [
@@ -179,7 +190,7 @@ class CampaignSerializer(serializers.ModelSerializer):
             "status", "budget", "min_budget", "max_budget", "per_creator_budget", "min_price", "max_price", "rate_card_id", "start_date", "end_date", "progress", "brief", "admin_review",
             "category", "delivery_language", "country", "province", "district", "medium", "voice_brief", "screenshare_brief", "video_brief",
             "counter_price", "counter_note", "counter_round", "counter_history", "decline_reason", "created_via", "created_time", "created_at",
-            "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews", "creator_rating"
+            "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews", "creator_rating", "business_rating"
         ]
         read_only_fields = ["brand"]
 

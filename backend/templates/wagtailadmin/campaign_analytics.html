@@ -1,0 +1,694 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campaign Analytics | Ampli Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              orange: '#ff7a45',
+              blue: '#2f54eb',
+              dark: '#0a0e1a',
+              card: '#ffffff',
+              border: '#e2e8f0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .analytics-container {
+      font-family: 'Inter', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 analytics-container min-h-screen">
+  <div class="p-6 max-w-7xl mx-auto space-y-8 pb-16">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 pb-5">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
+          <i class="fa-solid fa-cube"></i> Campaign Workspaces
+        </div>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+          Campaign Analytics <i class="fa-solid fa-chart-line text-blue-600 text-xl"></i>
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+          Live lifecycle funnels, platform fee revenues, escrow balances, and campaign-level financial audits.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="exportCSV()" class="px-3.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 shadow-sm flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-download text-blue-600"></i> Export CSV
+        </button>
+
+        <button onclick="window.print()" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-sm flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-print"></i> Print / PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. CAMPAIGN FUNNEL (STATUS BREAKDOWN) -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-bullseye text-blue-600"></i> 1. Campaign Funnel & Status Breakdown
+        </h2>
+        <span id="kpiConversionBadge" class="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
+          Funnel Conversion: {{ funnel_stats.conversion_rate }}%
+        </span>
+      </div>
+
+      <!-- KPIs -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 flex justify-between">Total <i class="fa-solid fa-cube text-blue-600"></i></div>
+          <div id="kpiTotalCount" class="text-2xl font-black text-slate-900 mt-2 font-mono">{{ funnel_stats.total }}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">Campaigns Created</div>
+        </div>
+
+        <div class="bg-emerald-50/60 rounded-xl border border-emerald-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-emerald-700 flex justify-between">Live Now <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span></div>
+          <div id="kpiLiveCount" class="text-2xl font-black text-emerald-700 mt-2 font-mono">{{ funnel_stats.live }}</div>
+          <div class="text-[10px] text-emerald-600 mt-0.5">Active Workspaces</div>
+        </div>
+
+        <div class="bg-amber-50/60 rounded-xl border border-amber-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-amber-700 flex justify-between">Under Review <i class="fa-regular fa-clock text-amber-600"></i></div>
+          <div id="kpiUnderReviewCount" class="text-2xl font-black text-amber-700 mt-2 font-mono">{{ funnel_stats.under_review }}</div>
+          <div class="text-[10px] text-amber-600 mt-0.5">Pending Admin Decision</div>
+        </div>
+
+        <div class="bg-blue-50/60 rounded-xl border border-blue-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-blue-700 flex justify-between">Pending Setup <i class="fa-solid fa-layer-group text-blue-600"></i></div>
+          <div id="kpiPendingCount" class="text-2xl font-black text-blue-700 mt-2 font-mono">{{ funnel_stats.pending }}</div>
+          <div class="text-[10px] text-blue-600 mt-0.5">Draft / Contract Prep</div>
+        </div>
+
+        <div class="bg-purple-50/60 rounded-xl border border-purple-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-purple-700 flex justify-between">Completed <i class="fa-solid fa-circle-check text-purple-600"></i></div>
+          <div id="kpiCompletedCount" class="text-2xl font-black text-purple-700 mt-2 font-mono">{{ funnel_stats.completed }}</div>
+          <div class="text-[10px] text-purple-600 mt-0.5">Approved & Delivered</div>
+        </div>
+
+        <div class="bg-rose-50/60 rounded-xl border border-rose-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-rose-700 flex justify-between">Rejected <i class="fa-solid fa-circle-xmark text-rose-600"></i></div>
+          <div id="kpiRejectedCount" class="text-2xl font-black text-rose-700 mt-2 font-mono">{{ funnel_stats.rejected }}</div>
+          <div class="text-[10px] text-rose-600 mt-0.5">Cancelled / Declined</div>
+        </div>
+      </div>
+
+      <!-- Funnel Progress & Top 5 Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Funnel Progress -->
+        <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div class="flex justify-between items-center">
+            <h3 class="text-sm font-bold text-slate-900">Campaign Pipeline Funnel</h3>
+            <span class="text-[11px] font-semibold text-slate-400 uppercase">Conversion Progress</span>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs font-semibold mb-1">
+                <span>1. Submitted & Briefed</span>
+                <span class="font-mono text-slate-600">{{ funnel_stats.total }} (100%)</span>
+              </div>
+              <div class="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-500 rounded-full" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-semibold mb-1">
+                <span>2. Approved / Pitched</span>
+                <span class="font-mono text-slate-600">{{ funnel_stats.approved_count }} ({{ funnel_stats.approved_pct }}%)</span>
+              </div>
+              <div class="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-indigo-500 rounded-full" style="width: {{ funnel_stats.approved_pct }}%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-semibold mb-1">
+                <span>3. Live in Workspace</span>
+                <span class="font-mono text-slate-600">{{ funnel_stats.live_count }} ({{ funnel_stats.live_pct }}%)</span>
+              </div>
+              <div class="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-600 rounded-full" style="width: {{ funnel_stats.live_pct }}%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-semibold mb-1">
+                <span>4. Completed Delivery</span>
+                <span class="font-mono text-slate-600">{{ funnel_stats.completed }} ({{ funnel_stats.conversion_rate }}%)</span>
+              </div>
+              <div class="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-emerald-500 rounded-full" style="width: {{ funnel_stats.conversion_rate }}%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top 5 Active Distributions -->
+        <div class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Top Categories -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div class="text-xs font-bold text-slate-800 mb-2.5 flex justify-between">
+              <span>Top Categories</span>
+              <i class="fa-solid fa-cube text-slate-400"></i>
+            </div>
+            <div class="space-y-2 text-xs">
+              {% for item in distributions.categories %}
+              <div>
+                <div class="flex justify-between text-[11px] mb-0.5">
+                  <span class="font-medium truncate max-w-[120px]">{{ item.name }}</span>
+                  <span class="font-mono text-slate-500">{{ item.count }} ({{ item.pct }}%)</span>
+                </div>
+                <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-blue-600 rounded-full" style="width: {{ item.pct }}%"></div>
+                </div>
+              </div>
+              {% empty %}
+              <div class="text-slate-400 text-center py-2">No category data</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Top Platforms -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div class="text-xs font-bold text-slate-800 mb-2.5 flex justify-between">
+              <span>Top Platforms</span>
+              <i class="fa-solid fa-globe text-slate-400"></i>
+            </div>
+            <div class="space-y-2 text-xs">
+              {% for item in distributions.platforms %}
+              <div>
+                <div class="flex justify-between text-[11px] mb-0.5">
+                  <span class="font-medium truncate max-w-[120px]">{{ item.name }}</span>
+                  <span class="font-mono text-slate-500">{{ item.count }} ({{ item.pct }}%)</span>
+                </div>
+                <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-emerald-500 rounded-full" style="width: {{ item.pct }}%"></div>
+                </div>
+              </div>
+              {% empty %}
+              <div class="text-slate-400 text-center py-2">No platform data</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. PLATFORM REVENUE FROM CHARGES -->
+    <div class="space-y-4 pt-2">
+      <div class="flex justify-between items-center">
+        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-hand-holding-dollar text-emerald-600"></i> 2. Platform Revenue from Charges (Admin Earnings)
+        </h2>
+        {% if revenue_stats.custom_overrides_count > 0 %}
+        <span class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+          <i class="fa-solid fa-percent text-[10px]"></i> {{ revenue_stats.custom_overrides_count }} Custom Fee Overrides
+        </span>
+        {% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 flex justify-between">Total Platform Revenue <i class="fa-solid fa-dollar-sign text-emerald-600"></i></div>
+          <div id="kpiTotalRevenue" class="text-2xl font-black text-slate-900 mt-2 font-mono">{{ currency_symbol }}{{ revenue_stats.total_revenue|floatformat:2 }}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">Sum of business fee (2.5%) + creator fee (1.5%)</div>
+        </div>
+
+        <div class="bg-emerald-50/60 rounded-xl border border-emerald-200 p-5 shadow-sm">
+          <div class="text-xs font-semibold text-emerald-700 flex justify-between">Collected Revenue <i class="fa-solid fa-circle-check text-emerald-600"></i></div>
+          <div id="kpiCollectedRevenue" class="text-2xl font-black text-emerald-700 mt-2 font-mono">{{ currency_symbol }}{{ revenue_stats.collected_revenue|floatformat:2 }}</div>
+          <div class="text-[10px] text-emerald-600 mt-0.5">Fees confirmed in platform bank vault</div>
+        </div>
+
+        <div class="bg-amber-50/60 rounded-xl border border-amber-200 p-5 shadow-sm">
+          <div class="text-xs font-semibold text-amber-700 flex justify-between">Pending / Outstanding <i class="fa-regular fa-clock text-amber-600"></i></div>
+          <div id="kpiPendingRevenue" class="text-2xl font-black text-amber-700 mt-2 font-mono">{{ currency_symbol }}{{ revenue_stats.pending_revenue|floatformat:2 }}</div>
+          <div class="text-[10px] text-amber-600 mt-0.5">Unsettled active agreements</div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 flex justify-between">Average Platform Fee % <i class="fa-solid fa-percent text-blue-600"></i></div>
+          <div class="text-lg font-black text-slate-900 mt-2 font-mono">
+            Biz: <span class="text-blue-600">{{ revenue_stats.avg_biz_fee }}%</span> / Creator: <span class="text-emerald-600">{{ revenue_stats.avg_creator_fee }}%</span>
+          </div>
+          <div class="text-[10px] text-slate-400 mt-0.5">Per-campaign charge rate tracking</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. FINANCIAL / ESCROW ANALYTICS -->
+    <div class="space-y-4 pt-2">
+      <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-vault text-blue-600"></i> 3. Financial & Escrow Vault Analytics
+      </h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 flex justify-between">Total GMV (Agreed Value) <i class="fa-solid fa-money-bill-wave text-blue-600"></i></div>
+          <div id="kpiTotalGMV" class="text-2xl font-black text-slate-900 mt-2 font-mono">{{ currency_symbol }}{{ escrow_stats.total_gmv|floatformat:2 }}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">Sum of all final agreed prices</div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 flex justify-between">Total Escrowed Funds <i class="fa-solid fa-shield-halved text-indigo-600"></i></div>
+          <div class="text-2xl font-black text-indigo-600 mt-2 font-mono">{{ currency_symbol }}{{ escrow_stats.total_escrowed|floatformat:2 }}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">Deposited by business into escrow</div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 flex justify-between">Total Released Payouts <i class="fa-solid fa-circle-check text-emerald-600"></i></div>
+          <div class="text-2xl font-black text-emerald-600 mt-2 font-mono">{{ currency_symbol }}{{ escrow_stats.total_released|floatformat:2 }}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">Disbursed to creators upon delivery</div>
+        </div>
+
+        <div class="bg-blue-50/60 rounded-xl border border-blue-200 p-5 shadow-sm">
+          <div class="text-xs font-semibold text-blue-700 flex justify-between">Held in Active Escrow <i class="fa-solid fa-lock text-blue-600"></i></div>
+          <div class="text-2xl font-black text-blue-700 mt-2 font-mono">{{ currency_symbol }}{{ escrow_stats.total_held|floatformat:2 }}</div>
+          <div class="text-[10px] text-blue-600 mt-0.5">Currently secured in milestone vault</div>
+        </div>
+      </div>
+
+      <!-- Milestone Progression & Leaderboards -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-900 mb-3 flex items-center justify-between">
+            <span>Milestone Installment Progression</span>
+            <i class="fa-solid fa-layer-group text-blue-600"></i>
+          </h3>
+          <div class="grid grid-cols-3 gap-3 text-center text-xs">
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+              <div class="text-slate-500 font-semibold">1. In Escrow</div>
+              <div class="text-lg font-black font-mono mt-1 text-slate-900">{{ escrow_stats.milestones.escrowed.count }}</div>
+              <div class="text-[10px] text-slate-400 mt-0.5 font-mono">{{ currency_symbol }}{{ escrow_stats.milestones.escrowed.amount|floatformat:0 }}</div>
+            </div>
+            <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div class="text-amber-700 font-semibold">2. Verified</div>
+              <div class="text-lg font-black font-mono mt-1 text-amber-700">{{ escrow_stats.milestones.paid.count }}</div>
+              <div class="text-[10px] text-amber-600 mt-0.5 font-mono">{{ currency_symbol }}{{ escrow_stats.milestones.paid.amount|floatformat:0 }}</div>
+            </div>
+            <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <div class="text-emerald-700 font-semibold">3. Released</div>
+              <div class="text-lg font-black font-mono mt-1 text-emerald-700">{{ escrow_stats.milestones.released.count }}</div>
+              <div class="text-[10px] text-emerald-600 mt-0.5 font-mono">{{ currency_symbol }}{{ escrow_stats.milestones.released.amount|floatformat:0 }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-900 mb-3 flex items-center justify-between">
+            <span>Top Campaigns by Platform Fee Generated</span>
+            <i class="fa-solid fa-trophy text-amber-500"></i>
+          </h3>
+          <div class="divide-y divide-slate-100 text-xs">
+            {% for c in escrow_stats.top_by_revenue %}
+            <div class="py-2 flex justify-between items-center">
+              <div class="truncate max-w-[220px]">
+                <div class="font-bold text-slate-800 truncate">{{ c.name }}</div>
+                <div class="text-[10px] text-slate-400">{{ c.brand_name }}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-mono font-bold text-slate-800">{{ c.currency_symbol|default:currency_symbol }}{{ c.base_price|floatformat:2 }}</div>
+                <div class="font-mono font-semibold text-emerald-600 text-[10px]">Fee: {{ c.currency_symbol|default:currency_symbol }}{{ c.fee_generated|floatformat:2 }}</div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="text-slate-400 text-center py-4">No top campaign data yet</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. TRENDS & VISUALIZATIONS (CHART.JS) -->
+    <div class="space-y-4 pt-2">
+      <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-chart-simple text-blue-600"></i> 4. Performance Trends & Spend Distribution
+      </h2>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Line Chart -->
+        <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="flex justify-between items-center mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Campaigns Created vs Platform Revenue</h3>
+              <div class="text-[11px] text-slate-400">Monthly progression</div>
+            </div>
+          </div>
+          <div class="h-64">
+            <canvas id="lineChartCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Grouped Bar Chart -->
+        <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="flex justify-between items-center mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Target Budget vs Agreed Price vs Spend</h3>
+              <div class="text-[11px] text-slate-400">Realized spend efficiency</div>
+            </div>
+          </div>
+          <div class="h-64">
+            <canvas id="barChartCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. CAMPAIGN-LEVEL DETAIL TABLE -->
+    <div class="space-y-4 pt-2">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-blue-600"></i> 5. Campaign Workspace Details & Fee Audits
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">Granular records with fee breakdowns, milestone timeline statuses, and proxy metrics.</p>
+        </div>
+        <div class="text-xs text-slate-500" id="tableCountDisplay">Showing all campaigns</div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse" id="campaignsTable">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                <th class="px-4 py-3">Campaign</th>
+                <th class="px-4 py-3">Brand & Creator</th>
+                <th class="px-4 py-3">Platform / Category</th>
+                <th class="px-4 py-3">Agreed Price</th>
+                <th class="px-4 py-3">Platform Fee</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Flow Progress</th>
+                <th class="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="campaignsTableBody">
+              <!-- Rendered via JavaScript for dynamic filtering -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRILL-DOWN MODAL -->
+  <div id="drilldownModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden text-xs">
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+        <div>
+          <h3 id="modalTitle" class="text-base font-bold text-slate-900">Campaign Details</h3>
+          <div class="text-slate-500 text-[11px]" id="modalSubtitle">#ID • Platform</div>
+        </div>
+        <button onclick="closeModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto space-y-5" id="modalBody">
+        <!-- Injected dynamically -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+        <button onclick="closeModal()" class="px-5 py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700">
+          Close Audit
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON Payload for Interactive Client-Side Features -->
+  {{ campaigns_json|json_script:"campaigns-data" }}
+  {{ trends_json|json_script:"trends-data" }}
+  {{ budget_vs_spend_json|json_script:"budget-vs-spend-data" }}
+
+  <script>
+    const allCampaigns = JSON.parse(document.getElementById('campaigns-data').textContent || '[]');
+    const trendsData = JSON.parse(document.getElementById('trends-data').textContent || '{}');
+    const budgetVsSpendData = JSON.parse(document.getElementById('budget-vs-spend-data').textContent || '[]');
+    const defaultCurrencySymbol = "{{ currency_symbol|default:'Rs' }}";
+
+    function renderTable(list) {
+      const tbody = document.getElementById('campaignsTableBody');
+      const countDisplay = document.getElementById('tableCountDisplay');
+      if (countDisplay) {
+        countDisplay.textContent = `Showing ${list.length} of ${allCampaigns.length} campaigns`;
+      }
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400 text-xs">No campaigns available</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(c => {
+        const fPrice = parseFloat(c.final_price || c.budget || 0);
+        const fee = parseFloat(c.total_fee || (fPrice * 0.04));
+        const progress = c.progress || (c.status === 'Completed' ? 100 : 50);
+        const sym = c.currency_symbol || defaultCurrencySymbol;
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="px-4 py-3 font-bold text-slate-900">
+              <div>${c.name}</div>
+              <div class="text-[10px] text-slate-400 font-normal">#${c.id}</div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="font-medium text-slate-800">${c.brand_name || '—'}</div>
+              <div class="text-[10px] text-slate-400">➔ ${c.creator_name || '—'}</div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="font-medium text-slate-800">${c.platform || 'General'}</div>
+              <div class="text-[10px] text-slate-400">${c.category || 'General'}</div>
+            </td>
+            <td class="px-4 py-3 font-mono font-bold text-slate-900">${sym}${fPrice.toFixed(2)}</td>
+            <td class="px-4 py-3 font-mono">
+              <span class="text-emerald-600 font-bold">${sym}${fee.toFixed(2)}</span>
+              <div class="text-[10px] text-slate-400">(2.5% + 1.5%)</div>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                c.status === 'Live' || c.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                c.status === 'Completed' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                c.status === 'Under Review' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                'bg-slate-100 text-slate-600'
+              }">${c.status || 'Pending'}</span>
+            </td>
+            <td class="px-4 py-3 min-w-[100px]">
+              <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+                <span>Progress</span>
+                <span>${progress}%</span>
+              </div>
+              <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-600 rounded-full" style="width: ${progress}%"></div>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <button onclick="openModal(${c.id})" class="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-100 font-bold text-slate-700 text-xs">
+                <i class="fa-solid fa-eye text-blue-600 mr-1"></i> Drill-down
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openModal(id) {
+      const c = allCampaigns.find(item => item.id === id);
+      if (!c) return;
+
+      document.getElementById('modalTitle').textContent = c.name;
+      document.getElementById('modalSubtitle').textContent = `#${c.id} • ${c.platform || 'Instagram'} • ${c.brand_name} ➔ ${c.creator_name}`;
+
+      const fPrice = parseFloat(c.final_price || c.budget || 0);
+      const bizFee = fPrice * 0.025;
+      const creatorFee = fPrice * 0.015;
+      const totalFee = bizFee + creatorFee;
+      const creatorNet = fPrice - creatorFee;
+      const progress = c.progress || 50;
+      const engagement = (3 + progress * 0.09).toFixed(2);
+      const sym = c.currency_symbol || defaultCurrencySymbol;
+
+      document.getElementById('modalBody').innerHTML = `
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <div class="font-bold text-sm text-slate-900 flex justify-between">
+            <span>Platform Fee Settlement</span>
+            <span class="font-mono text-emerald-600">Total Take: ${sym}${totalFee.toFixed(2)}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-xs pt-1">
+            <div class="p-3 bg-white border border-slate-200 rounded-lg">
+              <div class="text-slate-500 font-semibold mb-1">🏢 Brand Invoice</div>
+              <div>Base Price: <strong class="font-mono">${sym}${fPrice.toFixed(2)}</strong></div>
+              <div class="text-blue-600">Platform Charge (+2.5%): +${sym}${bizFee.toFixed(2)}</div>
+              <div class="border-t border-slate-100 pt-1 mt-1 font-bold">Total: ${sym}${(fPrice + bizFee).toFixed(2)}</div>
+            </div>
+            <div class="p-3 bg-white border border-slate-200 rounded-lg">
+              <div class="text-slate-500 font-semibold mb-1">🎨 Creator Payout</div>
+              <div>Agreed Price: <strong class="font-mono">${sym}${fPrice.toFixed(2)}</strong></div>
+              <div class="text-rose-600">Platform Charge (-1.5%): -${sym}${creatorFee.toFixed(2)}</div>
+              <div class="border-t border-slate-100 pt-1 mt-1 font-bold text-emerald-600">Net Received: ${sym}${creatorNet.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2">
+          <div class="font-bold text-sm text-slate-900">Performance Proxies & Estimated Reach</div>
+          <div class="grid grid-cols-4 gap-2 text-center">
+            <div class="p-2 bg-slate-50 rounded-lg">
+              <div class="text-[10px] text-slate-400">Avg Engagement</div>
+              <div class="font-bold text-blue-600 font-mono mt-0.5">${engagement}%</div>
+            </div>
+            <div class="p-2 bg-slate-50 rounded-lg">
+              <div class="text-[10px] text-slate-400">Est. Reach</div>
+              <div class="font-bold text-slate-800 font-mono mt-0.5">${Math.round(fPrice * 14.5).toLocaleString()}</div>
+            </div>
+            <div class="p-2 bg-slate-50 rounded-lg">
+              <div class="text-[10px] text-slate-400">Impressions</div>
+              <div class="font-bold text-slate-800 font-mono mt-0.5">${Math.round(fPrice * 38.2).toLocaleString()}</div>
+            </div>
+            <div class="p-2 bg-slate-50 rounded-lg">
+              <div class="text-[10px] text-slate-400">ROI Proxy</div>
+              <div class="font-bold text-emerald-600 font-mono mt-0.5">4.1x</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const modal = document.getElementById('drilldownModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('drilldownModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function exportCSV() {
+      const headers = ["ID", "Name", "Brand", "Creator", "Status", "Platform", "Category", "Agreed Price", "Platform Fee"];
+      const rows = allCampaigns.map(c => [
+        c.id,
+        `"${(c.name || '').replace(/"/g, '""')}"`,
+        `"${(c.brand_name || '').replace(/"/g, '""')}"`,
+        `"${(c.creator_name || '').replace(/"/g, '""')}"`,
+        c.status || 'Draft',
+        c.platform || 'Instagram',
+        c.category || 'General',
+        c.final_price || c.budget || 0,
+        c.total_fee || 0
+      ]);
+
+      const csv = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csv));
+      link.setAttribute("download", `ampli_campaign_analytics_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Initialize Charts & Table
+    document.addEventListener('DOMContentLoaded', () => {
+      renderTable(allCampaigns);
+
+      // Line Chart
+      const lineCtx = document.getElementById('lineChartCanvas');
+      if (lineCtx && trendsData.labels) {
+        new Chart(lineCtx, {
+          type: 'line',
+          data: {
+            labels: trendsData.labels,
+            datasets: [
+              {
+                label: 'Campaigns',
+                data: trendsData.campaigns_count,
+                borderColor: '#2f54eb',
+                backgroundColor: 'rgba(47, 84, 235, 0.1)',
+                fill: true,
+                tension: 0.35,
+                yAxisID: 'y'
+              },
+              {
+                label: `Revenue (${defaultCurrencySymbol})`,
+                data: trendsData.revenue_amount,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                fill: true,
+                tension: 0.35,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { type: 'linear', position: 'left', grid: { display: false } },
+              y1: { type: 'linear', position: 'right', grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // Bar Chart
+      const barCtx = document.getElementById('barChartCanvas');
+      if (barCtx && budgetVsSpendData.length > 0) {
+        new Chart(barCtx, {
+          type: 'bar',
+          data: {
+            labels: budgetVsSpendData.map(d => (d.campaign || '').slice(0, 12)),
+            datasets: [
+              { label: 'Budget', data: budgetVsSpendData.map(d => d.target_budget || 0), backgroundColor: '#94a3b8' },
+              { label: 'Agreed Price', data: budgetVsSpendData.map(d => d.final_price || 0), backgroundColor: '#2f54eb' },
+              { label: 'Released Spend', data: budgetVsSpendData.map(d => d.funds_released || 0), backgroundColor: '#10b981' }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { grid: { display: false } },
+              y: { grid: { color: '#f1f5f9' } }
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
+{% endblock %}

@@ -1,0 +1,831 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block titletag %}Connected Social Accounts — Wagtail Admin{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<style>
+  :root {
+    --sa-primary: #4f46e5;
+    --sa-primary-hover: #4338ca;
+    --sa-dark-header: #1e293b;
+    --sa-dark-bg: #0f172a;
+    --sa-slate-50: #f8fafc;
+    --sa-slate-100: #f1f5f9;
+    --sa-slate-200: #e2e8f0;
+    --sa-slate-300: #cbd5e1;
+    --sa-slate-600: #475569;
+    --sa-slate-700: #334155;
+    --sa-slate-800: #1e293b;
+    --sa-slate-900: #0f172a;
+  }
+
+  .sa-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 32px 36px 64px 36px;
+    max-width: 1440px;
+    margin: 0 auto;
+    color: #1e293b;
+  }
+
+  /* ── 1. Header Banner ── */
+  .sa-header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 16px;
+    padding: 28px 32px;
+    color: #ffffff;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .sa-header-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .sa-header-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #818cf8;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+  }
+
+  .sa-header h1 {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sa-header p {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #94a3b8;
+  }
+
+  .sa-header-badges {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .sa-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+  }
+
+  .sa-badge-pill.verified {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #6ee7b7;
+  }
+
+  /* ── 2. Top Summary KPI Row ── */
+  .sa-stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+
+  .sa-stat-card {
+    background: #ffffff;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .sa-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.08);
+  }
+
+  .sa-stat-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .sa-stat-icon.blue   { background: #eff6ff; color: #3b82f6; }
+  .sa-stat-icon.green  { background: #ecfdf5; color: #10b981; }
+  .sa-stat-icon.amber  { background: #fffbeb; color: #f59e0b; }
+  .sa-stat-icon.purple { background: #faf5ff; color: #a855f7; }
+
+  .sa-stat-val {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+  }
+
+  .sa-stat-lbl {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  /* ── 3. Toolbar: Search & Filters ── */
+  .sa-toolbar {
+    background: #ffffff;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  }
+
+  .sa-toolbar-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .sa-search-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    max-width: 540px;
+  }
+
+  .sa-search-wrapper {
+    position: relative;
+    flex: 1;
+  }
+
+  .sa-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 15px;
+    pointer-events: none;
+  }
+
+  .sa-search-input {
+    width: 100% !important;
+    display: block !important;
+    height: 40px !important;
+    padding: 8px 14px 8px 38px !important;
+    border: 1.5px solid var(--sa-slate-300) !important;
+    border-radius: 10px !important;
+    font-size: 0.88rem !important;
+    color: #0f172a !important;
+    background-color: #f8fafc !important;
+    outline: none !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
+  }
+
+  .sa-search-input:focus {
+    background-color: #ffffff !important;
+    border-color: var(--sa-primary) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
+  }
+
+  .sa-btn-search {
+    height: 40px;
+    padding: 0 18px;
+    background: var(--sa-primary);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .sa-btn-search:hover {
+    background: var(--sa-primary-hover);
+  }
+
+  .sa-filters-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--sa-slate-100);
+  }
+
+  .sa-filter-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .sa-chip {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f1f5f9;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sa-chip:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+
+  .sa-chip.active {
+    background: #e0e7ff;
+    color: #3730a3;
+    border-color: #c7d2fe;
+    font-weight: 700;
+  }
+
+  /* ── 4. Creator Cards Grid ── */
+  .sa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 22px;
+  }
+
+  @media (max-width: 640px) {
+    .sa-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .sa-creator-card {
+    background: #ffffff;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .sa-creator-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
+
+  .sa-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .sa-creator-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .sa-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #e2e8f0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+
+  .sa-avatar-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+  }
+
+  .sa-creator-name {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .sa-creator-handle {
+    font-size: 0.8rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .sa-reach-pill {
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #f8fafc;
+    border: 1px solid var(--sa-slate-200);
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  /* Accounts Sub-list */
+  .sa-channels-box {
+    background: #f8fafc;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sa-channel-row {
+    background: #ffffff;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    transition: all 0.15s ease;
+  }
+
+  .sa-channel-row:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  }
+
+  .sa-channel-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sa-plat-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .sa-plat-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sa-plat-name {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+  }
+
+  .sa-plat-user {
+    font-size: 0.74rem;
+    color: #64748b;
+    font-family: monospace;
+  }
+
+  .sa-channel-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sa-followers-tag {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #0f172a;
+    background: #f1f5f9;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+  }
+
+  .sa-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .sa-status-badge.verified {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+  }
+
+  .sa-status-badge.pending {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+  }
+
+  .sa-status-badge.disconnected {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+  }
+
+  /* Card Footer Actions */
+  .sa-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--sa-slate-100);
+  }
+
+  .sa-btn-detail {
+    padding: 8px 16px;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    background: var(--sa-primary);
+    color: #ffffff !important;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .sa-btn-detail:hover {
+    background: var(--sa-primary-hover);
+    transform: translateX(2px);
+  }
+
+  .sa-btn-proof {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #ffffff;
+    color: #2563eb !important;
+    border: 1px solid #bfdbfe;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+  }
+
+  .sa-btn-proof:hover {
+    background: #eff6ff;
+  }
+
+  .sa-toggle-form {
+    display: inline;
+    margin: 0;
+  }
+
+  .sa-btn-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Empty State */
+  .sa-empty-box {
+    background: #ffffff;
+    border: 1.5px dashed var(--sa-slate-300);
+    border-radius: 16px;
+    padding: 48px 24px;
+    text-align: center;
+    color: #64748b;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sa-container">
+
+  <!-- 1. Header Banner -->
+  <div class="sa-header">
+    <div class="sa-header-title">
+      <div class="sa-header-icon">
+        <i class="fa-solid fa-share-nodes"></i>
+      </div>
+      <div>
+        <h1>Creator Connected Social Accounts <i class="fa-solid fa-shield-check text-indigo-400 text-lg"></i></h1>
+        <p>Live registry of creator social channels, authentic handles, follower statistics, proof links, and verification audits.</p>
+      </div>
+    </div>
+
+    <div class="sa-header-badges">
+      <div class="sa-badge-pill verified">
+        <i class="fa-solid fa-circle-check"></i> {{ verified_percentage }}% Verified Accounts
+      </div>
+      <div class="sa-badge-pill">
+        <i class="fa-solid fa-users"></i> {{ total_reach_formatted }} Total Reach
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. KPI Summary Cards -->
+  <div class="sa-stats-row">
+    <div class="sa-stat-card">
+      <div class="sa-stat-icon blue">
+        <i class="fa-solid fa-link"></i>
+      </div>
+      <div>
+        <div class="sa-stat-val">{{ total_accounts_count }}</div>
+        <div class="sa-stat-lbl">Total Connected Accounts</div>
+      </div>
+    </div>
+
+    <div class="sa-stat-card">
+      <div class="sa-stat-icon green">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <div>
+        <div class="sa-stat-val">{{ total_verified_count }}</div>
+        <div class="sa-stat-lbl">Verified Accounts</div>
+      </div>
+    </div>
+
+    <div class="sa-stat-card">
+      <div class="sa-stat-icon amber">
+        <i class="fa-solid fa-clock"></i>
+      </div>
+      <div>
+        <div class="sa-stat-val">{{ total_pending_count }}</div>
+        <div class="sa-stat-lbl">Pending Verification</div>
+      </div>
+    </div>
+
+    <div class="sa-stat-card">
+      <div class="sa-stat-icon purple">
+        <i class="fa-solid fa-users-viewfinder"></i>
+      </div>
+      <div>
+        <div class="sa-stat-val">{{ total_reach_formatted }}</div>
+        <div class="sa-stat-lbl">Total Follower Reach</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Toolbar: Search and Filter Chips -->
+  <div class="sa-toolbar">
+    <div class="sa-toolbar-top">
+      <form method="GET" action="{% url 'admin_social_accounts_list' %}" class="sa-search-form">
+        {% if platform_filter != 'all' %}
+        <input type="hidden" name="platform" value="{{ platform_filter }}">
+        {% endif %}
+        {% if status_filter != 'all' %}
+        <input type="hidden" name="status" value="{{ status_filter }}">
+        {% endif %}
+
+        <div class="sa-search-wrapper">
+          <i class="fa-solid fa-magnifying-glass sa-search-icon"></i>
+          <input type="text" name="q" value="{{ search_query }}" placeholder="Search creators, usernames, platforms, handles..." class="sa-search-input">
+        </div>
+        <button type="submit" class="sa-btn-search">
+          <i class="fa-solid fa-magnifying-glass"></i> Search
+        </button>
+      </form>
+
+      {% if search_query or platform_filter != 'all' or status_filter != 'all' %}
+      <a href="{% url 'admin_social_accounts_list' %}" class="px-3.5 py-2 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition">
+        <i class="fa-solid fa-rotate-left mr-1"></i> Reset Filters
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- Filter Chips Row -->
+    <div class="sa-filters-bar">
+      <div class="sa-filter-chips">
+        <span class="text-xs font-bold text-slate-400 mr-1">Platform:</span>
+        <a href="?platform=all{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="sa-chip {% if platform_filter == 'all' %}active{% endif %}">
+          All ({{ total_accounts_count }})
+        </a>
+        <a href="?platform=instagram{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="sa-chip {% if platform_filter == 'instagram' %}active{% endif %}">
+          <i class="fa-brands fa-instagram text-pink-600"></i> Instagram ({{ platform_counts.instagram }})
+        </a>
+        <a href="?platform=youtube{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="sa-chip {% if platform_filter == 'youtube' %}active{% endif %}">
+          <i class="fa-brands fa-youtube text-red-600"></i> YouTube ({{ platform_counts.youtube }})
+        </a>
+        <a href="?platform=tiktok{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="sa-chip {% if platform_filter == 'tiktok' %}active{% endif %}">
+          <i class="fa-brands fa-tiktok text-slate-900"></i> TikTok ({{ platform_counts.tiktok }})
+        </a>
+        <a href="?platform=facebook{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="sa-chip {% if platform_filter == 'facebook' %}active{% endif %}">
+          <i class="fa-brands fa-facebook text-blue-600"></i> Facebook ({{ platform_counts.facebook }})
+        </a>
+        <a href="?platform=twitter{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="sa-chip {% if platform_filter == 'twitter' %}active{% endif %}">
+          <i class="fa-brands fa-x-twitter text-slate-900"></i> X / Twitter ({{ platform_counts.twitter }})
+        </a>
+        <a href="?platform=linkedin{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="sa-chip {% if platform_filter == 'linkedin' %}active{% endif %}">
+          <i class="fa-brands fa-linkedin text-blue-700"></i> LinkedIn ({{ platform_counts.linkedin }})
+        </a>
+      </div>
+
+      <div class="sa-filter-chips">
+        <span class="text-xs font-bold text-slate-400 mr-1">Status:</span>
+        <a href="?status=all{% if search_query %}&q={{ search_query }}{% endif %}{% if platform_filter != 'all' %}&platform={{ platform_filter }}{% endif %}" class="sa-chip {% if status_filter == 'all' %}active{% endif %}">
+          All
+        </a>
+        <a href="?status=verified{% if search_query %}&q={{ search_query }}{% endif %}{% if platform_filter != 'all' %}&platform={{ platform_filter }}{% endif %}" class="sa-chip {% if status_filter == 'verified' %}active{% endif %}">
+          <i class="fa-solid fa-circle-check text-emerald-600"></i> Verified
+        </a>
+        <a href="?status=pending{% if search_query %}&q={{ search_query }}{% endif %}{% if platform_filter != 'all' %}&platform={{ platform_filter }}{% endif %}" class="sa-chip {% if status_filter == 'pending' %}active{% endif %}">
+          <i class="fa-solid fa-clock text-amber-600"></i> Pending
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Creator Social Accounts Grid -->
+  {% if creators %}
+  <div class="sa-grid">
+    {% for creator in creators %}
+    <div class="sa-creator-card">
+      <div>
+        <!-- Card Header -->
+        <div class="sa-card-header">
+          <div class="sa-creator-meta">
+            {% if creator.avatar_url %}
+            <img src="{{ creator.avatar_url }}" alt="{{ creator.full_name }}" class="sa-avatar">
+            {% else %}
+            <div class="sa-avatar-placeholder">
+              {{ creator.username|slice:":1"|upper }}
+            </div>
+            {% endif %}
+
+            <div>
+              <h3 class="sa-creator-name">{{ creator.full_name }}</h3>
+              <div class="sa-creator-handle">
+                <span>@{{ creator.username }}</span>
+                <span>•</span>
+                <span><i class="fa-solid fa-location-dot text-slate-400"></i> {{ creator.location }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sa-reach-pill">
+            <i class="fa-solid fa-users text-indigo-600"></i> {{ creator.total_reach_formatted }} Reach
+          </div>
+        </div>
+
+        <!-- Channels List for this creator -->
+        <div class="sa-channels-box">
+          {% if creator.accounts %}
+            {% for acc in creator.accounts %}
+            <div class="sa-channel-row">
+              <div class="sa-channel-left">
+                <div class="sa-plat-badge" style="background: {{ acc.platform_info.gradient }};">
+                  <i class="{{ acc.platform_info.icon }}"></i>
+                </div>
+                <div class="sa-plat-info">
+                  <div class="sa-plat-name">{{ acc.platform_info.name }}</div>
+                  <div class="sa-plat-user">@{{ acc.username }}</div>
+                </div>
+              </div>
+
+              <div class="sa-channel-right">
+                <div class="sa-followers-tag">
+                  {{ acc.followers_formatted }}
+                </div>
+
+                {% if acc.is_verified %}
+                <span class="sa-status-badge verified" title="Verified by Super Admin">
+                  <i class="fa-solid fa-circle-check"></i> Verified
+                </span>
+                {% elif acc.is_connected %}
+                <span class="sa-status-badge pending" title="Connected, pending audit">
+                  <i class="fa-solid fa-clock"></i> In Verify
+                </span>
+                {% else %}
+                <span class="sa-status-badge disconnected" title="Disconnected channel">
+                  Disconnected
+                </span>
+                {% endif %}
+
+                <!-- Quick Verification Toggle Button -->
+                <form method="POST" action="{% url 'admin_social_accounts_toggle_verify' acc.id %}" class="sa-toggle-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button type="submit" class="sa-btn-toggle text-xs font-bold px-2 py-1 rounded transition {% if acc.is_verified %}text-amber-600 hover:bg-amber-50{% else %}text-emerald-600 hover:bg-emerald-50{% endif %}" title="{% if acc.is_verified %}Revoke Verification{% else %}Verify Account{% endif %}">
+                    {% if acc.is_verified %}
+                    <i class="fa-solid fa-shield-xmark"></i>
+                    {% else %}
+                    <i class="fa-solid fa-shield-check"></i>
+                    {% endif %}
+                  </button>
+                </form>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-xs text-slate-400 py-3 text-center">No connected social accounts matching criteria</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Card Footer -->
+      <div class="sa-card-footer">
+        <div class="text-xs font-semibold text-slate-500">
+          <strong class="text-slate-900">{{ creator.verified_count }}</strong> of <strong>{{ creator.accounts_count }}</strong> channels verified
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a href="{% url 'admin_social_accounts_detail' creator.id %}" class="sa-btn-detail">
+            <i class="fa-solid fa-eye"></i> Manage Accounts
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="sa-empty-box">
+    <i class="fa-solid fa-share-nodes text-4xl text-slate-300 mb-3"></i>
+    <h3 class="text-base font-bold text-slate-700">No Creator Social Accounts Found</h3>
+    <p class="text-xs text-slate-400 mt-1">Try adjusting your search keywords or platform filters.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

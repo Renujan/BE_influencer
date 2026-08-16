@@ -45,6 +45,42 @@
     .w-sidebar__header {
         padding: 8px !important;
     }
+
+    /* Hide Super Admin Sidebar Search Bar & Search Container */
+    .w-sidebar form[action*="search"],
+    .w-sidebar input[type="search"],
+    .w-sidebar [role="search"],
+    .w-sidebar input[name="menu-search-q"],
+    .sidebar-search,
+    .sidebar-search-form,
+    .w-sidebar-search,
+    .w-sidebar__search,
+    .w-sidebar-search-form,
+    .sidebar-search__input,
+    [data-wagtail-sidebar-search],
+    [data-sidebar-search],
+    .sidebar-menu-item--search,
+    .w-sidebar [class*="search"] {
+        display: none !important;
+    }
+
+    /* Hide Wagtail version in sidebar settings expansion & footer */
+    .sidebar-sub-menu-panel__footer,
+    .sidebar-sub-menu__footer,
+    .sidebar-footer__version,
+    .w-sidebar-footer__version,
+    .w-version,
+    [class*="sub-menu-panel__footer"],
+    [class*="sub-menu__footer"],
+    .w-sidebar__footer-version,
+    .sidebar-main-menu--open-footer {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        opacity: 0 !important;
+    }
 </style>
 {% endblock %}
 

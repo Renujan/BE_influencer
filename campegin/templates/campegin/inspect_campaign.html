@@ -622,40 +622,84 @@
             </div>
         </div>
 
-        <!-- Campaign Milestones & Tasks -->
+        <!-- Campaign Milestones & Tasks (From Workspace Payment) -->
         <div>
-            <h3 class="custom-section-title">Milestones &amp; Tasks</h3>
-            <div style="margin-bottom: 16px;">
-                <strong>Current Campaign Status:</strong>
-                <span class="badge-status {% if instance.status == 'Live' %}live{% elif instance.status == 'Pending' or instance.status == 'Under_Review' %}pending{% elif instance.status == 'Rejected' %}inactive{% else %}pending{% endif %}">
-                    {{ instance.get_status_display }}
-                </span>
+            <h3 class="custom-section-title">Milestones &amp; Tasks (Workspace Payment Breakdown)</h3>
+            <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <strong>Current Campaign Status:</strong>
+                    <span class="badge-status {% if instance.status == 'Live' %}live{% elif instance.status == 'Pending' or instance.status == 'Under_Review' %}pending{% elif instance.status == 'Rejected' %}inactive{% else %}pending{% endif %}">
+                        {{ instance.get_status_display }}
+                    </span>
+                </div>
+                {% if negotiation %}
+                <div style="font-size: 12px; color: #475569; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <span>Agreed Workspace Price: <strong style="color: #0f172a;">{{ currency_symbol }}{{ negotiation.final_price|floatformat:2 }}</strong></span>
+                    <span style="margin: 0 6px;">•</span>
+                    <span style="color: #059669; font-weight: 600;">Biz Fee ({{ negotiation.platform_charge }}%): {{ currency_symbol }}{{ negotiation.business_platform_charge_amount|floatformat:2 }}</span>
+                    <span style="margin: 0 6px;">•</span>
+                    <span style="color: #2563eb; font-weight: 600;">Creator Fee ({{ negotiation.creator_platform_charge }}%): {{ currency_symbol }}{{ negotiation.creator_platform_charge_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
             </div>
             <div class="custom-form-grid">
                 
                 <div class="custom-form-group">
-                    <label class="custom-form-label">Campaign Milestones</label>
+                    <label class="custom-form-label">Payment Milestone Installments</label>
                     <div class="custom-table-wrapper">
                         <table class="custom-data-table">
                             <thead>
                                 <tr>
                                     <th>Milestone Title</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Paid Date</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for milestone in milestones %}
                                     <tr>
-                                        <td><strong>{{ milestone.title }}</strong></td>
                                         <td>
-                                            <span class="badge-status {% if milestone.is_done %}live{% else %}pending{% endif %}">
-                                                {% if milestone.is_done %}Done{% else %}Pending{% endif %}
+                                            <strong style="color: #0f172a;">{{ milestone.title }}</strong>
+                                            {% if milestone.receipt_image %}
+                                                <div style="margin-top: 3px;">
+                                                    <a href="{{ milestone.receipt_image.url }}" target="_blank" style="font-size: 11px; color: #2563eb; font-weight: 600; text-decoration: underline;">
+                                                        🧾 View Receipt
+                                                    </a>
+                                                </div>
+                                            {% elif milestone.receipt_url %}
+                                                <div style="margin-top: 3px;">
+                                                    <a href="{{ milestone.receipt_url }}" target="_blank" style="font-size: 11px; color: #2563eb; font-weight: 600; text-decoration: underline;">
+                                                        🧾 View Receipt Link
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; {% if milestone.installment_type == 'business' %}background: #eff6ff; color: #1e40af;{% else %}background: #fdf2f8; color: #9d174d;{% endif %}">
+                                                {{ milestone.type }}
+                                            </span>
+                                        </td>
+                                        <td style="font-family: monospace; font-weight: 700; color: #0f172a;">
+                                            {% if milestone.amount %}
+                                                {{ currency_symbol }}{{ milestone.amount|floatformat:2 }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </td>
+                                        <td style="font-size: 12px; color: #64748b;">
+                                            {{ milestone.paid_date|default:"—" }}
+                                        </td>
+                                        <td>
+                                            <span class="badge-status {% if milestone.is_done %}live{% elif milestone.status == 'In Escrow' %}pending{% else %}completed{% endif %}">
+                                                {% if milestone.is_done %}✓ Released{% else %}{{ milestone.status }}{% endif %}
                                             </span>
                                         </td>
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="2" style="text-align: center; color: #94a3b8;">No milestones defined for this campaign</td>
+                                        <td colspan="5" style="text-align: center; color: #94a3b8; padding: 18px;">No milestone installments defined in Workspace Payment</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -664,12 +708,12 @@
                 </div>
 
                 <div class="custom-form-group">
-                    <label class="custom-form-label">Campaign Tasks List</label>
+                    <label class="custom-form-label">Campaign Tasks &amp; Deliverables Checklist</label>
                     <div class="custom-table-wrapper">
                         <table class="custom-data-table">
                             <thead>
                                 <tr>
-                                    <th>Task Title</th>
+                                    <th>Task / Deliverable Title</th>
                                     <th>Due Date</th>
                                     <th>Status</th>
                                 </tr>
@@ -677,17 +721,17 @@
                             <tbody>
                                 {% for task in tasks %}
                                     <tr>
-                                        <td><strong>{{ task.title }}</strong></td>
-                                        <td>{{ task.due_date|default:"-" }}</td>
+                                        <td><strong style="color: #0f172a;">{{ task.title }}</strong></td>
+                                        <td style="font-size: 12px; color: #64748b;">{{ task.due_date|default:"-" }}</td>
                                         <td>
                                             <span class="badge-status {% if task.is_done %}live{% else %}pending{% endif %}">
-                                                {% if task.is_done %}Done{% else %}Pending{% endif %}
+                                                {% if task.is_done %}✓ Done / Approved{% else %}⌛ Pending{% endif %}
                                             </span>
                                         </td>
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="3" style="text-align: center; color: #94a3b8;">No tasks configured for this campaign</td>
+                                        <td colspan="3" style="text-align: center; color: #94a3b8; padding: 18px;">No tasks configured for this campaign</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -864,27 +908,53 @@
                 <table class="custom-data-table">
                     <thead>
                         <tr>
-                            <th>Milestone Name</th>
+                            <th>Milestone / Installment</th>
+                            <th>Type</th>
                             <th>Amount</th>
                             <th>Payment Date</th>
+                            <th>Receipt / Proof</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for pay in payments %}
                             <tr>
-                                <td><strong>{{ pay.milestone_name }}</strong></td>
-                                <td><strong>${{ pay.amount }}</strong></td>
-                                <td>{{ pay.payment_date|default:"-" }}</td>
                                 <td>
-                                    <span class="badge-status {% if pay.status == 'Released' %}live{% elif pay.status == 'In Escrow' %}pending{% else %}completed{% endif %}">
-                                        {{ pay.status }}
+                                    <strong style="color: #0f172a;">{{ pay.title|default:pay.milestone_name }}</strong>
+                                </td>
+                                <td>
+                                    <span style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; {% if pay.installment_type == 'business' %}background: #eff6ff; color: #1e40af;{% else %}background: #fdf2f8; color: #9d174d;{% endif %}">
+                                        {% if pay.installment_type == 'business' %}Business Inbound{% elif pay.installment_type == 'creator' %}Creator Outbound{% else %}Installment{% endif %}
+                                    </span>
+                                </td>
+                                <td style="font-family: monospace; font-weight: 700; color: #0f172a;">
+                                    {{ currency_symbol }}{{ pay.amount|floatformat:2 }}
+                                </td>
+                                <td style="font-size: 12px; color: #64748b;">
+                                    {{ pay.paid_date|default:pay.payment_date|default:"—" }}
+                                </td>
+                                <td>
+                                    {% if pay.receipt_image %}
+                                        <a href="{{ pay.receipt_image.url }}" target="_blank" style="color: #2563eb; font-weight: 600; font-size: 11px; text-decoration: underline;">
+                                            🧾 View Receipt
+                                        </a>
+                                    {% elif pay.receipt_url %}
+                                        <a href="{{ pay.receipt_url }}" target="_blank" style="color: #2563eb; font-weight: 600; font-size: 11px; text-decoration: underline;">
+                                            🧾 View Receipt Link
+                                        </a>
+                                    {% else %}
+                                        <span style="color: #94a3b8; font-size: 11px;">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge-status {% if pay.is_paid or pay.status == 'Released' or pay.status == 'released' %}live{% elif pay.status == 'In Escrow' or pay.status == 'in_escrow' %}pending{% else %}completed{% endif %}">
+                                        {% if pay.is_paid or pay.status == 'Released' or pay.status == 'released' %}✓ Released{% elif pay.status == 'in_escrow' %}In Escrow{% else %}{{ pay.status }}{% endif %}
                                     </span>
                                 </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">No payment installments found for this campaign</td>
+                                <td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">No payment installments found for this campaign</td>
                             </tr>
                         {% endfor %}
                     </tbody>

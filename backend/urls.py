@@ -29,6 +29,8 @@ urlpatterns = [
     path("api/notifications/", include("notifications.api_urls")),
     path("api/analytics/", include("user.analytics_urls")),
     path("api/creator-ratings/", include("CreatorRating.urls")),
+    path("api/business-ratings/", include("CreatorRating.business_urls")),
+
 
 ]
 

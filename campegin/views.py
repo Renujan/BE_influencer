@@ -845,21 +845,67 @@ def download_campaign_pdf_view(request, campaign_id):
     campaign = get_object_or_404(Campaign, pk=campaign_id)
     
     # Retrieve related records
-    milestones = campaign.milestones.all()
-    tasks = campaign.tasks.all()
+    negotiation = campaign.payment_negotiations.first()
+    workspace_installments = list(campaign.workspace_installments.all().order_by("installment_type", "id"))
+    if not workspace_installments and negotiation:
+        workspace_installments = list(negotiation.installments.all().order_by("installment_type", "id"))
+
+    milestones_list = []
+    if workspace_installments:
+        for inst in workspace_installments:
+            inst_type_label = "Business (Inbound)" if inst.installment_type == "business" else "Creator (Outbound)"
+            status_label = "Released" if (inst.is_paid or inst.status == "released") else ("In Escrow" if inst.status == "in_escrow" else inst.status.replace("_", " ").title())
+            milestones_list.append({
+                "title": inst.title,
+                "amount": inst.amount,
+                "type": inst_type_label,
+                "status": status_label,
+                "is_done": bool(inst.is_paid or inst.status == "released"),
+                "paid_date": inst.paid_date,
+            })
+    elif campaign.milestones.exists():
+        for m in campaign.milestones.all():
+            milestones_list.append({
+                "title": m.title,
+                "amount": None,
+                "type": "General",
+                "status": "Done" if m.is_done else "Pending",
+                "is_done": m.is_done,
+                "paid_date": None,
+            })
+
+    tasks_list = []
+    if campaign.tasks.exists():
+        for t in campaign.tasks.all():
+            tasks_list.append({
+                "title": t.title,
+                "due_date": t.due_date or "-",
+                "is_done": t.is_done,
+            })
+    elif campaign.deliverables.exists():
+        for d in campaign.deliverables.all():
+            tasks_list.append({
+                "title": f"{d.name} ({d.type})",
+                "due_date": d.deadline or "-",
+                "is_done": d.status in ["Approved", "Published"],
+            })
+
     deliverables = campaign.deliverables.all()
-    payments = campaign.payments.all()
     files = campaign.files.all()
     tickets = campaign.tickets.all()
+    from .models import extract_currency_symbol
+    curr_sym = extract_currency_symbol(campaign) or "Rs"
     
     context = {
         "instance": campaign,
-        "milestones": milestones,
-        "tasks": tasks,
+        "negotiation": negotiation,
+        "milestones": milestones_list,
+        "tasks": tasks_list,
         "deliverables": deliverables,
-        "payments": payments,
+        "payments": workspace_installments if workspace_installments else campaign.payments.all(),
         "files": files,
         "tickets": tickets,
+        "currency_symbol": curr_sym,
     }
     
     html = render_to_string("campegin/campaign_pdf.html", context)

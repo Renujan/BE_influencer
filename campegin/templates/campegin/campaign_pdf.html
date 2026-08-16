@@ -198,12 +198,13 @@
     <div class="section-title">Campaign Checklist (Milestones &amp; Tasks)</div>
     <table class="grid-table">
         <tr>
-            <td style="width: 50%; padding-left: 0;">
-                <div class="label">Milestones</div>
+            <td style="width: 55%; padding-left: 0;">
+                <div class="label">Milestone Installments (Workspace Payment)</div>
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th style="width: 70%;">Milestone Title</th>
+                            <th style="width: 45%;">Milestone Title</th>
+                            <th style="width: 25%;">Amount</th>
                             <th style="width: 30%;">Status</th>
                         </tr>
                     </thead>
@@ -211,21 +212,28 @@
                         {% for milestone in milestones %}
                             <tr>
                                 <td><strong>{{ milestone.title }}</strong></td>
+                                <td style="font-family: monospace;">
+                                    {% if milestone.amount %}
+                                        {{ currency_symbol }}{{ milestone.amount|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <span class="badge badge-{% if milestone.is_done %}live{% else %}pending{% endif %}">
-                                        {% if milestone.is_done %}Done{% else %}Pending{% endif %}
+                                        {% if milestone.is_done %}Done / Released{% else %}{{ milestone.status|default:"Pending" }}{% endif %}
                                     </span>
                                 </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="2" style="text-align: center; color: #94a3b8;">No milestones defined</td>
+                                <td colspan="3" style="text-align: center; color: #94a3b8;">No milestones defined</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </td>
-            <td style="width: 50%; padding-right: 0;">
+            <td style="width: 45%; padding-right: 0;">
                 <div class="label">Tasks</div>
                 <table class="data-table">
                     <thead>

@@ -1,0 +1,626 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block titletag %}Connected Social Accounts — {{ creator.user.username }} | Wagtail Admin{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<style>
+  :root {
+    --sa-dark-header: #1e293b;
+    --sa-dark-bg: #0f172a;
+    --sa-primary: #4f46e5;
+    --sa-primary-hover: #4338ca;
+    --sa-slate-100: #f1f5f9;
+    --sa-slate-200: #e2e8f0;
+    --sa-slate-300: #cbd5e1;
+    --sa-slate-600: #475569;
+    --sa-slate-700: #334155;
+    --sa-slate-800: #1e293b;
+    --sa-slate-900: #0f172a;
+  }
+
+  .sa-detail-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 28px 32px 64px 32px;
+    max-width: 1440px;
+    margin: 0 auto;
+    color: #1e293b;
+  }
+
+  /* ── 1. Premium Dark Header (#1e293b) ── */
+  .sa-dark-header {
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 28px 32px;
+    color: #ffffff;
+    margin-bottom: 28px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .sa-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sa-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #94a3b8;
+  }
+
+  .sa-breadcrumb a {
+    color: #94a3b8;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .sa-breadcrumb a:hover {
+    color: #ffffff;
+  }
+
+  .sa-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sa-dark-header h1 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .sa-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sa-btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff !important;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.2s ease;
+  }
+
+  .sa-btn-back:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(-2px);
+  }
+
+  /* ── 2. Profile Overview Card ── */
+  .sa-profile-card {
+    background: #ffffff;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 28px;
+    align-items: center;
+  }
+
+  @media (max-width: 900px) {
+    .sa-profile-card {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+  }
+
+  .sa-avatar-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    object-fit: cover;
+    background: #e2e8f0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .sa-avatar-large-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  }
+
+  .sa-profile-info h2 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sa-profile-tags {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .sa-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: var(--sa-slate-100);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .sa-stat-pill-group {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .sa-stat-pill {
+    background: #f8fafc;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 12px;
+    padding: 12px 18px;
+    text-align: center;
+    min-width: 100px;
+  }
+
+  .sa-stat-pill-val {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .sa-stat-pill-lbl {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── 3. Connected Accounts Grid ── */
+  .sa-channels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 768px) {
+    .sa-channels-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .sa-channel-card {
+    background: #ffffff;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .sa-channel-card:hover {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
+  }
+
+  .sa-channel-header {
+    padding: 20px 24px;
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .sa-channel-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sa-channel-header-icon {
+    font-size: 26px;
+    color: #ffffff;
+  }
+
+  .sa-channel-header-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin: 0;
+    color: #ffffff;
+  }
+
+  .sa-channel-header-status {
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(4px);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .sa-channel-body {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+  }
+
+  .sa-channel-metric-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .sa-channel-metric-box {
+    background: #f8fafc;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+
+  .sa-channel-metric-val {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: monospace;
+  }
+
+  .sa-channel-metric-lbl {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  .sa-proof-box {
+    background: #f1f5f9;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.8rem;
+  }
+
+  .sa-proof-box-title {
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sa-channel-footer {
+    padding: 16px 24px;
+    background: #f8fafc;
+    border-top: 1px solid var(--sa-slate-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .sa-btn-verify-action {
+    padding: 8px 16px;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .sa-btn-verify-action.verify {
+    background: #10b981;
+    color: #ffffff;
+  }
+  .sa-btn-verify-action.verify:hover {
+    background: #059669;
+  }
+
+  .sa-btn-verify-action.unverify {
+    background: #f59e0b;
+    color: #ffffff;
+  }
+  .sa-btn-verify-action.unverify:hover {
+    background: #d97706;
+  }
+
+  .sa-btn-link-out {
+    padding: 8px 14px;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: #ffffff;
+    color: #475569 !important;
+    border: 1px solid var(--sa-slate-300);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+  }
+
+  .sa-btn-link-out:hover {
+    background: #f1f5f9;
+    color: #0f172a !important;
+  }
+
+  /* ── 4. Shortcuts Bar ── */
+  .sa-shortcuts-bar {
+    background: #ffffff;
+    border: 1px solid var(--sa-slate-200);
+    border-radius: 14px;
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .sa-shortcuts-links {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .sa-btn-shortcut {
+    padding: 8px 16px;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: #334155 !important;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--sa-slate-200);
+    transition: all 0.15s ease;
+  }
+
+  .sa-btn-shortcut:hover {
+    background: #e2e8f0;
+    color: #0f172a !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sa-detail-container">
+
+  <!-- 1. Header Banner -->
+  <div class="sa-dark-header">
+    <div class="sa-header-left">
+      <div class="sa-breadcrumb">
+        <a href="{% url 'admin_social_accounts_list' %}"><i class="fa-solid fa-share-nodes"></i> Connected Accounts</a>
+        <span>/</span>
+        <span>@{{ creator.user.username }}</span>
+      </div>
+      <div class="sa-header-title">
+        <h1>Social Channels Audit</h1>
+      </div>
+    </div>
+
+    <div class="sa-header-actions">
+      <a href="{% url 'admin_social_accounts_list' %}" class="sa-btn-back">
+        <i class="fa-solid fa-arrow-left"></i> Back to Accounts List
+      </a>
+    </div>
+  </div>
+
+  <!-- 2. Creator Profile Card -->
+  <div class="sa-profile-card">
+    <div>
+      {% if creator.avatar_url %}
+      <img src="{{ creator.avatar_url }}" alt="{{ creator.user.username }}" class="sa-avatar-large">
+      {% else %}
+      <div class="sa-avatar-large-placeholder">
+        {{ creator.user.username|slice:":1"|upper }}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="sa-profile-info">
+      <h2>
+        {{ creator.user.get_full_name|default:creator.user.username }}
+        {% if verified_count == total_accounts and total_accounts > 0 %}
+        <i class="fa-solid fa-circle-check text-emerald-500 text-lg" title="All channels verified"></i>
+        {% endif %}
+      </h2>
+      <div class="sa-profile-tags">
+        <span class="sa-tag"><i class="fa-solid fa-at text-indigo-500"></i> {{ creator.user.username }}</span>
+        {% if location_display %}
+        <span class="sa-tag"><i class="fa-solid fa-location-dot text-rose-500"></i> {{ location_display }}</span>
+        {% endif %}
+        {% for niche in niches %}
+        <span class="sa-tag"><i class="fa-solid fa-tag text-amber-500"></i> {{ niche }}</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="sa-stat-pill-group">
+      <div class="sa-stat-pill">
+        <div class="sa-stat-pill-val text-indigo-600">{{ total_accounts }}</div>
+        <div class="sa-stat-pill-lbl">Channels</div>
+      </div>
+      <div class="sa-stat-pill">
+        <div class="sa-stat-pill-val text-emerald-600">{{ verified_count }}</div>
+        <div class="sa-stat-pill-lbl">Verified</div>
+      </div>
+      <div class="sa-stat-pill">
+        <div class="sa-stat-pill-val text-purple-600">{{ total_reach_formatted }}</div>
+        <div class="sa-stat-pill-lbl">Total Reach</div>
+      </div>
+      <div class="sa-stat-pill">
+        <div class="sa-stat-pill-val text-blue-600">{{ avg_engagement }}%</div>
+        <div class="sa-stat-pill-lbl">Avg. Eng.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Connected Social Accounts Grid -->
+  {% if social_accounts %}
+  <div class="sa-channels-grid">
+    {% for acc in social_accounts %}
+    <div class="sa-channel-card">
+      <div>
+        <!-- Platform Header -->
+        <div class="sa-channel-header" style="background: {{ acc.platform_info.gradient }};">
+          <div class="sa-channel-header-left">
+            <i class="{{ acc.platform_info.icon }} sa-channel-header-icon"></i>
+            <div>
+              <h3 class="sa-channel-header-title">{{ acc.platform_info.name }}</h3>
+              <div class="text-xs opacity-90">@{{ acc.username }}</div>
+            </div>
+          </div>
+
+          <div class="sa-channel-header-status">
+            {% if acc.is_verified %}
+            <i class="fa-solid fa-circle-check"></i> Verified
+            {% elif acc.is_connected %}
+            <i class="fa-solid fa-clock"></i> In Verify
+            {% else %}
+            Disconnected
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="sa-channel-body">
+          <div class="sa-channel-metric-row">
+            <div class="sa-channel-metric-box">
+              <div class="sa-channel-metric-val">{{ acc.followers_formatted }}</div>
+              <div class="sa-channel-metric-lbl">Followers / Audience</div>
+            </div>
+            <div class="sa-channel-metric-box">
+              <div class="sa-channel-metric-val text-indigo-600">{{ acc.engagement_rate }}%</div>
+              <div class="sa-channel-metric-lbl">Engagement Rate</div>
+            </div>
+          </div>
+
+          <!-- Proof Link -->
+          <div class="sa-proof-box">
+            <div class="sa-proof-box-title">
+              <span>Proof Link / Profile URL</span>
+              {% if acc.proof_link %}
+              <a href="{{ acc.proof_link }}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-indigo-600 hover:underline">
+                Open URL <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </a>
+              {% endif %}
+            </div>
+            {% if acc.proof_link %}
+            <div class="text-xs text-slate-600 font-mono truncate" title="{{ acc.proof_link }}">
+              {{ acc.proof_link }}
+            </div>
+            {% else %}
+            <div class="text-xs text-slate-400 italic">No proof link submitted by creator</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="sa-channel-footer">
+        <form method="POST" action="{% url 'admin_social_accounts_toggle_verify' acc.id %}" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          {% if acc.is_verified %}
+          <button type="submit" class="sa-btn-verify-action unverify">
+            <i class="fa-solid fa-shield-xmark"></i> Revoke Verification
+          </button>
+          {% else %}
+          <button type="submit" class="sa-btn-verify-action verify">
+            <i class="fa-solid fa-shield-check"></i> Verify Channel
+          </button>
+          {% endif %}
+        </form>
+
+        {% if acc.proof_link %}
+        <a href="{{ acc.proof_link }}" target="_blank" rel="noopener noreferrer" class="sa-btn-link-out">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> Visit
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400 mb-8">
+    <i class="fa-solid fa-share-nodes text-4xl text-slate-300 mb-3"></i>
+    <h3 class="text-base font-bold text-slate-700">No Connected Social Accounts</h3>
+    <p class="text-xs text-slate-400 mt-1">This creator has not connected any social media profiles yet.</p>
+  </div>
+  {% endif %}
+
+  <!-- 4. Quick Shortcuts -->
+  <div class="sa-shortcuts-bar">
+    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Related Creator Pages</span>
+    <div class="sa-shortcuts-links">
+      <a href="{% url 'admin_ratecard_detail' creator.id %}" class="sa-btn-shortcut">
+        <i class="fa-solid fa-file-invoice-dollar text-indigo-600"></i> View Rate Cards
+      </a>
+      <a href="{% url 'admin_portfolio_detail' creator.id %}" class="sa-btn-shortcut">
+        <i class="fa-solid fa-folder-open text-purple-600"></i> View Portfolio
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
