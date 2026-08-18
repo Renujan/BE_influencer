@@ -296,7 +296,7 @@ def create_installments(request):
             installment_type=installment_type,
             title=title,
             amount=amount_val,
-            status='released' if is_paid_val else 'in_escrow',
+            status='released' if is_paid_val else (item.get('status') or 'pending'),
             is_paid=is_paid_val,
             paid_date=paid_date_val if is_paid_val else None,
         )
@@ -340,7 +340,8 @@ def update_installment(request):
                 from django.utils import timezone
                 installment.paid_date = timezone.now().date()
         else:
-            installment.status = 'in_escrow'
+            has_receipt = bool(installment.receipt_image or installment.receipt_url)
+            installment.status = 'in_escrow' if has_receipt else 'pending'
             if paid_date is not None:
                 installment.paid_date = paid_date or None
     elif paid_date is not None:
@@ -372,7 +373,7 @@ def upload_installment_receipt(request):
     if receipt_url:
         installment.receipt_url = receipt_url
 
-    installment.status = 'payment_submitted'
+    installment.status = 'in_escrow'
     installment.save()
 
     serializer = WorkspaceInstallmentSerializer(installment, context={'request': request})
@@ -400,7 +401,7 @@ def verify_installment(request):
             from django.utils import timezone
             installment.paid_date = timezone.now().date()
     elif action == 'reject':
-        installment.status = 'in_escrow'
+        installment.status = 'pending'
         installment.is_paid = False
         installment.paid_date = None
 

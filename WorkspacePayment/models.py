@@ -111,6 +111,7 @@ class WorkspaceInstallment(models.Model):
         ('creator', 'Creator Installment (Outbound)'),
     )
     STATUS_CHOICES = (
+        ('pending', 'Pending'),
         ('in_escrow', 'In Escrow'),
         ('payment_submitted', 'Payment Submitted'),
         ('released', 'Released'),
@@ -121,7 +122,7 @@ class WorkspaceInstallment(models.Model):
     installment_type = models.CharField(max_length=20, choices=INSTALLMENT_TYPE_CHOICES, default='creator')
     title = models.CharField(max_length=255, default='Installment')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='in_escrow')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     is_paid = models.BooleanField(default=False)
     paid_date = models.DateField(null=True, blank=True)
     receipt_image = models.FileField(upload_to='payment_receipts/', null=True, blank=True)

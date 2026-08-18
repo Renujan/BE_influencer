@@ -356,12 +356,14 @@ def admin_portfolio_list_view(request):
 
         niches_list = [n.name for n in cp.niches.all()]
 
+        country_name = cp.country.name if cp.country else (cp.location or "—")
         creators_data.append({
             "id": cp.id,
             "user": cp.user,
             "username": cp.user.username,
             "full_name": f"{cp.user.first_name} {cp.user.last_name}".strip() or cp.user.username,
             "avatar_url": cp.avatar_url or "",
+            "country": country_name,
             "location": cp.location or (cp.country.name if cp.country else "—"),
             "status": cp.status,
             "niches": niches_list,

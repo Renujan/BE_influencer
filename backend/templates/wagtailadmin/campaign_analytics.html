@@ -364,7 +364,7 @@
           <div class="flex justify-between items-center mb-3">
             <div>
               <h3 class="text-sm font-bold text-slate-900">Campaigns Created vs Platform Revenue</h3>
-              <div class="text-[11px] text-slate-400">Monthly progression</div>
+              <div class="text-[11px] text-slate-400">Progression across created campaigns</div>
             </div>
           </div>
           <div class="h-64">
@@ -394,7 +394,7 @@
           <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
             <i class="fa-solid fa-list-check text-blue-600"></i> 5. Campaign Workspace Details & Fee Audits
           </h2>
-          <p class="text-xs text-slate-500 mt-0.5">Granular records with fee breakdowns, milestone timeline statuses, and proxy metrics.</p>
+          <p class="text-xs text-slate-500 mt-0.5">Granular records with fee breakdowns and milestone timeline statuses.</p>
         </div>
         <div class="text-xs text-slate-500" id="tableCountDisplay">Showing all campaigns</div>
       </div>
@@ -405,7 +405,6 @@
             <thead>
               <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                 <th class="px-4 py-3">Campaign</th>
-                <th class="px-4 py-3">Brand & Creator</th>
                 <th class="px-4 py-3">Platform / Category</th>
                 <th class="px-4 py-3">Agreed Price</th>
                 <th class="px-4 py-3">Platform Fee</th>
@@ -424,15 +423,15 @@
   </div>
 
   <!-- DRILL-DOWN MODAL -->
-  <div id="drilldownModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden text-xs">
+  <div id="drilldownModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4" onclick="handleBackdropClick(event)">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden text-xs" onclick="event.stopPropagation()">
       <!-- Modal Header -->
       <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
         <div>
           <h3 id="modalTitle" class="text-base font-bold text-slate-900">Campaign Details</h3>
           <div class="text-slate-500 text-[11px]" id="modalSubtitle">#ID • Platform</div>
         </div>
-        <button onclick="closeModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 text-sm">
+        <button onclick="closeModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 text-sm cursor-pointer">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -444,7 +443,7 @@
 
       <!-- Modal Footer -->
       <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
-        <button onclick="closeModal()" class="px-5 py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700">
+        <button onclick="closeModal()" class="px-5 py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 cursor-pointer">
           Close Audit
         </button>
       </div>
@@ -470,7 +469,7 @@
       }
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400 text-xs">No campaigns available</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-xs">No campaigns available</td></tr>`;
         return;
       }
 
@@ -485,10 +484,6 @@
             <td class="px-4 py-3 font-bold text-slate-900">
               <div>${c.name}</div>
               <div class="text-[10px] text-slate-400 font-normal">#${c.id}</div>
-            </td>
-            <td class="px-4 py-3">
-              <div class="font-medium text-slate-800">${c.brand_name || '—'}</div>
-              <div class="text-[10px] text-slate-400">➔ ${c.creator_name || '—'}</div>
             </td>
             <td class="px-4 py-3">
               <div class="font-medium text-slate-800">${c.platform || 'General'}</div>
@@ -517,7 +512,7 @@
               </div>
             </td>
             <td class="px-4 py-3 text-right">
-              <button onclick="openModal(${c.id})" class="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-100 font-bold text-slate-700 text-xs">
+              <button onclick="openModal(${c.id})" class="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-100 font-bold text-slate-700 text-xs cursor-pointer">
                 <i class="fa-solid fa-eye text-blue-600 mr-1"></i> Drill-down
               </button>
             </td>
@@ -531,57 +526,212 @@
       if (!c) return;
 
       document.getElementById('modalTitle').textContent = c.name;
-      document.getElementById('modalSubtitle').textContent = `#${c.id} • ${c.platform || 'Instagram'} • ${c.brand_name} ➔ ${c.creator_name}`;
+      document.getElementById('modalSubtitle').textContent = `#${c.id} • ${c.platform || 'Instagram'} • Brand: ${c.brand_name || '—'} ➔ Creator: ${c.creator_name || '—'}`;
 
       const fPrice = parseFloat(c.final_price || c.budget || 0);
-      const bizFee = fPrice * 0.025;
-      const creatorFee = fPrice * 0.015;
-      const totalFee = bizFee + creatorFee;
+      const bizFee = parseFloat(c.biz_fee !== undefined ? c.biz_fee : (fPrice * 0.025));
+      const creatorFee = parseFloat(c.creator_fee !== undefined ? c.creator_fee : (fPrice * 0.015));
+      const totalFee = parseFloat(c.total_fee !== undefined ? c.total_fee : (bizFee + creatorFee));
       const creatorNet = fPrice - creatorFee;
-      const progress = c.progress || 50;
-      const engagement = (3 + progress * 0.09).toFixed(2);
       const sym = c.currency_symbol || defaultCurrencySymbol;
 
+      const bizInsts = Array.isArray(c.business_installments) ? c.business_installments : [];
+      const creatorInsts = Array.isArray(c.creator_installments) ? c.creator_installments : [];
+
+      const isPaidInst = (inst) => {
+        const st = String(inst.status || "").toLowerCase().trim();
+        return Boolean(inst.is_paid || st === "released" || st === "paid" || st === "approved" || st === "verified");
+      };
+
+      const bizPaid = bizInsts.filter(isPaidInst);
+      const bizPending = bizInsts.filter(i => !isPaidInst(i));
+
+      const creatorPaid = creatorInsts.filter(isPaidInst);
+      const creatorPending = creatorInsts.filter(i => !isPaidInst(i));
+
+      const allPaid = [...bizPaid, ...creatorPaid];
+      const allDividedPending = [...bizPending, ...creatorPending];
+
+      const bizAllocated = bizInsts.reduce((acc, inst) => acc + (parseFloat(inst.amount) || 0), 0);
+      const creatorAllocated = creatorInsts.reduce((acc, inst) => acc + (parseFloat(inst.amount) || 0), 0);
+
+      const bizRemaining = Math.max(0, fPrice - bizAllocated);
+      const creatorRemaining = Math.max(0, creatorNet - creatorAllocated);
+
+      const paidSum = allPaid.reduce((acc, inst) => acc + (parseFloat(inst.amount) || 0), 0);
+      const dividedPendingSum = allDividedPending.reduce((acc, inst) => acc + (parseFloat(inst.amount) || 0), 0);
+      const totalPendingSum = dividedPendingSum + (bizInsts.length === 0 ? fPrice : bizRemaining) + (creatorInsts.length === 0 ? creatorNet : creatorRemaining);
+      const totalPendingCount = allDividedPending.length + (bizInsts.length === 0 && fPrice > 0 ? 1 : 0) + (creatorInsts.length === 0 && creatorNet > 0 ? 1 : 0);
+
       document.getElementById('modalBody').innerHTML = `
+        <!-- Fee Settlement Breakdown -->
         <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-          <div class="font-bold text-sm text-slate-900 flex justify-between">
-            <span>Platform Fee Settlement</span>
-            <span class="font-mono text-emerald-600">Total Take: ${sym}${totalFee.toFixed(2)}</span>
+          <div class="font-bold text-sm text-slate-900 flex justify-between items-center">
+            <span>Platform Charges & Net Settlement</span>
+            <span class="font-mono text-emerald-600 font-bold">Total Fee: ${sym}${totalFee.toFixed(2)}</span>
           </div>
-          <div class="grid grid-cols-2 gap-3 text-xs pt-1">
-            <div class="p-3 bg-white border border-slate-200 rounded-lg">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+            <div class="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
               <div class="text-slate-500 font-semibold mb-1">🏢 Brand Invoice</div>
-              <div>Base Price: <strong class="font-mono">${sym}${fPrice.toFixed(2)}</strong></div>
-              <div class="text-blue-600">Platform Charge (+2.5%): +${sym}${bizFee.toFixed(2)}</div>
-              <div class="border-t border-slate-100 pt-1 mt-1 font-bold">Total: ${sym}${(fPrice + bizFee).toFixed(2)}</div>
+              <div class="flex justify-between"><span>Base Price:</span> <strong class="font-mono">${sym}${fPrice.toFixed(2)}</strong></div>
+              <div class="flex justify-between text-blue-600 font-semibold"><span>Platform Charge (+2.5%):</span> <span class="font-mono">+${sym}${bizFee.toFixed(2)}</span></div>
+              <div class="border-t border-slate-100 pt-1 mt-1 font-bold flex justify-between"><span>Total Billed to Brand:</span> <span class="font-mono">${sym}${(fPrice + bizFee).toFixed(2)}</span></div>
             </div>
-            <div class="p-3 bg-white border border-slate-200 rounded-lg">
+            <div class="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
               <div class="text-slate-500 font-semibold mb-1">🎨 Creator Payout</div>
-              <div>Agreed Price: <strong class="font-mono">${sym}${fPrice.toFixed(2)}</strong></div>
-              <div class="text-rose-600">Platform Charge (-1.5%): -${sym}${creatorFee.toFixed(2)}</div>
-              <div class="border-t border-slate-100 pt-1 mt-1 font-bold text-emerald-600">Net Received: ${sym}${creatorNet.toFixed(2)}</div>
+              <div class="flex justify-between"><span>Agreed Price:</span> <strong class="font-mono">${sym}${fPrice.toFixed(2)}</strong></div>
+              <div class="flex justify-between text-rose-600 font-semibold"><span>Platform Charge (-1.5%):</span> <span class="font-mono">-${sym}${creatorFee.toFixed(2)}</span></div>
+              <div class="border-t border-slate-100 pt-1 mt-1 font-bold text-emerald-600 flex justify-between"><span>Net Disbursed to Creator:</span> <span class="font-mono">${sym}${creatorNet.toFixed(2)}</span></div>
             </div>
           </div>
         </div>
 
-        <div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2">
-          <div class="font-bold text-sm text-slate-900">Performance Proxies & Estimated Reach</div>
-          <div class="grid grid-cols-4 gap-2 text-center">
-            <div class="p-2 bg-slate-50 rounded-lg">
-              <div class="text-[10px] text-slate-400">Avg Engagement</div>
-              <div class="font-bold text-blue-600 font-mono mt-0.5">${engagement}%</div>
+        <!-- Installments Breakdown (Pending & Paid) -->
+        <div class="space-y-3">
+          <div class="font-bold text-sm text-slate-900 flex items-center justify-between flex-wrap gap-2">
+            <span class="flex items-center gap-1.5">
+              <i class="fa-solid fa-money-check-dollar text-blue-600"></i> Workspace Payment Installments (Paid & Pending)
+            </span>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                Paid: ${sym}${paidSum.toFixed(2)} (${allPaid.length})
+              </span>
+              <span class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                Pending: ${sym}${totalPendingSum.toFixed(2)} (${totalPendingCount})
+              </span>
             </div>
-            <div class="p-2 bg-slate-50 rounded-lg">
-              <div class="text-[10px] text-slate-400">Est. Reach</div>
-              <div class="font-bold text-slate-800 font-mono mt-0.5">${Math.round(fPrice * 14.5).toLocaleString()}</div>
+          </div>
+
+          <div class="space-y-4">
+            <!-- 1. BUSINESS INBOUND INSTALLMENTS SECTION -->
+            <div class="rounded-xl border border-blue-200 bg-blue-50/50 p-3.5 space-y-2.5">
+              <div class="text-xs font-bold text-blue-700 flex items-center justify-between flex-wrap gap-2">
+                <span class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-building"></i> 🏢 Business Milestone Installments (Inbound: Brand → Admin)
+                </span>
+                <span class="text-[11px] font-mono font-bold text-blue-800">
+                  Total: ${sym}${fPrice.toFixed(2)}
+                </span>
+              </div>
+
+              ${bizInsts.length === 0 ? `
+                <div class="p-3 rounded-lg border border-slate-200 bg-white text-xs flex items-center justify-between">
+                  <div>
+                    <div class="font-semibold text-slate-800">Inbound Campaign Payment (Undivided)</div>
+                    <div class="text-[10px] text-slate-400">No inbound installments divided yet in Workspace Payment</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-mono font-bold text-slate-900">${sym}${fPrice.toFixed(2)}</div>
+                    <span class="text-[10px] font-bold text-amber-600">In Escrow (Pending)</span>
+                  </div>
+                </div>
+              ` : `
+                <div class="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white overflow-hidden">
+                  ${bizInsts.map((inst, idx) => {
+                    const isPaid = isPaidInst(inst);
+                    return `
+                      <div class="p-2.5 flex items-center justify-between gap-2 text-xs hover:bg-slate-50 transition">
+                        <div class="min-w-0 flex-1">
+                          <div class="font-semibold text-slate-900 flex items-center gap-2">
+                            <span class="truncate">${inst.title || `Business Milestone #${idx + 1}`}</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">
+                              🏢 Brand
+                            </span>
+                          </div>
+                          <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-2">
+                            <span>${inst.paid_date ? `Paid Date: ${inst.paid_date}` : "Date: Pending"}</span>
+                            ${inst.receipt_image_url ? `
+                              <a href="${inst.receipt_image_url}" target="_blank" class="text-blue-600 hover:underline font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-file-invoice text-[10px]"></i> View Proof
+                              </a>
+                            ` : ''}
+                          </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                          <div class="font-mono font-bold text-slate-900">${sym}${parseFloat(inst.amount || 0).toFixed(2)}</div>
+                          <span class="inline-block text-[10px] font-bold ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">
+                            ${isPaid ? 'Approved (Paid)' : 'In Escrow (Pending)'}
+                          </span>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                  ${bizRemaining > 1 ? `
+                    <div class="p-2.5 flex items-center justify-between gap-2 text-xs bg-slate-50">
+                      <span class="text-[11px] font-semibold text-slate-500">Remaining Unallocated Inbound</span>
+                      <div class="text-right font-mono font-bold text-amber-600">
+                        ${sym}${bizRemaining.toFixed(2)}
+                      </div>
+                    </div>
+                  ` : ''}
+                </div>
+              `}
             </div>
-            <div class="p-2 bg-slate-50 rounded-lg">
-              <div class="text-[10px] text-slate-400">Impressions</div>
-              <div class="font-bold text-slate-800 font-mono mt-0.5">${Math.round(fPrice * 38.2).toLocaleString()}</div>
-            </div>
-            <div class="p-2 bg-slate-50 rounded-lg">
-              <div class="text-[10px] text-slate-400">ROI Proxy</div>
-              <div class="font-bold text-emerald-600 font-mono mt-0.5">4.1x</div>
+
+            <!-- 2. CREATOR OUTBOUND INSTALLMENTS SECTION -->
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 space-y-2.5">
+              <div class="text-xs font-bold text-emerald-700 flex items-center justify-between flex-wrap gap-2">
+                <span class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-paint-brush"></i> 🎨 Creator Milestone Installments (Outbound: Admin → Creator)
+                </span>
+                <span class="text-[11px] font-mono font-bold text-emerald-800">
+                  Net Payout: ${sym}${creatorNet.toFixed(2)}
+                </span>
+              </div>
+
+              ${creatorInsts.length === 0 ? `
+                <div class="p-3 rounded-lg border border-slate-200 bg-white text-xs flex items-center justify-between">
+                  <div>
+                    <div class="font-semibold text-slate-800">Outbound Creator Payout (Undivided)</div>
+                    <div class="text-[10px] text-slate-400">No outbound installments divided yet in Workspace Payment</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-mono font-bold text-slate-900">${sym}${creatorNet.toFixed(2)}</div>
+                    <span class="text-[10px] font-bold text-amber-600">In Escrow (Pending)</span>
+                  </div>
+                </div>
+              ` : `
+                <div class="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white overflow-hidden">
+                  ${creatorInsts.map((inst, idx) => {
+                    const isPaid = isPaidInst(inst);
+                    const isSubmitted = inst.status === "payment_submitted" || inst.receipt_image_url;
+                    return `
+                      <div class="p-2.5 flex items-center justify-between gap-2 text-xs hover:bg-slate-50 transition">
+                        <div class="min-w-0 flex-1">
+                          <div class="font-semibold text-slate-900 flex items-center gap-2">
+                            <span class="truncate">${inst.title || `Creator Milestone #${idx + 1}`}</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-purple-50 text-purple-700 border border-purple-200">
+                              🎨 Creator
+                            </span>
+                          </div>
+                          <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-2">
+                            <span>${inst.paid_date ? `Paid Date: ${inst.paid_date}` : "Date: Pending"}</span>
+                            ${inst.receipt_image_url ? `
+                              <a href="${inst.receipt_image_url}" target="_blank" class="text-blue-600 hover:underline font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-file-invoice text-[10px]"></i> View Receipt
+                              </a>
+                            ` : ''}
+                          </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                          <div class="font-mono font-bold text-slate-900">${sym}${parseFloat(inst.amount || 0).toFixed(2)}</div>
+                          <span class="inline-block text-[10px] font-bold ${isPaid ? 'text-emerald-600' : (isSubmitted ? 'text-blue-600' : 'text-amber-600')}">
+                            ${isPaid ? 'Released & Verified (Paid)' : (isSubmitted ? 'Awaiting Verification' : 'In Escrow (Pending)')}
+                          </span>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                  ${creatorRemaining > 1 ? `
+                    <div class="p-2.5 flex items-center justify-between gap-2 text-xs bg-slate-50">
+                      <span class="text-[11px] font-semibold text-slate-500">Remaining Unallocated Outbound</span>
+                      <div class="text-right font-mono font-bold text-amber-600">
+                        ${sym}${creatorRemaining.toFixed(2)}
+                      </div>
+                    </div>
+                  ` : ''}
+                </div>
+              `}
             </div>
           </div>
         </div>
@@ -594,9 +744,23 @@
 
     function closeModal() {
       const modal = document.getElementById('drilldownModal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
     }
+
+    function handleBackdropClick(event) {
+      if (event.target && event.target.id === 'drilldownModal') {
+        closeModal();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        closeModal();
+      }
+    });
 
     function exportCSV() {
       const headers = ["ID", "Name", "Brand", "Creator", "Status", "Platform", "Category", "Agreed Price", "Platform Fee"];
@@ -634,7 +798,7 @@
             labels: trendsData.labels,
             datasets: [
               {
-                label: 'Campaigns',
+                label: 'Campaigns Created',
                 data: trendsData.campaigns_count,
                 borderColor: '#2f54eb',
                 backgroundColor: 'rgba(47, 84, 235, 0.1)',
@@ -643,7 +807,7 @@
                 yAxisID: 'y'
               },
               {
-                label: `Revenue (${defaultCurrencySymbol})`,
+                label: `Platform Revenue (${defaultCurrencySymbol})`,
                 data: trendsData.revenue_amount,
                 borderColor: '#10b981',
                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -656,9 +820,52 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  title: function(tooltipItems) {
+                    const idx = tooltipItems[0].dataIndex;
+                    const fullName = (trendsData.campaign_names && trendsData.campaign_names[idx]) || tooltipItems[0].label;
+                    const date = (trendsData.campaign_dates && trendsData.campaign_dates[idx]) ? ` • ${trendsData.campaign_dates[idx]}` : '';
+                    return `${fullName}${date}`;
+                  },
+                  label: function(context) {
+                    const idx = context.dataIndex;
+                    if (context.datasetIndex === 0) {
+                      return ` Total Campaigns Created: ${context.raw}`;
+                    } else {
+                      const fee = (trendsData.per_campaign_fees && trendsData.per_campaign_fees[idx] !== undefined)
+                        ? ` (Fee: ${defaultCurrencySymbol}${Number(trendsData.per_campaign_fees[idx]).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})`
+                        : '';
+                      return ` Platform Revenue: ${defaultCurrencySymbol}${Number(context.raw).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}${fee}`;
+                    }
+                  }
+                }
+              }
+            },
             scales: {
-              y: { type: 'linear', position: 'left', grid: { display: false } },
-              y1: { type: 'linear', position: 'right', grid: { display: false } }
+              y: {
+                type: 'linear',
+                position: 'left',
+                beginAtZero: true,
+                grid: { display: false },
+                ticks: { precision: 0 }
+              },
+              y1: {
+                type: 'linear',
+                position: 'right',
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: {
+                  callback: function(value) {
+                    return defaultCurrencySymbol + Number(value).toLocaleString();
+                  }
+                }
+              }
             }
           }
         });

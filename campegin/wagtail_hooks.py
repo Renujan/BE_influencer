@@ -340,18 +340,43 @@ class PitchInspectView(InspectView):
             self.object.save()
             from .models import Campaign
             campaign = Campaign.objects.filter(name=self.object.campaign_name, brand=self.object.brand).first()
+            tags = self.object.tags or []
+            if isinstance(tags, str):
+                try:
+                    import json
+                    tags = json.loads(tags)
+                except Exception:
+                    tags = [tags]
+            if not isinstance(tags, list):
+                tags = [str(tags)]
+            known_platforms = {"Instagram", "YouTube", "TikTok", "Facebook", "LinkedIn", "X", "Twitter", "Snapchat", "Pinterest"}
+            niche_val = next((str(t).strip() for t in tags if str(t).strip() and not any(p.lower() == str(t).strip().lower() for p in known_platforms)), "")
+            if not niche_val and self.object.creator and hasattr(self.object.creator, "creator_profile") and self.object.creator.creator_profile.niches:
+                cr_niches = self.object.creator.creator_profile.niches
+                if isinstance(cr_niches, list) and cr_niches:
+                    niche_val = str(cr_niches[0]).strip()
+            if not niche_val:
+                niche_val = "Tech"
+            platform_val = next((str(t).strip() for t in tags if any(p.lower() == str(t).strip().lower() for p in known_platforms)), "Instagram")
+
             if not campaign:
                 campaign = Campaign.objects.create(
                     name=self.object.campaign_name,
                     brand=self.object.brand,
                     creator=self.object.creator,
                     budget=self.object.budget,
+                    category=niche_val,
+                    medium=platform_val,
                     brief=self.object.description or f"Campaign proposal based on pitch: {self.object.campaign_name}",
                     status="Live",
                     progress=62,
                     start_date=self.object.sent_date or "2026-08-01",
                     created_via="pitch",
                 )
+            else:
+                if not campaign.category or campaign.category == "General":
+                    campaign.category = niche_val
+                    campaign.save(update_fields=["category"])
             from .views import populate_deliverables_from_pitch
             populate_deliverables_from_pitch(campaign, self.object)
             messages.success(request, f"Pitch '{self.object.campaign_name}' accepted and converted to Live Campaign.")
@@ -903,6 +928,8 @@ class WorkspacePaymentViewSet(SnippetViewSet):
         return WorkspacePaymentNegotiation.objects.filter(campaign__status__in=["Live", "Completed"])
 
 import json
+import calendar
+from django.utils import timezone
 from django.shortcuts import render
 from wagtail.admin.menu import MenuItem
 
@@ -1164,6 +1191,37 @@ def admin_campaign_analytics_view(request):
         c_sym = getattr(c, "currency_symbol", user_currency_symbol) or user_currency_symbol
         created_str = c.created_at.isoformat() if getattr(c, "created_at", None) else (c.start_date or "")
 
+        # Collect business and creator installments
+        inst_list = []
+        biz_insts = []
+        creator_insts = []
+        if neg:
+            for inst in neg.installments.all():
+                proof_url = None
+                if inst.receipt_image:
+                    try:
+                        proof_url = request.build_absolute_uri(inst.receipt_image.url)
+                    except Exception:
+                        proof_url = str(inst.receipt_image.url) if hasattr(inst.receipt_image, 'url') else str(inst.receipt_image)
+                elif inst.receipt_url:
+                    proof_url = str(inst.receipt_url)
+
+                i_data = {
+                    "id": inst.id,
+                    "title": inst.title or "Milestone Installment",
+                    "amount": float(inst.amount or 0),
+                    "installment_type": inst.installment_type or "creator",
+                    "status": inst.status or "in_escrow",
+                    "is_paid": bool(inst.is_paid or inst.status == "released"),
+                    "paid_date": inst.paid_date.strftime("%Y-%m-%d") if inst.paid_date else None,
+                    "receipt_image_url": proof_url,
+                }
+                inst_list.append(i_data)
+                if inst.installment_type == "business":
+                    biz_insts.append(i_data)
+                else:
+                    creator_insts.append(i_data)
+
         camp_payload.append({
             "id": c.id,
             "name": c.name,
@@ -1182,14 +1240,61 @@ def admin_campaign_analytics_view(request):
             "creator_fee_paid": bool(neg and neg.creator_fee_is_paid),
             "currency_symbol": c_sym,
             "created_at": created_str,
+            "installments": inst_list,
+            "business_installments": biz_insts,
+            "creator_installments": creator_insts,
         })
 
-    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
-    trends_payload = {
-        "labels": months,
-        "campaigns_count": [max(1, int(total * (0.6 + i * 0.1))) for i in range(6)],
-        "revenue_amount": [max(100, int((total_rev / 6) * (0.7 + i * 0.15))) for i in range(6)],
-    }
+    # Actual trends data: a point for every campaign created in chronological order
+    now = timezone.now()
+    sorted_campaigns = sorted(campaigns, key=lambda x: (x.created_at or now, x.id))
+
+    labels = []
+    campaigns_count = []
+    revenue_amount = []
+    per_campaign_fees = []
+    campaign_names = []
+    campaign_dates = []
+
+    cum_rev = 0.0
+    for idx, c in enumerate(sorted_campaigns, 1):
+        neg = neg_by_camp.get(c.id)
+        f_price = float(neg.final_price if (neg and neg.final_price is not None) else (c.budget or 0))
+        biz_pct = float(neg.business_platform_charge if (neg and neg.business_platform_charge is not None) else (neg.platform_charge if (neg and neg.platform_charge is not None) else 2.5))
+        creator_pct = float(neg.creator_platform_charge if (neg and neg.creator_platform_charge is not None) else 1.5)
+        biz_fee = float(neg.business_platform_charge_amount) if (neg and neg.business_platform_charge_amount is not None) else (f_price * (biz_pct / 100))
+        creator_fee = float(neg.creator_platform_charge_amount) if (neg and neg.creator_platform_charge_amount is not None) else (f_price * (creator_pct / 100))
+        tot_fee = biz_fee + creator_fee
+
+        cum_rev += tot_fee
+
+        c_date = c.created_at.strftime("%b %d") if c.created_at else (c.start_date or "N/A")
+        label = c.name if len(c.name) <= 15 else (c.name[:13] + "..")
+        labels.append(label)
+        campaign_names.append(c.name)
+        campaign_dates.append(c_date)
+        campaigns_count.append(idx)
+        revenue_amount.append(round(cum_rev, 2))
+        per_campaign_fees.append(round(tot_fee, 2))
+
+    if not sorted_campaigns:
+        trends_payload = {
+            "labels": ["No Campaigns"],
+            "campaign_names": ["No Campaigns"],
+            "campaign_dates": ["N/A"],
+            "campaigns_count": [0],
+            "revenue_amount": [0.0],
+            "per_campaign_fees": [0.0],
+        }
+    else:
+        trends_payload = {
+            "labels": labels,
+            "campaign_names": campaign_names,
+            "campaign_dates": campaign_dates,
+            "campaigns_count": campaigns_count,
+            "revenue_amount": revenue_amount,
+            "per_campaign_fees": per_campaign_fees,
+        }
 
     budget_vs_spend_payload = []
     for c in campaigns[:6]:

@@ -70,6 +70,13 @@ class CampaignViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+        # Only pending campaigns can be edited by non-staff users
+        if not (request.user.is_staff or request.user.is_superuser):
+            if str(instance.status or "").lower() != "pending":
+                return Response(
+                    {"detail": "Only pending campaigns can be edited."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         data = request.data.copy()
         # Remove file objects so CharField serialization does not throw errors
         for field in ["voice_brief", "screenshare_brief", "video_brief"]:
@@ -82,6 +89,18 @@ class CampaignViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Only pending campaigns can be deleted by non-staff users
+        if not (request.user.is_staff or request.user.is_superuser):
+            if str(instance.status or "").lower() != "pending":
+                return Response(
+                    {"detail": "Only pending campaigns can be deleted."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_create(self, serializer):
         voice_file = self.request.FILES.get("voice_brief")
@@ -1399,6 +1418,25 @@ class PitchViewSet(viewsets.ModelViewSet):
         pitch.save()
 
         # Create Campaign created via pitch
+        tags = pitch.tags or []
+        if isinstance(tags, str):
+            try:
+                import json
+                tags = json.loads(tags)
+            except Exception:
+                tags = [tags]
+        if not isinstance(tags, list):
+            tags = [str(tags)]
+        known_platforms = {"Instagram", "YouTube", "TikTok", "Facebook", "LinkedIn", "X", "Twitter", "Snapchat", "Pinterest"}
+        niche_val = next((str(t).strip() for t in tags if str(t).strip() and not any(p.lower() == str(t).strip().lower() for p in known_platforms)), "")
+        if not niche_val and pitch.creator and hasattr(pitch.creator, "creator_profile") and pitch.creator.creator_profile.niches:
+            cr_niches = pitch.creator.creator_profile.niches
+            if isinstance(cr_niches, list) and cr_niches:
+                niche_val = str(cr_niches[0]).strip()
+        if not niche_val:
+            niche_val = "Tech"
+        platform_val = next((str(t).strip() for t in tags if any(p.lower() == str(t).strip().lower() for p in known_platforms)), "Instagram")
+
         campaign = Campaign.objects.create(
             name=request.data.get("name") or pitch.campaign_name,
             brand=pitch.brand,
@@ -1406,6 +1444,8 @@ class PitchViewSet(viewsets.ModelViewSet):
             budget=final_budget,
             counter_price=final_budget,
             counter_history=pitch.counter_history,
+            category=niche_val,
+            medium=platform_val,
             brief=request.data.get("brief") or pitch.description or f"Campaign proposal based on pitch: {pitch.campaign_name}",
             status="Live",
             start_date=request.data.get("start_date") or pitch.sent_date or "2026-08-01",

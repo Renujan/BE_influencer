@@ -416,10 +416,10 @@ class PortfolioViewSet(ModelViewSet):
     index_view_class = PortfolioIndexView
     create_view_enabled = False
     inspect_view_enabled = False
-    form_fields = ["user", "phone", "location", "status"]
+    form_fields = ["user", "phone", "country", "status"]
 
-    list_display = ("user", "location", "country", "get_status_badge")
-    search_fields = ("user__username", "user__email", "location")
+    list_display = ("user", "country", "get_status_badge")
+    search_fields = ("user__username", "user__email", "country__name", "location")
 
     @property
     def permission_policy(self):

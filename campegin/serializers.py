@@ -188,7 +188,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         fields = [
             "id", "name", "brand", "brand_name", "creator", "creator_name",
             "status", "budget", "min_budget", "max_budget", "per_creator_budget", "min_price", "max_price", "rate_card_id", "start_date", "end_date", "progress", "brief", "admin_review",
-            "category", "delivery_language", "country", "province", "district", "medium", "voice_brief", "screenshare_brief", "video_brief",
+            "category", "delivery_language", "country", "province", "district", "voice_brief", "screenshare_brief", "video_brief",
             "counter_price", "counter_note", "counter_round", "counter_history", "decline_reason", "created_via", "created_time", "created_at",
             "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews", "creator_rating", "business_rating"
         ]
@@ -265,6 +265,8 @@ class PitchSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source="brand.username", read_only=True)
     creator_name = serializers.CharField(source="creator.username", read_only=True)
     deliverables = FlexibleJSONField(required=False, allow_null=True, default=list)
+    tags = FlexibleJSONField(required=False, allow_null=True, default=list)
+    counter_history = FlexibleJSONField(required=False, allow_null=True, default=list)
 
     class Meta:
         model = Pitch
@@ -274,3 +276,95 @@ class PitchSerializer(serializers.ModelSerializer):
             "description", "deliverables", "counter_offer", "counter_note", "counter_count", "counter_history", "attachment", "decline_reason"
         ]
         read_only_fields = ["creator"]
+
+    def to_internal_value(self, data):
+        ret = super().to_internal_value(data)
+        incoming_tags = ret.get("tags") or []
+        if isinstance(incoming_tags, str):
+            try:
+                import json
+                incoming_tags = json.loads(incoming_tags)
+            except Exception:
+                incoming_tags = [incoming_tags]
+        if not isinstance(incoming_tags, list):
+            incoming_tags = [str(incoming_tags)]
+
+        def extract_val(field_name):
+            if hasattr(data, "getlist"):
+                vals = data.getlist(field_name)
+                if vals and vals[0]:
+                    return vals[0]
+            return data.get(field_name)
+
+        niche = extract_val("niche")
+        if niche and niche not in incoming_tags:
+            incoming_tags.append(niche)
+
+        niches = extract_val("niches")
+        if niches:
+            if isinstance(niches, str):
+                try:
+                    import json
+                    niches = json.loads(niches)
+                except Exception:
+                    niches = [n.strip() for n in niches.split(",") if n.strip()]
+            if isinstance(niches, list):
+                for n in niches:
+                    if n and n not in incoming_tags:
+                        incoming_tags.append(n)
+
+        platform = extract_val("platform")
+        if platform and platform not in incoming_tags:
+            incoming_tags.append(platform)
+
+        category = extract_val("category")
+        if category and category not in incoming_tags:
+            incoming_tags.append(category)
+
+        delivery_language = extract_val("delivery_language")
+        if delivery_language and delivery_language not in incoming_tags:
+            incoming_tags.append(delivery_language)
+
+        ret["tags"] = incoming_tags
+        return ret
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        tags = instance.tags or []
+        if isinstance(tags, str):
+            try:
+                import json
+                tags = json.loads(tags)
+            except Exception:
+                tags = [tags]
+        if not isinstance(tags, list):
+            tags = [str(tags)]
+
+        known_platforms = {"Instagram", "YouTube", "TikTok", "Facebook", "LinkedIn", "X", "Twitter", "Snapchat", "Pinterest"}
+        known_mediums = {"English", "Sinhala", "Tamil", "Hindi", "Malayalam", "Telugu", "Kannada", "Bengali", "Spanish", "French", "German", "Arabic", "Mandarin", "Japanese"}
+        found_platform = None
+        found_delivery_lang = None
+        found_niche = None
+        found_niches = []
+
+        for t in tags:
+            t_str = str(t).strip()
+            if not t_str:
+                continue
+            if t_str in known_platforms or any(p.lower() == t_str.lower() for p in known_platforms):
+                if not found_platform:
+                    found_platform = t_str
+            elif t_str in known_mediums or any(m.lower() == t_str.lower() for m in known_mediums):
+                if not found_delivery_lang:
+                    found_delivery_lang = t_str
+            else:
+                if not found_niche:
+                    found_niche = t_str
+                found_niches.append(t_str)
+
+        data["niche"] = found_niche or ""
+        data["niches"] = found_niches if found_niches else ([found_niche] if found_niche else [])
+        data["category"] = found_niche or (tags[0] if tags else "General")
+        data["platform"] = found_platform or ""
+        data["delivery_language"] = found_delivery_lang or ""
+        return data
