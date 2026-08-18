@@ -577,6 +577,86 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         return Response(AdminComplianceTicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=["post"])
+    def accept_counter(self, request, pk=None):
+        campaign = self.get_object()
+        if campaign.counter_price:
+            campaign.budget = campaign.counter_price
+        elif campaign.counter_history and len(campaign.counter_history) > 0:
+            last_p = campaign.counter_history[-1].get("price")
+            if last_p:
+                campaign.budget = last_p
+        campaign.status = "Accepted_Pending_Admin"
+        campaign.save()
+
+        Notification.objects.create(
+            title="Campaign Counter Accepted - Awaiting Admin Approval",
+            message=f"The counter offer for campaign '{campaign.name}' was accepted and is awaiting Admin Approval to become Live.",
+            category="campaign",
+            icon="fas fa-check-circle",
+            target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
+        )
+        return Response(CampaignSerializer(campaign).data)
+
+    @action(detail=True, methods=["post"])
+    def decline_counter(self, request, pk=None):
+        campaign = self.get_object()
+        reason = request.data.get("reason") or request.data.get("note") or request.data.get("message") or "Counter offer declined."
+        campaign.status = "Rejected"
+        campaign.decline_reason = reason
+        campaign.save()
+
+        import datetime
+        now = datetime.datetime.now()
+        time_str = now.strftime("%H:%M")
+
+        WorkspaceMessage.objects.create(
+            campaign=campaign,
+            sender=request.user,
+            text=f"Declined Counter Offer: {reason}",
+            message_type="main",
+            time=time_str
+        )
+
+        Notification.objects.create(
+            title="Campaign Counter Declined",
+            message=f"The counter offer for campaign '{campaign.name}' was declined. Reason: {reason}",
+            category="campaign",
+            icon="fas fa-times-circle",
+            target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
+        )
+        return Response({"message": "Counter offer declined", "status": "Rejected", "decline_reason": reason})
+
+    @action(detail=True, methods=["post"])
+    def counter_reply(self, request, pk=None):
+        campaign = self.get_object()
+        counter_price = request.data.get("price")
+        counter_note = request.data.get("note")
+        campaign.counter_price = counter_price
+        campaign.counter_note = counter_note
+        campaign.status = "Business_Countered"
+
+        history = list(campaign.counter_history or [])
+        history.append({
+            "round": campaign.counter_round or 1,
+            "sender": "Business",
+            "sender_name": campaign.brand.username if campaign.brand else "Business",
+            "price": str(counter_price),
+            "note": counter_note or "",
+            "status": "Business_Countered"
+        })
+        campaign.counter_history = history
+        campaign.save()
+
+        Notification.objects.create(
+            title="Business Replied to Counter Offer",
+            message=f"Business submitted a counter-response of {counter_price} for campaign '{campaign.name}'.",
+            category="campaign",
+            icon="fas fa-handshake",
+            target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
+        )
+        return Response(CampaignSerializer(campaign).data)
+
 
 class RequestViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
@@ -585,24 +665,30 @@ class RequestViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        status_param = self.request.query_params.get("status")
-
-        statuses = ["Pending", "Countered", "Countered_Pending", "Business_Countered", "Live", "Completed", "Rejected"]
-        if status_param:
-            statuses = [s.strip() for s in status_param.split(",")]
+        if not user or not user.is_authenticated:
+            return Campaign.objects.none()
 
         if user.is_staff or user.is_superuser:
-            return Campaign.objects.filter(status__in=statuses).exclude(created_via="pitch")
-
-        if hasattr(user, "business_profile"):
-            return Campaign.objects.filter(brand=user, status__in=statuses).exclude(created_via="pitch")
+            qs = Campaign.objects.all()
+        elif hasattr(user, "business_profile"):
+            qs = Campaign.objects.filter(brand=user)
         elif hasattr(user, "creator_profile"):
             profile = getattr(user, "creator_profile", None)
             q_filter = models.Q(creator=user)
             if profile:
                 q_filter |= models.Q(creator__creator_profile=profile)
-            return Campaign.objects.filter(q_filter, status__in=statuses).exclude(created_via="pitch").distinct()
-        return Campaign.objects.none()
+            qs = Campaign.objects.filter(q_filter).distinct()
+        else:
+            qs = Campaign.objects.filter(models.Q(brand=user) | models.Q(creator=user))
+
+        if self.action == "list":
+            qs = qs.exclude(created_via="pitch")
+            status_param = self.request.query_params.get("status")
+            if status_param:
+                statuses = [s.strip() for s in status_param.split(",")]
+                qs = qs.filter(status__in=statuses)
+
+        return qs
 
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):
@@ -773,9 +859,25 @@ class RequestViewSet(viewsets.ModelViewSet):
             campaign.status = "Countered"
         elif campaign.status in ["Business_Counter_Pending", "Business_Countered"]:
             campaign.status = "Business_Countered"
+        elif campaign.status in ["Accepted_Pending_Admin", "Accepted"]:
+            if campaign.counter_price:
+                campaign.budget = campaign.counter_price
+            elif campaign.counter_history and len(campaign.counter_history) > 0:
+                last_p = campaign.counter_history[-1].get("price")
+                if last_p:
+                    campaign.budget = last_p
+            campaign.status = "Live"
         else:
-            campaign.status = "Countered"
+            campaign.status = "Live" if "accepted" in str(campaign.status).lower() else "Countered"
         campaign.save()
+
+        Notification.objects.create(
+            title="Campaign Live" if campaign.status == "Live" else "Campaign Counter Approved",
+            message=f"Campaign '{campaign.name}' is now Live." if campaign.status == "Live" else f"A counter offer was approved for '{campaign.name}'.",
+            category="campaign",
+            icon="fas fa-play-circle" if campaign.status == "Live" else "fas fa-handshake",
+            target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
+        )
         return Response(CampaignSerializer(campaign).data)
 
     @action(detail=True, methods=["post"])

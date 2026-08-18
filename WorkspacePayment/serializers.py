@@ -36,6 +36,17 @@ class WorkspaceInstallmentSerializer(serializers.ModelSerializer):
             return url
         return None
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        has_receipt = bool(data.get('receipt_image_url') or data.get('receipt_url') or data.get('receipt_image'))
+        if data.get('is_paid') or data.get('status') == 'released':
+            data['status'] = 'released'
+        elif has_receipt:
+            data['status'] = 'in_escrow'
+        else:
+            data['status'] = 'pending'
+        return data
+
 
 class WorkspacePaymentNegotiationSerializer(serializers.ModelSerializer):
     proposed_by_name = serializers.SerializerMethodField()

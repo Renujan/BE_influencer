@@ -171,12 +171,16 @@ class CampaignInspectView(InspectView):
             self.object.status = "Rejected"
             self.object.decline_reason = admin_review or "Counter offer rejected by admin."
             messages.warning(request, f"Counter offer rejected for '{self.object.name}'.")
-        elif status == "Live_Countered":
+        elif status in ["Live_Countered", "Approve_Accepted_Counter"] or (status == "Live" and self.object.status == "Accepted_Pending_Admin"):
             if self.object.counter_price:
                 self.object.budget = self.object.counter_price
+            elif self.object.counter_history and len(self.object.counter_history) > 0:
+                last_p = self.object.counter_history[-1].get("price")
+                if last_p:
+                    self.object.budget = last_p
             self.object.status = "Live"
             self.object.progress = self.object.calculate_flow_progress()
-            messages.success(request, f"Counter offer accepted! Campaign '{self.object.name}' is now Live.")
+            messages.success(request, f"Counter offer agreement approved! Campaign '{self.object.name}' is now Live.")
         elif status in [choice[0] for choice in self.object.STATUS_CHOICES]:
             if status == "Live":
                 self.object.status = "Pending"

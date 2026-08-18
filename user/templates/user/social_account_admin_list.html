@@ -298,184 +298,441 @@
     font-weight: 700;
   }
 
-  /* ── 4. Creator Cards Grid ── */
-  .sa-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-    gap: 22px;
-  }
-
-  @media (max-width: 640px) {
-    .sa-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .sa-creator-card {
+  /* ── 4. Creator Directory Table ── */
+  .sa-table-card {
     background: #ffffff;
     border: 1px solid var(--sa-slate-200);
     border-radius: 16px;
-    padding: 22px;
-    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.03);
-    transition: all 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    box-shadow: 0 4px 14px -3px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
   }
 
-  .sa-creator-card:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
-  }
-
-  .sa-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 14px;
-    margin-bottom: 16px;
-  }
-
-  .sa-creator-meta {
+  .sa-table-header-info {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--sa-slate-200);
+    background: #ffffff;
     display: flex;
     align-items: center;
-    gap: 14px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
   }
 
-  .sa-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+  .sa-table-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sa-table-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sa-table-count {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.08);
+    border: 1px solid rgba(79, 70, 229, 0.18);
+    padding: 3px 10px;
+    border-radius: 9999px;
+  }
+
+  .sa-table-wrapper {
+    overflow-x: auto;
+    width: 100%;
+  }
+
+  .sa-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    text-align: left;
+    font-size: 0.85rem;
+  }
+
+  .sa-table thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 13px 18px;
+    border-bottom: 1.5px solid var(--sa-slate-200);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .sa-creator-row {
+    transition: all 0.15s ease;
+    cursor: pointer;
+    border-bottom: 1px solid var(--sa-slate-100);
+  }
+
+  .sa-creator-row:hover {
+    background-color: #f8fafc;
+  }
+
+  .sa-creator-row.expanded {
+    background-color: #f1f5f9;
+  }
+
+  .sa-table tbody td {
+    padding: 14px 18px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  /* Creator Profile Cell */
+  .sa-creator-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sa-expand-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    border: 1px solid var(--sa-slate-200);
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .sa-creator-row:hover .sa-expand-btn {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+
+  .sa-expand-btn.rotated {
+    transform: rotate(90deg);
+    background: var(--sa-primary);
+    color: #ffffff;
+    border-color: var(--sa-primary);
+  }
+
+  .sa-tbl-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
     object-fit: cover;
     background: #e2e8f0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--sa-slate-200);
+    flex-shrink: 0;
   }
 
-  .sa-avatar-placeholder {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+  .sa-tbl-avatar-placeholder {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
     background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: 1.1rem;
-    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+    font-size: 1rem;
+    flex-shrink: 0;
   }
 
-  .sa-creator-name {
-    font-size: 0.98rem;
+  .sa-tbl-creator-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .sa-tbl-creator-name {
+    font-size: 0.92rem;
     font-weight: 700;
     color: #0f172a;
-    margin: 0;
-    line-height: 1.3;
+    text-decoration: none;
+    line-height: 1.25;
+    transition: color 0.15s ease;
   }
 
-  .sa-creator-handle {
-    font-size: 0.8rem;
+  .sa-tbl-creator-name:hover {
+    color: var(--sa-primary);
+  }
+
+  .sa-tbl-creator-sub {
+    font-size: 0.75rem;
     color: #64748b;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     margin-top: 2px;
   }
 
-  .sa-reach-pill {
-    padding: 4px 10px;
-    border-radius: 6px;
-    background: #f8fafc;
-    border: 1px solid var(--sa-slate-200);
-    font-size: 0.76rem;
-    font-weight: 700;
-    color: #334155;
+  /* Platform Badges Row in Master Table */
+  .sa-platforms-pill-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .sa-platform-mini-pill {
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  }
+
+  .sa-location-tag {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     white-space: nowrap;
   }
 
-  /* Accounts Sub-list */
-  .sa-channels-box {
-    background: #f8fafc;
-    border: 1px solid var(--sa-slate-200);
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  .sa-niche-pill {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #4338ca;
+    background: #e0e7ff;
+    padding: 2px 7px;
+    border-radius: 4px;
+    display: inline-block;
   }
 
-  .sa-channel-row {
+  .sa-followers-tag {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0f172a;
+    background: #f1f5f9;
+    padding: 4px 9px;
+    border-radius: 6px;
+    font-family: monospace;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+  }
+
+  .sa-verified-summary-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.73rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .sa-verified-summary-pill.full {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+  }
+
+  .sa-verified-summary-pill.partial {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+  }
+
+  .sa-verified-summary-pill.none {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+  }
+
+  /* Actions */
+  .sa-actions-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .sa-btn-manage-accounts {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: var(--sa-primary);
+    color: #ffffff !important;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(79, 70, 229, 0.2);
+  }
+
+  .sa-btn-manage-accounts:hover {
+    background: var(--sa-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+  }
+
+  .sa-btn-expand-channels {
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #334155 !important;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .sa-btn-expand-channels:hover {
+    background: #e2e8f0;
+    color: #0f172a !important;
+  }
+
+  /* ── Expanded Drawer Row (Revealed on Click) ── */
+  .sa-drawer-row {
+    background: #f8fafc !important;
+  }
+
+  .sa-drawer-cell {
+    padding: 0 20px 20px 20px !important;
+    border-bottom: 2px solid var(--sa-slate-200) !important;
+  }
+
+  .sa-drawer-container {
     background: #ffffff;
-    border: 1px solid var(--sa-slate-200);
-    border-radius: 10px;
-    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
+
+  .sa-drawer-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    transition: all 0.15s ease;
-  }
-
-  .sa-channel-row:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-  }
-
-  .sa-channel-left {
-    display: flex;
-    align-items: center;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--sa-slate-200);
+    flex-wrap: wrap;
     gap: 10px;
   }
 
-  .sa-plat-badge {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+  .sa-drawer-title {
+    font-size: 0.86rem;
+    font-weight: 800;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sa-sub-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+
+  .sa-sub-table thead th {
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 8px 12px;
+    border-radius: 4px;
+  }
+
+  .sa-sub-table tbody td {
+    padding: 10px 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .sa-sub-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .sa-tbl-plat-badge {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #ffffff;
-    font-size: 15px;
+    font-size: 12px;
     flex-shrink: 0;
   }
 
-  .sa-plat-info {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .sa-plat-name {
-    font-size: 0.84rem;
-    font-weight: 700;
-    color: #0f172a;
-    line-height: 1.2;
-  }
-
-  .sa-plat-user {
-    font-size: 0.74rem;
-    color: #64748b;
+  .sa-handle-link {
+    font-size: 0.8rem;
+    font-weight: 600;
     font-family: monospace;
-  }
-
-  .sa-channel-right {
-    display: flex;
+    color: #2563eb;
+    text-decoration: none;
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    transition: all 0.15s ease;
   }
 
-  .sa-followers-tag {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #0f172a;
-    background: #f1f5f9;
+  .sa-handle-link:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .sa-btn-proof-table {
     padding: 3px 8px;
-    border-radius: 6px;
-    font-family: monospace;
+    border-radius: 5px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: #f8fafc;
+    color: #2563eb !important;
+    border: 1px solid #bfdbfe;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+  }
+
+  .sa-btn-proof-table:hover {
+    background: #eff6ff;
   }
 
   .sa-status-badge {
@@ -486,6 +743,7 @@
     border-radius: 9999px;
     font-size: 0.7rem;
     font-weight: 700;
+    white-space: nowrap;
   }
 
   .sa-status-badge.verified {
@@ -506,66 +764,39 @@
     border: 1px solid #e2e8f0;
   }
 
-  /* Card Footer Actions */
-  .sa-card-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding-top: 14px;
-    border-top: 1px solid var(--sa-slate-100);
-  }
-
-  .sa-btn-detail {
-    padding: 8px 16px;
-    border-radius: 9px;
-    font-size: 0.82rem;
+  .sa-btn-inline-verify {
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 0.7rem;
     font-weight: 700;
-    background: var(--sa-primary);
-    color: #ffffff !important;
-    text-decoration: none;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    transition: all 0.2s ease;
-  }
-
-  .sa-btn-detail:hover {
-    background: var(--sa-primary-hover);
-    transform: translateX(2px);
-  }
-
-  .sa-btn-proof {
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    background: #ffffff;
-    color: #2563eb !important;
-    border: 1px solid #bfdbfe;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
+    gap: 4px;
     transition: all 0.15s ease;
   }
 
-  .sa-btn-proof:hover {
-    background: #eff6ff;
+  .sa-btn-inline-verify.verify {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
   }
 
-  .sa-toggle-form {
-    display: inline;
-    margin: 0;
+  .sa-btn-inline-verify.verify:hover {
+    background: #059669;
+    color: #ffffff;
   }
 
-  .sa-btn-toggle {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
+  .sa-btn-inline-verify.revoke {
+    background: #fff1f2;
+    color: #e11d48;
+    border: 1px solid #fecdd3;
+  }
+
+  .sa-btn-inline-verify.revoke:hover {
+    background: #e11d48;
+    color: #ffffff;
   }
 
   /* Empty State */
@@ -717,107 +948,219 @@
     </div>
   </div>
 
-  <!-- 4. Creator Social Accounts Grid -->
+  <!-- 4. Master Creator Directory Table -->
   {% if creators %}
-  <div class="sa-grid">
-    {% for creator in creators %}
-    <div class="sa-creator-card">
-      <div>
-        <!-- Card Header -->
-        <div class="sa-card-header">
-          <div class="sa-creator-meta">
-            {% if creator.avatar_url %}
-            <img src="{{ creator.avatar_url }}" alt="{{ creator.full_name }}" class="sa-avatar">
-            {% else %}
-            <div class="sa-avatar-placeholder">
-              {{ creator.username|slice:":1"|upper }}
-            </div>
-            {% endif %}
-
-            <div>
-              <h3 class="sa-creator-name">{{ creator.full_name }}</h3>
-              <div class="sa-creator-handle">
-                <span>@{{ creator.username }}</span>
-                <span>•</span>
-                <span><i class="fa-solid fa-location-dot text-slate-400"></i> {{ creator.location }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="sa-reach-pill">
-            <i class="fa-solid fa-users text-indigo-600"></i> {{ creator.total_reach_formatted }} Reach
-          </div>
-        </div>
-
-        <!-- Channels List for this creator -->
-        <div class="sa-channels-box">
-          {% if creator.accounts %}
-            {% for acc in creator.accounts %}
-            <div class="sa-channel-row">
-              <div class="sa-channel-left">
-                <div class="sa-plat-badge" style="background: {{ acc.platform_info.gradient }};">
-                  <i class="{{ acc.platform_info.icon }}"></i>
-                </div>
-                <div class="sa-plat-info">
-                  <div class="sa-plat-name">{{ acc.platform_info.name }}</div>
-                  <div class="sa-plat-user">@{{ acc.username }}</div>
-                </div>
-              </div>
-
-              <div class="sa-channel-right">
-                <div class="sa-followers-tag">
-                  {{ acc.followers_formatted }}
-                </div>
-
-                {% if acc.is_verified %}
-                <span class="sa-status-badge verified" title="Verified by Super Admin">
-                  <i class="fa-solid fa-circle-check"></i> Verified
-                </span>
-                {% elif acc.is_connected %}
-                <span class="sa-status-badge pending" title="Connected, pending audit">
-                  <i class="fa-solid fa-clock"></i> In Verify
-                </span>
-                {% else %}
-                <span class="sa-status-badge disconnected" title="Disconnected channel">
-                  Disconnected
-                </span>
-                {% endif %}
-
-                <!-- Quick Verification Toggle Button -->
-                <form method="POST" action="{% url 'admin_social_accounts_toggle_verify' acc.id %}" class="sa-toggle-form">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                  <button type="submit" class="sa-btn-toggle text-xs font-bold px-2 py-1 rounded transition {% if acc.is_verified %}text-amber-600 hover:bg-amber-50{% else %}text-emerald-600 hover:bg-emerald-50{% endif %}" title="{% if acc.is_verified %}Revoke Verification{% else %}Verify Account{% endif %}">
-                    {% if acc.is_verified %}
-                    <i class="fa-solid fa-shield-xmark"></i>
-                    {% else %}
-                    <i class="fa-solid fa-shield-check"></i>
-                    {% endif %}
-                  </button>
-                </form>
-              </div>
-            </div>
-            {% endfor %}
-          {% else %}
-            <div class="text-xs text-slate-400 py-3 text-center">No connected social accounts matching criteria</div>
-          {% endif %}
-        </div>
+  <div class="sa-table-card">
+    <div class="sa-table-header-info">
+      <div class="sa-table-header-left">
+        <span class="sa-table-title"><i class="fa-solid fa-users-viewfinder text-indigo-600"></i> Creator Accounts Directory</span>
+        <span class="sa-table-count">{{ total_creators }} Creators • {{ total_accounts_count }} Connected Accounts</span>
       </div>
-
-      <!-- Card Footer -->
-      <div class="sa-card-footer">
-        <div class="text-xs font-semibold text-slate-500">
-          <strong class="text-slate-900">{{ creator.verified_count }}</strong> of <strong>{{ creator.accounts_count }}</strong> channels verified
-        </div>
-
-        <div class="flex items-center gap-2">
-          <a href="{% url 'admin_social_accounts_detail' creator.id %}" class="sa-btn-detail">
-            <i class="fa-solid fa-eye"></i> Manage Accounts
-          </a>
-        </div>
+      <div class="text-xs text-slate-400">
+        <i class="fa-solid fa-circle-info mr-1"></i> Click any creator row to view platforms & verification
       </div>
     </div>
-    {% endfor %}
+
+    <div class="sa-table-wrapper">
+      <table class="sa-table">
+        <thead>
+          <tr>
+            <th style="width: 320px;">Creator Profile</th>
+            <th style="width: 200px;">Country</th>
+            <th style="width: 200px;">Channels Status</th>
+            <th style="width: 240px; text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for creator in creators %}
+          <!-- Master Creator Row -->
+          <tr id="creator-row-{{ creator.id }}" class="sa-creator-row" onclick="toggleCreatorChannels('{{ creator.id }}')">
+            <!-- Creator Profile -->
+            <td>
+              <div class="sa-creator-cell">
+                <button type="button" class="sa-expand-btn" id="expand-btn-{{ creator.id }}" title="Click to expand channels" onclick="event.stopPropagation(); toggleCreatorChannels('{{ creator.id }}')">
+                  <i class="fa-solid fa-chevron-right" id="expand-icon-{{ creator.id }}"></i>
+                </button>
+                {% if creator.avatar_url %}
+                <img src="{{ creator.avatar_url }}" alt="{{ creator.full_name }}" class="sa-tbl-avatar">
+                {% else %}
+                <div class="sa-tbl-avatar-placeholder">
+                  {{ creator.username|slice:":1"|upper }}
+                </div>
+                {% endif %}
+                <div class="sa-tbl-creator-info">
+                  <span class="sa-tbl-creator-name">{{ creator.full_name }}</span>
+                  <div class="sa-tbl-creator-sub">
+                    <span>@{{ creator.username }}</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Country -->
+            <td>
+              <span class="sa-location-tag">
+                <i class="fa-solid fa-earth-americas text-indigo-500"></i> {{ creator.country_name|default:"—" }}
+              </span>
+            </td>
+
+            <!-- Channels Status -->
+            <td>
+              {% if creator.accounts_count > 0 %}
+                {% if creator.is_fully_verified %}
+                <span class="sa-verified-summary-pill full" title="All connected channels are verified">
+                  <i class="fa-solid fa-circle-check"></i> {{ creator.verified_count }}/{{ creator.accounts_count }} Verified
+                </span>
+                {% elif creator.verified_count > 0 %}
+                <span class="sa-verified-summary-pill partial" title="Some channels pending verification">
+                  <i class="fa-solid fa-clock"></i> {{ creator.verified_count }}/{{ creator.accounts_count }} Verified
+                </span>
+                {% else %}
+                <span class="sa-verified-summary-pill none" title="Pending verification">
+                  <i class="fa-solid fa-clock"></i> 0/{{ creator.accounts_count }} Verified
+                </span>
+                {% endif %}
+              {% else %}
+                <span class="text-xs text-slate-400 italic">No accounts</span>
+              {% endif %}
+            </td>
+
+            <!-- Actions Column -->
+            <td style="text-align: right;" onclick="event.stopPropagation();">
+              <div class="sa-actions-cell">
+                <button type="button" class="sa-btn-expand-channels" onclick="toggleCreatorChannels('{{ creator.id }}')">
+                  <i class="fa-solid fa-share-nodes"></i> Platforms ({{ creator.accounts_count }})
+                </button>
+                <a href="{% url 'admin_social_accounts_detail' creator.id %}" class="sa-btn-manage-accounts" title="Manage Accounts &amp; Social Channels Audit">
+                  <i class="fa-solid fa-users-gear"></i> Manage Accounts
+                </a>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Expandable Platform Details Drawer Row -->
+          <tr id="channels-drawer-{{ creator.id }}" class="sa-drawer-row" style="display: none;">
+            <td colspan="4" class="sa-drawer-cell">
+              <div class="sa-drawer-container">
+                <div class="sa-drawer-header">
+                  <div class="sa-drawer-title">
+                    <i class="fa-solid fa-share-nodes text-indigo-600"></i>
+                    <span>Connected Social Channels for <strong>{{ creator.full_name }}</strong> (@{{ creator.username }})</span>
+                  </div>
+                  <div>
+                    <a href="{% url 'admin_social_accounts_detail' creator.id %}" class="sa-btn-manage-accounts" style="padding: 5px 12px; font-size: 0.75rem;">
+                      <i class="fa-solid fa-shield-check"></i> Open Social Channels Audit
+                    </a>
+                  </div>
+                </div>
+
+                {% if creator.accounts %}
+                <table class="sa-sub-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 160px;">Platform</th>
+                      <th style="width: 180px;">Handle / Username</th>
+                      <th style="width: 130px;">Followers</th>
+                      <th style="width: 120px;">Engagement</th>
+                      <th style="width: 140px;">Proof Link</th>
+                      <th style="width: 140px;">Verification</th>
+                      <th style="width: 150px; text-align: right;">Audit Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for acc in creator.accounts %}
+                    <tr>
+                      <!-- Platform -->
+                      <td>
+                        <div style="display: inline-flex; align-items: center; gap: 8px;">
+                          <div class="sa-tbl-plat-badge" style="background: {{ acc.platform_info.gradient }};">
+                            <i class="{{ acc.platform_info.icon }}"></i>
+                          </div>
+                          <span style="font-weight: 700; color: #1e293b;">{{ acc.platform_info.name }}</span>
+                        </div>
+                      </td>
+
+                      <!-- Handle -->
+                      <td>
+                        {% if acc.proof_link %}
+                        <a href="{{ acc.proof_link }}" target="_blank" rel="noopener noreferrer" class="sa-handle-link" title="Open profile link">
+                          @{{ acc.username }} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-60"></i>
+                        </a>
+                        {% else %}
+                        <span class="font-mono text-slate-800 text-xs font-semibold">@{{ acc.username }}</span>
+                        {% endif %}
+                      </td>
+
+                      <!-- Followers -->
+                      <td>
+                        <span class="sa-followers-tag" style="font-size: 0.76rem; padding: 2px 7px;">
+                          <i class="fa-solid fa-users text-indigo-500"></i> {{ acc.followers_formatted }}
+                        </span>
+                      </td>
+
+                      <!-- Engagement -->
+                      <td>
+                        <span style="font-family: monospace; font-weight: 700; color: #475569; font-size: 0.76rem;">
+                          {{ acc.engagement_rate }}%
+                        </span>
+                      </td>
+
+                      <!-- Proof Link -->
+                      <td>
+                        {% if acc.proof_link %}
+                        <a href="{{ acc.proof_link }}" target="_blank" rel="noopener noreferrer" class="sa-btn-proof-table" title="{{ acc.proof_link }}">
+                          <i class="fa-solid fa-link"></i> View Proof
+                        </a>
+                        {% else %}
+                        <span class="text-xs text-slate-400 italic">No link</span>
+                        {% endif %}
+                      </td>
+
+                      <!-- Verification Status -->
+                      <td>
+                        {% if acc.is_verified %}
+                        <span class="sa-status-badge verified" title="Verified by Super Admin">
+                          <i class="fa-solid fa-circle-check"></i> Verified
+                        </span>
+                        {% elif acc.is_connected %}
+                        <span class="sa-status-badge pending" title="Connected, awaiting audit">
+                          <i class="fa-solid fa-clock"></i> In Verify
+                        </span>
+                        {% else %}
+                        <span class="sa-status-badge disconnected" title="Disconnected channel">
+                          <i class="fa-solid fa-circle-xmark"></i> Disconnected
+                        </span>
+                        {% endif %}
+                      </td>
+
+                      <!-- Audit Action -->
+                      <td style="text-align: right;">
+                        <form method="POST" action="{% url 'admin_social_accounts_toggle_verify' acc.id %}" style="display: inline; margin: 0;">
+                          {% csrf_token %}
+                          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                          <button type="submit" class="sa-btn-inline-verify {% if acc.is_verified %}revoke{% else %}verify{% endif %}" title="{% if acc.is_verified %}Revoke Verification{% else %}Verify Channel{% endif %}">
+                            {% if acc.is_verified %}
+                            <i class="fa-solid fa-shield-xmark"></i> Revoke
+                            {% else %}
+                            <i class="fa-solid fa-shield-check"></i> Verify
+                            {% endif %}
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+                {% else %}
+                <div class="text-xs text-slate-400 py-3 text-center">No connected social accounts for this creator.</div>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
   {% else %}
   <div class="sa-empty-box">
@@ -828,4 +1171,24 @@
   {% endif %}
 
 </div>
+
+<script>
+  function toggleCreatorChannels(id) {
+    const drawer = document.getElementById('channels-drawer-' + id);
+    const btn = document.getElementById('expand-btn-' + id);
+    const icon = document.getElementById('expand-icon-' + id);
+    const masterRow = document.getElementById('creator-row-' + id);
+    if (!drawer) return;
+
+    if (drawer.style.display === 'none' || drawer.style.display === '') {
+      drawer.style.display = 'table-row';
+      if (btn) btn.classList.add('rotated');
+      if (masterRow) masterRow.classList.add('expanded');
+    } else {
+      drawer.style.display = 'none';
+      if (btn) btn.classList.remove('rotated');
+      if (masterRow) masterRow.classList.remove('expanded');
+    }
+  }
+</script>
 {% endblock %}
