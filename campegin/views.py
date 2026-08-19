@@ -20,7 +20,138 @@ from .serializers import (
 from notifications.models import Notification
 from chat_monitor.models import ChatReview
 
-from user.permissions import IsApprovedBusiness
+def build_campaign_pdf_context(campaign):
+    from WorkspacePayment.models import WorkspaceInstallment, WorkspacePaymentNegotiation
+    from .models import extract_currency_symbol
+
+    curr_sym = campaign.currency_symbol or extract_currency_symbol(campaign) or "$"
+    
+    # Retrieve related records
+    negotiation = campaign.payment_negotiations.first()
+    workspace_installments = list(campaign.workspace_installments.all().order_by("installment_type", "id"))
+    if not workspace_installments and negotiation:
+        workspace_installments = list(negotiation.installments.all().order_by("installment_type", "id"))
+
+    payments_list = []
+    if workspace_installments:
+        for inst in workspace_installments:
+            inst_type_label = "Business (Inbound)" if inst.installment_type == "business" else "Creator (Outbound)"
+            status_label = "Released" if (inst.is_paid or inst.status == "released") else ("In Escrow" if inst.status == "in_escrow" else inst.status.replace("_", " ").title())
+            p_date = inst.paid_date.strftime("%b %d, %Y") if inst.paid_date else "-"
+            payments_list.append({
+                "milestone_name": inst.title,
+                "title": inst.title,
+                "type_label": inst_type_label,
+                "amount": inst.amount,
+                "payment_date": p_date,
+                "paid_date": p_date,
+                "status": status_label,
+                "status_display": status_label,
+                "status_lower": str(inst.status).lower(),
+                "is_paid": bool(inst.is_paid or inst.status == "released"),
+            })
+    elif campaign.payments.exists():
+        for pay in campaign.payments.all():
+            payments_list.append({
+                "milestone_name": pay.milestone_name,
+                "title": pay.milestone_name,
+                "type_label": "General",
+                "amount": pay.amount,
+                "payment_date": pay.payment_date or "-",
+                "paid_date": pay.payment_date or "-",
+                "status": pay.status,
+                "status_display": pay.status,
+                "status_lower": str(pay.status).lower(),
+                "is_paid": pay.status == "Released",
+            })
+    else:
+        # Fallback to default installments calculated from campaign budget/price
+        try:
+            budget_val = float(campaign.counter_price or campaign.budget or 0)
+        except Exception:
+            budget_val = 0
+        if budget_val > 0:
+            payments_list = [
+                {
+                    "milestone_name": "Milestone 1 - Initial Deposit / Content Draft",
+                    "title": "Milestone 1 - Initial Deposit / Content Draft",
+                    "type_label": "Business (Inbound)",
+                    "amount": round(budget_val * 0.5, 2),
+                    "payment_date": campaign.start_date or "-",
+                    "paid_date": campaign.start_date or "-",
+                    "status": "In Escrow" if campaign.status in ["Live", "Completed"] else "Pending",
+                    "status_display": "In Escrow" if campaign.status in ["Live", "Completed"] else "Pending",
+                    "status_lower": "in_escrow" if campaign.status in ["Live", "Completed"] else "pending",
+                    "is_paid": False,
+                },
+                {
+                    "milestone_name": "Milestone 2 - Final Deliverable Release",
+                    "title": "Milestone 2 - Final Deliverable Release",
+                    "type_label": "Creator (Outbound)",
+                    "amount": round(budget_val * 0.5, 2),
+                    "payment_date": campaign.end_date or "-",
+                    "paid_date": campaign.end_date or "-",
+                    "status": "Released" if campaign.status == "Completed" else "Pending",
+                    "status_display": "Released" if campaign.status == "Completed" else "Pending",
+                    "status_lower": "released" if campaign.status == "Completed" else "pending",
+                    "is_paid": campaign.status == "Completed",
+                }
+            ]
+
+    milestones_list = []
+    if payments_list:
+        for p in payments_list:
+            milestones_list.append({
+                "title": p["title"],
+                "amount": p["amount"],
+                "type": p.get("type_label", "Installment"),
+                "status": p["status_display"],
+                "is_done": p.get("is_paid", False),
+                "paid_date": p.get("payment_date"),
+            })
+    elif campaign.milestones.exists():
+        for m in campaign.milestones.all():
+            milestones_list.append({
+                "title": m.title,
+                "amount": None,
+                "type": "General",
+                "status": "Done" if m.is_done else "Pending",
+                "is_done": m.is_done,
+                "paid_date": None,
+            })
+
+    tasks_list = []
+    if campaign.tasks.exists():
+        for t in campaign.tasks.all():
+            tasks_list.append({
+                "title": t.title,
+                "due_date": t.due_date or "-",
+                "is_done": t.is_done,
+            })
+    elif campaign.deliverables.exists():
+        for d in campaign.deliverables.all():
+            tasks_list.append({
+                "title": f"{d.name} ({d.type})",
+                "due_date": d.deadline or "-",
+                "is_done": d.status in ["Approved", "Published"],
+            })
+
+    deliverables = campaign.deliverables.all()
+    files = campaign.files.all()
+    tickets = campaign.tickets.all()
+
+    return {
+        "instance": campaign,
+        "negotiation": negotiation,
+        "milestones": milestones_list,
+        "tasks": tasks_list,
+        "deliverables": deliverables,
+        "payments": payments_list,
+        "files": files,
+        "tickets": tickets,
+        "currency_symbol": curr_sym,
+    }
+
 
 class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
@@ -85,6 +216,14 @@ class CampaignViewSet(viewsets.ModelViewSet):
         medium_val = data.get("medium") or data.get("platform") or data.get("target_platform")
         if medium_val:
             data["medium"] = medium_val
+        if "start_date" in data:
+            s_date = str(data["start_date"]).strip()
+            if s_date:
+                import re
+                from datetime import datetime
+                if not re.search(r'\b(19\d\d|20\d\d)\b', s_date):
+                    s_date = f"{s_date}, {datetime.now().year}"
+                data["start_date"] = s_date
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
@@ -127,10 +266,13 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         start_date = serializer.validated_data.get("start_date") or self.request.data.get("start_date")
         from datetime import datetime
+        import re
         if not start_date:
             start_date = datetime.now().strftime("%b %d, %Y")
-        elif not any(char.isdigit() and len(w.strip(",")) == 4 for w in str(start_date).split() for char in w):
-            start_date = f"{str(start_date).strip()}, {datetime.now().year}"
+        else:
+            start_date = str(start_date).strip()
+            if not re.search(r'\b(19\d\d|20\d\d)\b', start_date):
+                start_date = f"{start_date}, {datetime.now().year}"
 
         created_time = self.request.data.get("created_time") or serializer.validated_data.get("created_time") or datetime.now().isoformat()
         medium_val = self.request.data.get("medium") or self.request.data.get("platform") or self.request.data.get("target_platform") or serializer.validated_data.get("medium", "")
@@ -233,32 +375,15 @@ class CampaignViewSet(viewsets.ModelViewSet):
         from xhtml2pdf import pisa
 
         campaign = self.get_object()
-        
-        # Retrieve related records
-        milestones = campaign.milestones.all()
-        tasks = campaign.tasks.all()
-        deliverables = campaign.deliverables.all()
-        payments = campaign.payments.all()
-        files = campaign.files.all()
-        tickets = campaign.tickets.all()
-        
-        context = {
-            "instance": campaign,
-            "milestones": milestones,
-            "tasks": tasks,
-            "deliverables": deliverables,
-            "payments": payments,
-            "files": files,
-            "tickets": tickets,
-        }
+        context = build_campaign_pdf_context(campaign)
         
         html = render_to_string("campegin/campaign_pdf.html", context)
         result = BytesIO()
         pdf = pisa.pisaDocument(BytesIO(html.encode("utf-8")), result)
         if not pdf.err:
             response = HttpResponse(result.getvalue(), content_type='application/pdf')
-            filename = f"campaign_{campaign.name.replace(' ', '_')}.pdf"
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            clean_name = str(campaign.name or "campaign").replace(" ", "_")
+            response['Content-Disposition'] = f'attachment; filename="campaign_{clean_name}.pdf"'
             return response
         return HttpResponse("Error generating PDF", status=500)
 
@@ -699,8 +824,22 @@ class RequestViewSet(viewsets.ModelViewSet):
             last_p = campaign.counter_history[-1].get("price")
             if last_p:
                 campaign.budget = last_p
-        campaign.status = "Live"
+
+        has_counter = (campaign.counter_round and campaign.counter_round > 0) or (campaign.counter_history and len(campaign.counter_history) > 0) or bool(campaign.counter_price)
+        if has_counter:
+            campaign.status = "Accepted_Pending_Admin"
+        else:
+            campaign.status = "Live"
         campaign.save()
+
+        if campaign.status == "Accepted_Pending_Admin":
+            Notification.objects.create(
+                title="Campaign Counter Accepted - Awaiting Admin Approval",
+                message=f"The counter offer for campaign '{campaign.name}' was accepted and is awaiting Admin Approval to become Live.",
+                category="campaign",
+                icon="fas fa-check-circle",
+                target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
+            )
         return Response(CampaignSerializer(campaign).data)
 
     @action(detail=True, methods=["post"])
@@ -964,78 +1103,15 @@ from xhtml2pdf import pisa
 @user_passes_test(lambda u: u.is_staff)
 def download_campaign_pdf_view(request, campaign_id):
     campaign = get_object_or_404(Campaign, pk=campaign_id)
-    
-    # Retrieve related records
-    negotiation = campaign.payment_negotiations.first()
-    workspace_installments = list(campaign.workspace_installments.all().order_by("installment_type", "id"))
-    if not workspace_installments and negotiation:
-        workspace_installments = list(negotiation.installments.all().order_by("installment_type", "id"))
-
-    milestones_list = []
-    if workspace_installments:
-        for inst in workspace_installments:
-            inst_type_label = "Business (Inbound)" if inst.installment_type == "business" else "Creator (Outbound)"
-            status_label = "Released" if (inst.is_paid or inst.status == "released") else ("In Escrow" if inst.status == "in_escrow" else inst.status.replace("_", " ").title())
-            milestones_list.append({
-                "title": inst.title,
-                "amount": inst.amount,
-                "type": inst_type_label,
-                "status": status_label,
-                "is_done": bool(inst.is_paid or inst.status == "released"),
-                "paid_date": inst.paid_date,
-            })
-    elif campaign.milestones.exists():
-        for m in campaign.milestones.all():
-            milestones_list.append({
-                "title": m.title,
-                "amount": None,
-                "type": "General",
-                "status": "Done" if m.is_done else "Pending",
-                "is_done": m.is_done,
-                "paid_date": None,
-            })
-
-    tasks_list = []
-    if campaign.tasks.exists():
-        for t in campaign.tasks.all():
-            tasks_list.append({
-                "title": t.title,
-                "due_date": t.due_date or "-",
-                "is_done": t.is_done,
-            })
-    elif campaign.deliverables.exists():
-        for d in campaign.deliverables.all():
-            tasks_list.append({
-                "title": f"{d.name} ({d.type})",
-                "due_date": d.deadline or "-",
-                "is_done": d.status in ["Approved", "Published"],
-            })
-
-    deliverables = campaign.deliverables.all()
-    files = campaign.files.all()
-    tickets = campaign.tickets.all()
-    from .models import extract_currency_symbol
-    curr_sym = extract_currency_symbol(campaign) or "Rs"
-    
-    context = {
-        "instance": campaign,
-        "negotiation": negotiation,
-        "milestones": milestones_list,
-        "tasks": tasks_list,
-        "deliverables": deliverables,
-        "payments": workspace_installments if workspace_installments else campaign.payments.all(),
-        "files": files,
-        "tickets": tickets,
-        "currency_symbol": curr_sym,
-    }
+    context = build_campaign_pdf_context(campaign)
     
     html = render_to_string("campegin/campaign_pdf.html", context)
     result = BytesIO()
     pdf = pisa.pisaDocument(BytesIO(html.encode("utf-8")), result)
     if not pdf.err:
         response = HttpResponse(result.getvalue(), content_type='application/pdf')
-        filename = f"campaign_{campaign.name.replace(' ', '_')}.pdf"
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        clean_name = str(campaign.name or "campaign").replace(" ", "_")
+        response['Content-Disposition'] = f'attachment; filename="campaign_{clean_name}.pdf"'
         return response
     return HttpResponse("Error generating PDF", status=500)
 
@@ -1693,31 +1769,35 @@ class CreatorEarningsView(APIView):
                         except Exception:
                             pass
 
-            payments = c.payments.all()
-            if payments.exists():
-                for p in payments:
-                    amount_val = float(p.amount)
-                    p_st = str(p.status or "").strip().lower()
-                    if p_st in dropped_statuses:
-                        continue
-                    
-                    if p_st in ("released", "paid"):
+            workspace_insts = []
+            if neg_obj:
+                workspace_insts = list(neg_obj.installments.filter(installment_type='creator').order_by('id'))
+            if not workspace_insts:
+                workspace_insts = list(c.workspace_installments.filter(installment_type='creator').order_by('id'))
+
+            if workspace_insts:
+                for inst in workspace_insts:
+                    amount_val = float(inst.amount or 0)
+                    is_rel = bool(inst.is_paid or str(inst.status or '').lower() == 'released')
+                    if is_rel:
                         released_sum += amount_val
-                        if p.payment_date:
+                        paid_dt = inst.paid_date or inst.updated_at or inst.created_at
+                        if paid_dt:
                             try:
-                                parts = str(p.payment_date).split('-')
-                                if len(parts) >= 2:
-                                    m_idx = int(parts[1]) - 1
-                                    if 0 <= m_idx <= 11:
-                                        default_months[m_idx]["v"] += amount_val
+                                if hasattr(paid_dt, 'month'):
+                                    m_idx = paid_dt.month - 1
+                                else:
+                                    m_idx = int(str(paid_dt).split('-')[1]) - 1
+                                if 0 <= m_idx <= 11:
+                                    default_months[m_idx]["v"] += amount_val
                             except Exception:
                                 pass
                         transactions.append({
-                            "id": p.id + c.id * 10000,
-                            "campaign": c.name,
+                            "id": inst.id + c.id * 10000,
+                            "campaign": f"{c.name} ({inst.title})" if inst.title else c.name,
                             "brand": brand_name,
                             "amount": amount_val,
-                            "date": str(p.payment_date or "Paid"),
+                            "date": str(inst.paid_date or "Paid"),
                             "status": "paid",
                             "type": "credit",
                             "period": "Monthly",
@@ -1725,40 +1805,82 @@ class CreatorEarningsView(APIView):
                     else:
                         pending_sum += amount_val
                         transactions.append({
-                            "id": p.id + c.id * 10000,
-                            "campaign": c.name,
+                            "id": inst.id + c.id * 10000,
+                            "campaign": f"{c.name} ({inst.title})" if inst.title else c.name,
                             "brand": brand_name,
                             "amount": amount_val,
-                            "date": str(p.payment_date or "Pending"),
+                            "date": str(inst.created_at or "Pending"),
                             "status": "escrow",
                             "type": "pending",
                             "period": "Monthly",
                         })
             else:
-                if st == "completed":
-                    released_sum += camp_amount
-                    transactions.append({
-                        "id": c.id * 10000,
-                        "campaign": c.name,
-                        "brand": brand_name,
-                        "amount": camp_amount,
-                        "date": "Completed",
-                        "status": "paid",
-                        "type": "credit",
-                        "period": "Monthly",
-                    })
+                payments = c.payments.all()
+                if payments.exists():
+                    for p in payments:
+                        amount_val = float(p.amount)
+                        p_st = str(p.status or "").strip().lower()
+                        if p_st in dropped_statuses:
+                            continue
+                        
+                        if p_st in ("released", "paid"):
+                            released_sum += amount_val
+                            if p.payment_date:
+                                try:
+                                    parts = str(p.payment_date).split('-')
+                                    if len(parts) >= 2:
+                                        m_idx = int(parts[1]) - 1
+                                        if 0 <= m_idx <= 11:
+                                            default_months[m_idx]["v"] += amount_val
+                                except Exception:
+                                    pass
+                            transactions.append({
+                                "id": p.id + c.id * 10000,
+                                "campaign": c.name,
+                                "brand": brand_name,
+                                "amount": amount_val,
+                                "date": str(p.payment_date or "Paid"),
+                                "status": "paid",
+                                "type": "credit",
+                                "period": "Monthly",
+                            })
+                        else:
+                            pending_sum += amount_val
+                            transactions.append({
+                                "id": p.id + c.id * 10000,
+                                "campaign": c.name,
+                                "brand": brand_name,
+                                "amount": amount_val,
+                                "date": str(p.payment_date or "Pending"),
+                                "status": "escrow",
+                                "type": "pending",
+                                "period": "Monthly",
+                            })
                 else:
-                    pending_sum += camp_amount
-                    transactions.append({
-                        "id": c.id * 10000,
-                        "campaign": c.name,
-                        "brand": brand_name,
-                        "amount": camp_amount,
-                        "date": "Pending",
-                        "status": "escrow",
-                        "type": "pending",
-                        "period": "Monthly",
-                    })
+                    if st == "completed":
+                        released_sum += camp_amount
+                        transactions.append({
+                            "id": c.id * 10000,
+                            "campaign": c.name,
+                            "brand": brand_name,
+                            "amount": camp_amount,
+                            "date": "Completed",
+                            "status": "paid",
+                            "type": "credit",
+                            "period": "Monthly",
+                        })
+                    else:
+                        pending_sum += camp_amount
+                        transactions.append({
+                            "id": c.id * 10000,
+                            "campaign": c.name,
+                            "brand": brand_name,
+                            "amount": camp_amount,
+                            "date": "Pending",
+                            "status": "escrow",
+                            "type": "pending",
+                            "period": "Monthly",
+                        })
                 
         transactions.sort(key=lambda x: x["id"], reverse=True)
         in_escrow = pending_sum

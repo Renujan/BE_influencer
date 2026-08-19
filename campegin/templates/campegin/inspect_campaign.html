@@ -954,7 +954,17 @@
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">No payment installments found for this campaign</td>
+                                <td colspan="6" style="text-align: center; color: #64748b; padding: 28px 20px; background-color: #f8fafc;">
+                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+                                        <div style="width: 36px; height: 36px; border-radius: 50%; background-color: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                                            <i class="fas fa-wallet"></i>
+                                        </div>
+                                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;">Installments haven't been divided yet</div>
+                                        <div style="font-size: 12px; color: #64748b; max-width: 440px; line-height: 1.4;">
+                                            Payment milestone installments will appear here once configured and agreed in the workspace payment negotiation.
+                                        </div>
+                                    </div>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -1009,51 +1019,83 @@
                     <thead>
                         <tr>
                             <th>Step / Stage</th>
-                            <th>Sender</th>
+                            <th>Counter Offer Sender</th>
                             <th>Proposed Counter Price</th>
                             <th>Original Budget</th>
-                            <th>Counter Note</th>
-                            <th>Status</th>
+                            <th>Remarks / Counter Note</th>
+                            <th>Moderation / Flow Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Initial Budget Row -->
+                        <!-- Initial Proposal -->
                         <tr>
-                            <td><strong style="color: #475569;">Initial Campaign Budget</strong></td>
-                            <td>Business ({% if instance.brand %}{{ instance.brand.username }}{% else %}Brand{% endif %})</td>
-                            <td><strong>{{ instance.currency_symbol }}{{ instance.budget|default:"0.00" }}</strong></td>
-                            <td>{{ instance.currency_symbol }}{{ instance.budget|default:"0.00" }}</td>
-                            <td style="color: #64748b;">Initial campaign request created</td>
-                            <td><span class="badge-status live">Active</span></td>
+                            <td><strong style="color: #475569;">{{ initial_proposal_title|default:"Initial Proposal" }}</strong></td>
+                            <td>
+                                {% if initial_sender_type == 'Creator' %}
+                                    <strong>Creator</strong> ({{ initial_sender_name }})
+                                {% else %}
+                                    <strong>Business</strong> ({{ initial_sender_name }})
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ currency_symbol }}{{ initial_budget|default:instance.budget|default:"0.00" }}</strong></td>
+                            <td>{{ currency_symbol }}{{ initial_budget|default:instance.budget|default:"0.00" }}</td>
+                            <td style="color: #64748b;">
+                                {% if instance.created_via == 'pitch' or pitch %}
+                                    Initial pitch proposal submitted by creator
+                                {% else %}
+                                    Initial campaign request created
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge-status {% if instance.created_via == 'pitch' or pitch %}pending_admin{% else %}live{% endif %}">
+                                    {% if instance.created_via == 'pitch' or pitch %}Pitch Created{% else %}Active{% endif %}
+                                </span>
+                            </td>
                         </tr>
-                        {% if instance.counter_history %}
-                            {% for item in instance.counter_history %}
+                        {% if negotiation_history %}
+                            {% for item in negotiation_history %}
                             <tr>
                                 <td><strong style="color: #d97706;">Counter Round {{ item.round }}</strong></td>
                                 <td>
                                     {% if item.sender == 'Creator' %}
-                                        <strong>Creator</strong> ({% if instance.creator %}{{ instance.creator.username }}{% else %}Creator{% endif %})
+                                        <strong>Creator</strong> ({{ item.sender_name|default:instance.creator.username }})
+                                    {% elif item.sender == 'Business' %}
+                                        <strong>Business</strong> ({{ item.sender_name|default:instance.brand.username }})
                                     {% else %}
-                                        <strong>Business</strong> ({% if instance.brand %}{{ instance.brand.username }}{% else %}Brand{% endif %})
+                                        <strong>{{ item.sender }}</strong> ({{ item.sender_name }})
                                     {% endif %}
                                 </td>
-                                <td><strong style="color: #d97706; font-size: 15px;">{{ instance.currency_symbol }}{{ item.price }}</strong></td>
-                                <td>{{ instance.currency_symbol }}{{ instance.budget|default:"0.00" }}</td>
-                                <td style="color: #334155;">{{ item.note|default:"-" }}</td>
+                                <td><strong style="color: #d97706; font-size: 15px;">{{ currency_symbol }}{{ item.price }}</strong></td>
+                                <td>{{ currency_symbol }}{{ initial_budget|default:instance.budget|default:"0.00" }}</td>
+                                <td style="color: #334155;">{{ item.note|default:"No notes provided" }}</td>
                                 <td>
-                                    <span class="badge-status {% if item.status == 'Countered' or item.status == 'Business_Countered' %}pending{% elif item.status == 'Live' %}live{% else %}draft{% endif %}">
-                                        {{ item.status }}
-                                    </span>
+                                    {% if item.status == 'pitch_counter_pending' or item.status == 'biz_counter_pending' or item.status == 'Countered_Pending' or item.status == 'Business_Counter_Pending' %}
+                                        <span class="badge-status pending_admin">Awaiting Admin Approval</span>
+                                    {% elif item.status == 'pitch_countered' or item.status == 'biz_countered' or item.status == 'Countered' or item.status == 'Business_Countered' or item.status == 'counter_offer' %}
+                                        <span class="badge-status accepted">Approved &amp; Forwarded</span>
+                                    {% elif item.status == 'accepted' or item.status == 'accepted_by_business' or item.status == 'Live' %}
+                                        <span class="badge-status live">Accepted</span>
+                                    {% else %}
+                                        <span class="badge-status {{ item.status }}">{{ item.status|title }}</span>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
-                        {% elif instance.counter_price %}
+                        {% elif latest_counter_offer %}
                             <tr>
-                                <td><strong style="color: #d97706;">Counter Round {{ instance.counter_round|default:1 }}</strong></td>
-                                <td>Counter Party</td>
-                                <td><strong style="color: #d97706; font-size: 15px;">{{ instance.currency_symbol }}{{ instance.counter_price }}</strong></td>
-                                <td>{{ instance.currency_symbol }}{{ instance.budget|default:"0.00" }}</td>
-                                <td>{{ instance.counter_note|default:"-" }}</td>
+                                <td><strong style="color: #d97706;">Counter Round {{ latest_counter_count|default:1 }}</strong></td>
+                                <td>
+                                    {% if instance.status == 'Countered' or instance.status == 'pitch_counter_pending' or instance.status == 'pitch_countered' %}
+                                        <strong>Creator</strong> ({{ instance.creator.username }})
+                                    {% elif instance.status == 'Business_Countered' or instance.status == 'biz_counter_pending' or instance.status == 'biz_countered' %}
+                                        <strong>Business</strong> ({{ instance.brand.username }})
+                                    {% else %}
+                                        Counter Party
+                                    {% endif %}
+                                </td>
+                                <td><strong style="color: #d97706; font-size: 15px;">{{ currency_symbol }}{{ latest_counter_offer }}</strong></td>
+                                <td>{{ currency_symbol }}{{ initial_budget|default:instance.budget|default:"0.00" }}</td>
+                                <td style="color: #334155;">{{ latest_counter_note|default:"No notes provided" }}</td>
                                 <td>
                                     <span class="badge-status {% if instance.status == 'Countered' or instance.status == 'Business_Countered' %}pending{% elif instance.status == 'Live' %}live{% else %}draft{% endif %}">
                                         {{ instance.get_status_display|default:instance.status }}
@@ -1064,18 +1106,26 @@
                     </tbody>
                 </table>
             </div>
-            {% if instance.status == 'Countered' %}
-            <div style="margin-top: 10px; font-size: 13px; color: #64748b; background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                <i class="fas fa-info-circle text-primary" style="color: #3b82f6;"></i> <strong>Waiting on Business:</strong> The creator has sent a counter offer. The business must accept, decline, or reply with another counter offer.
-            </div>
-            {% elif instance.status == 'Business_Countered' %}
-            <div style="margin-top: 10px; font-size: 13px; color: #64748b; background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                <i class="fas fa-info-circle text-primary" style="color: #3b82f6;"></i> <strong>Waiting on Creator:</strong> The business has replied with a counter offer. The creator must accept, decline, or reply with another counter offer.
-            </div>
-            {% elif instance.status == 'Live' and instance.counter_price %}
-            <div style="margin-top: 10px; font-size: 13px; color: #16a34a; background-color: #f0fdf4; padding: 12px; border-radius: 6px; border: 1px solid #bbf7d0;">
-                <i class="fas fa-check-circle text-green-600" style="color: #16a34a;"></i> <strong>Negotiation Complete:</strong> The counter offer was accepted and the campaign is now live with the final budget of {{ instance.currency_symbol }}{{ instance.budget }}.
-            </div>
+            {% if instance.created_via == 'pitch' or pitch %}
+                {% if instance.status == 'Live' or instance.status == 'Completed' %}
+                <div style="margin-top: 10px; font-size: 13px; color: #16a34a; background-color: #f0fdf4; padding: 12px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                    <i class="fas fa-check-circle text-green-600" style="color: #16a34a;"></i> <strong>Negotiation Complete:</strong> Pitch proposal was accepted and converted to Live Campaign with the final budget of {{ currency_symbol }}{{ final_accepted_price|default:instance.budget }}.
+                </div>
+                {% endif %}
+            {% else %}
+                {% if instance.status == 'Countered' %}
+                <div style="margin-top: 10px; font-size: 13px; color: #64748b; background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <i class="fas fa-info-circle text-primary" style="color: #3b82f6;"></i> <strong>Waiting on Business:</strong> The creator has sent a counter offer. The business must accept, decline, or reply with another counter offer.
+                </div>
+                {% elif instance.status == 'Business_Countered' %}
+                <div style="margin-top: 10px; font-size: 13px; color: #64748b; background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <i class="fas fa-info-circle text-primary" style="color: #3b82f6;"></i> <strong>Waiting on Creator:</strong> The business has replied with a counter offer. The creator must accept, decline, or reply with another counter offer.
+                </div>
+                {% elif instance.status == 'Live' and instance.counter_price %}
+                <div style="margin-top: 10px; font-size: 13px; color: #16a34a; background-color: #f0fdf4; padding: 12px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                    <i class="fas fa-check-circle text-green-600" style="color: #16a34a;"></i> <strong>Negotiation Complete:</strong> The counter offer was accepted and the campaign is now live with the final budget of {{ currency_symbol }}{{ final_accepted_price|default:instance.counter_price|default:instance.budget }}.
+                </div>
+                {% endif %}
             {% endif %}
         </div>
 

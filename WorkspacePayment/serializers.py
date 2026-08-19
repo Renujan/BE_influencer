@@ -181,3 +181,41 @@ class WorkspacePaymentNegotiationSerializer(serializers.ModelSerializer):
 
     def get_country(self, obj):
         return getattr(obj.campaign, 'country', None) or "Sri Lanka"
+
+    def to_representation(self, instance):
+        camp = instance.campaign
+        if camp:
+            created_via = str(getattr(camp, "created_via", "") or "").lower().strip()
+            if created_via == "pitch" or getattr(camp, "is_pitch", False):
+                from campegin.models import Pitch
+                pitch = Pitch.objects.filter(campaign_name=camp.name, brand=camp.brand, creator=camp.creator).order_by("-id").first() or Pitch.objects.filter(campaign_name=camp.name, brand=camp.brand).order_by("-id").first() or Pitch.objects.filter(brand=camp.brand, creator=camp.creator).order_by("-id").first()
+                pitch_price = None
+                if pitch:
+                    if pitch.counter_history and isinstance(pitch.counter_history, list) and len(pitch.counter_history) > 0:
+                        pitch_price = pitch.counter_history[-1].get("price")
+                    elif pitch.counter_offer:
+                        pitch_price = pitch.counter_offer
+                    elif pitch.budget:
+                        pitch_price = pitch.budget
+                
+                camp_price = None
+                if camp.counter_history and isinstance(camp.counter_history, list) and len(camp.counter_history) > 0:
+                    camp_price = camp.counter_history[-1].get("price")
+                elif camp.counter_price:
+                    camp_price = camp.counter_price
+                elif camp.budget:
+                    camp_price = camp.budget
+
+                resolved_price = pitch_price or camp_price or instance.final_price
+                if resolved_price:
+                    try:
+                        resolved_float = float(resolved_price)
+                        if instance.final_price != resolved_float:
+                            instance.final_price = resolved_float
+                            instance.status = "creator_accepted"
+                            instance.save(update_fields=["final_price", "status"])
+                    except Exception:
+                        pass
+
+        data = super().to_representation(instance)
+        return data

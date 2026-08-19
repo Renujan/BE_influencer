@@ -137,20 +137,45 @@ def get_negotiation(request, campaign_id):
         
         created_via = str(campaign.created_via or '').lower().strip() if campaign else ''
 
-        if not negotiation and campaign:
-            if created_via == 'pitch':
-                last_price = campaign.counter_price or campaign.budget
+        if created_via == 'pitch':
+            from campegin.models import Pitch
+            pitch = Pitch.objects.filter(campaign_name=campaign.name, brand=campaign.brand, creator=campaign.creator).order_by("-id").first() or Pitch.objects.filter(campaign_name=campaign.name, brand=campaign.brand).order_by("-id").first() or Pitch.objects.filter(brand=campaign.brand, creator=campaign.creator).order_by("-id").first()
+            pitch_price = None
+            if pitch:
+                if pitch.counter_history and isinstance(pitch.counter_history, list) and len(pitch.counter_history) > 0:
+                    pitch_price = pitch.counter_history[-1].get("price")
+                elif pitch.counter_offer:
+                    pitch_price = pitch.counter_offer
+                elif pitch.budget:
+                    pitch_price = pitch.budget
+            
+            camp_price = None
+            if campaign.counter_history and isinstance(campaign.counter_history, list) and len(campaign.counter_history) > 0:
+                camp_price = campaign.counter_history[-1].get("price")
+            elif campaign.counter_price:
+                camp_price = campaign.counter_price
+            elif campaign.budget:
+                camp_price = campaign.budget
+
+            last_price = pitch_price or camp_price or campaign.budget
+
+            if not negotiation:
                 negotiation = WorkspacePaymentNegotiation.objects.create(
                     campaign=campaign,
                     final_price=last_price,
                     status='creator_accepted'
                 )
             else:
-                negotiation = WorkspacePaymentNegotiation.objects.create(
-                    campaign=campaign,
-                    final_price=None,
-                    status='pending_proposal'
-                )
+                if last_price and negotiation.final_price != float(last_price):
+                    negotiation.final_price = float(last_price)
+                    negotiation.status = 'creator_accepted'
+                    negotiation.save(update_fields=['final_price', 'status'])
+        elif not negotiation and campaign:
+            negotiation = WorkspacePaymentNegotiation.objects.create(
+                campaign=campaign,
+                final_price=None,
+                status='pending_proposal'
+            )
         elif negotiation and campaign and created_via != 'pitch':
             # For direct request campaigns, if status was auto-set to creator_accepted without manual proposal, reset it to pending_proposal
             if negotiation.status == 'creator_accepted' and not negotiation.proposed_by and not negotiation.action_by:

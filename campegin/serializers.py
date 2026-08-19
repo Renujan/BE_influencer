@@ -183,12 +183,42 @@ class CampaignSerializer(serializers.ModelSerializer):
             }
         return None
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        created_via = str(getattr(instance, "created_via", "") or "").lower().strip()
+        if created_via == "pitch" or getattr(instance, "is_pitch", False):
+            from .models import Pitch
+            pitch = Pitch.objects.filter(campaign_name=instance.name, brand=instance.brand, creator=instance.creator).order_by("-id").first() or Pitch.objects.filter(campaign_name=instance.name, brand=instance.brand).order_by("-id").first() or Pitch.objects.filter(brand=instance.brand, creator=instance.creator).order_by("-id").first()
+            if pitch:
+                if pitch.counter_history and isinstance(pitch.counter_history, list) and len(pitch.counter_history) > 0:
+                    last_p = pitch.counter_history[-1].get("price")
+                    if last_p:
+                        data["budget"] = str(last_p)
+                        data["counter_price"] = str(last_p)
+                    data["counter_history"] = pitch.counter_history
+                elif pitch.counter_offer:
+                    data["budget"] = str(pitch.counter_offer)
+                    data["counter_price"] = str(pitch.counter_offer)
+            elif instance.counter_history and isinstance(instance.counter_history, list) and len(instance.counter_history) > 0:
+                last_p = instance.counter_history[-1].get("price")
+                if last_p:
+                    data["budget"] = str(last_p)
+                    data["counter_price"] = str(last_p)
+            elif instance.counter_price:
+                data["budget"] = str(instance.counter_price)
+        return data
+
+    platform = serializers.SerializerMethodField()
+
+    def get_platform(self, obj):
+        return obj.medium or ""
+
     class Meta:
         model = Campaign
         fields = [
             "id", "name", "brand", "brand_name", "creator", "creator_name",
             "status", "budget", "min_budget", "max_budget", "per_creator_budget", "min_price", "max_price", "rate_card_id", "start_date", "end_date", "progress", "brief", "admin_review",
-            "category", "delivery_language", "country", "province", "district", "voice_brief", "screenshare_brief", "video_brief",
+            "category", "delivery_language", "country", "province", "district", "medium", "platform", "voice_brief", "screenshare_brief", "video_brief",
             "counter_price", "counter_note", "counter_round", "counter_history", "decline_reason", "created_via", "created_time", "created_at",
             "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews", "creator_rating", "business_rating"
         ]
@@ -267,15 +297,81 @@ class PitchSerializer(serializers.ModelSerializer):
     deliverables = FlexibleJSONField(required=False, allow_null=True, default=list)
     tags = FlexibleJSONField(required=False, allow_null=True, default=list)
     counter_history = FlexibleJSONField(required=False, allow_null=True, default=list)
+    campaign_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Pitch
         fields = [
             "id", "creator", "creator_name", "brand", "brand_name",
             "campaign_name", "budget", "sent_date", "tags", "status",
-            "description", "deliverables", "counter_offer", "counter_note", "counter_count", "counter_history", "attachment", "decline_reason"
+            "description", "deliverables", "counter_offer", "counter_note", "counter_count", "counter_history", "attachment", "decline_reason", "campaign_id"
         ]
         read_only_fields = ["creator"]
+
+    def get_campaign_id(self, obj):
+        camp = Campaign.objects.filter(name__iexact=obj.campaign_name.strip(), brand=obj.brand, creator=obj.creator).order_by("-id").first()
+        if not camp:
+            camp = Campaign.objects.filter(name__icontains=obj.campaign_name.strip(), brand=obj.brand, creator=obj.creator).order_by("-id").first()
+        if not camp:
+            camp = Campaign.objects.filter(brand=obj.brand, creator=obj.creator, created_via="pitch").order_by("-id").first()
+        if not camp:
+            camp = Campaign.objects.filter(name__iexact=obj.campaign_name.strip(), creator=obj.creator).order_by("-id").first()
+        if not camp:
+            camp = Campaign.objects.filter(name__iexact=obj.campaign_name.strip(), brand=obj.brand).order_by("-id").first()
+        if not camp:
+            camp = Campaign.objects.filter(creator=obj.creator, created_via="pitch").order_by("-id").first()
+        if not camp:
+            camp = Campaign.objects.filter(name__iexact=obj.campaign_name.strip()).order_by("-id").first()
+
+        # If pitch status is accepted or live but no campaign exists, auto-create it so workspace is immediately available
+        if not camp and str(obj.status or "").lower() in ["accepted", "accepted_by_business", "live"]:
+            from .views import populate_deliverables_from_pitch
+            tags = obj.tags or []
+            if isinstance(tags, str):
+                try:
+                    import json
+                    tags = json.loads(tags)
+                except Exception:
+                    tags = [tags]
+            if not isinstance(tags, list):
+                tags = [str(tags)]
+            known_platforms = {"Instagram", "YouTube", "TikTok", "Facebook", "LinkedIn", "X", "Twitter", "Snapchat", "Pinterest"}
+            niche_val = next((str(t).strip() for t in tags if str(t).strip() and not any(p.lower() == str(t).strip().lower() for p in known_platforms)), "")
+            if not niche_val and obj.creator and hasattr(obj.creator, "creator_profile") and obj.creator.creator_profile.niches:
+                cr_niches = obj.creator.creator_profile.niches
+                if isinstance(cr_niches, list) and cr_niches:
+                    niche_val = str(cr_niches[0]).strip()
+            if not niche_val:
+                niche_val = "Tech"
+            platform_val = next((str(t).strip() for t in tags if any(p.lower() == str(t).strip().lower() for p in known_platforms)), "Instagram")
+
+            camp = Campaign.objects.create(
+                name=obj.campaign_name,
+                brand=obj.brand,
+                creator=obj.creator,
+                budget=obj.counter_offer or obj.budget,
+                counter_price=obj.counter_offer or obj.budget,
+                counter_note=obj.counter_note,
+                counter_history=obj.counter_history,
+                category=niche_val,
+                medium=platform_val,
+                brief=obj.description or f"Campaign proposal based on pitch: {obj.campaign_name}",
+                status="Live",
+                progress=62,
+                start_date=obj.sent_date or "2026-08-01",
+                created_via="pitch",
+            )
+            try:
+                from WorkspacePayment.models import WorkspacePaymentNegotiation
+                neg, _ = WorkspacePaymentNegotiation.objects.get_or_create(campaign=camp)
+                neg.final_price = obj.counter_offer or obj.budget
+                neg.status = 'creator_accepted'
+                neg.save()
+            except Exception:
+                pass
+            populate_deliverables_from_pitch(camp, obj)
+
+        return camp.id if camp else None
 
     def to_internal_value(self, data):
         ret = super().to_internal_value(data)

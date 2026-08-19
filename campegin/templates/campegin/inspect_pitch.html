@@ -637,8 +637,8 @@
                     <strong>Waiting on Admin:</strong> The business sent a counter of <strong>{{ instance.currency_symbol }}{{ instance.counter_offer }}</strong>. Approve below to forward it to the creator.
                 {% elif status == 'biz_countered' %}
                     <strong>Waiting on Creator:</strong> Business counter of <strong>{{ instance.currency_symbol }}{{ instance.counter_offer }}</strong> forwarded to the creator.
-                {% elif status == 'accepted' and instance.counter_offer %}
-                    <strong style="color:#166534;">Negotiation Complete:</strong> Counter offer was accepted. Final budget: <strong>{{ instance.currency_symbol }}{{ instance.budget }}</strong>.
+                {% elif status == 'accepted' or status == 'accepted_by_business' %}
+                    <strong style="color:#166534;">Negotiation Complete:</strong> Counter offer was accepted. Final budget: <strong>{{ instance.currency_symbol }}{{ final_accepted_price|default:instance.counter_offer|default:instance.budget }}</strong>.
                 {% endif %}
             </div>
             {% endif %}

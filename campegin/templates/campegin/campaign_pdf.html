@@ -159,7 +159,7 @@
         <tr>
             <td>
                 <div class="label">Budget</div>
-                <div class="value"><strong>{{ instance.currency_symbol }}{{ instance.budget }}</strong></div>
+                <div class="value"><strong>{{ currency_symbol|default:instance.currency_symbol|default:"$" }}{{ instance.budget }}</strong></div>
             </td>
             <td>
                 <div class="label">Start Date</div>
@@ -214,7 +214,7 @@
                                 <td><strong>{{ milestone.title }}</strong></td>
                                 <td style="font-family: monospace;">
                                     {% if milestone.amount %}
-                                        {{ currency_symbol }}{{ milestone.amount|floatformat:2 }}
+                                        {{ currency_symbol|default:instance.currency_symbol|default:"$" }}{{ milestone.amount|floatformat:2 }}
                                     {% else %}
                                         —
                                     {% endif %}
@@ -303,27 +303,29 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th>Milestone Name</th>
-                <th>Amount</th>
-                <th>Payment Date</th>
-                <th>Status</th>
+                <th style="width: 35%;">Milestone / Installment</th>
+                <th style="width: 20%;">Type</th>
+                <th style="width: 18%;">Amount</th>
+                <th style="width: 15%;">Payment Date</th>
+                <th style="width: 12%;">Status</th>
             </tr>
         </thead>
         <tbody>
             {% for pay in payments %}
                 <tr>
-                    <td><strong>{{ pay.milestone_name }}</strong></td>
-                    <td><strong>{{ instance.currency_symbol }}{{ pay.amount }}</strong></td>
-                    <td>{{ pay.payment_date|default:"-" }}</td>
+                    <td><strong>{{ pay.milestone_name|default:pay.title }}</strong></td>
+                    <td>{{ pay.type_label|default:"-" }}</td>
+                    <td><strong>{{ currency_symbol|default:instance.currency_symbol|default:"$" }}{{ pay.amount|floatformat:2 }}</strong></td>
+                    <td>{{ pay.payment_date|default:pay.paid_date|default:"-" }}</td>
                     <td>
-                        <span class="badge badge-{% if pay.status == 'Released' %}live{% elif pay.status == 'In Escrow' %}pending{% else %}completed{% endif %}">
-                            {{ pay.status }}
+                        <span class="badge badge-{% if pay.status_lower == 'released' or pay.status == 'Released' %}live{% elif pay.status_lower == 'in_escrow' or pay.status == 'In Escrow' or pay.status == 'Funded' %}pending{% else %}completed{% endif %}">
+                            {{ pay.status_display|default:pay.status }}
                         </span>
                     </td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="4" style="text-align: center; color: #94a3b8;">No payment installments found</td>
+                    <td colspan="5" style="text-align: center; color: #94a3b8;">No payment installments found</td>
                 </tr>
             {% endfor %}
         </tbody>

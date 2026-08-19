@@ -114,7 +114,7 @@ class CampaignInspectView(InspectView):
                     "is_done": is_done,
                 })
 
-        # Build Payments list
+        # Build Payments list strictly from Workspace Payment Installments
         payments_list = []
         if workspace_installments:
             for p in workspace_installments:
@@ -130,20 +130,50 @@ class CampaignInspectView(InspectView):
                     "status": "Released" if (p.is_paid or p.status == "released") else ("In Escrow" if p.status == "in_escrow" else p.status.replace("_", " ").title()),
                     "is_paid": p.is_paid,
                 })
-        elif campaign.payments.exists():
-            for p in campaign.payments.all():
-                payments_list.append({
-                    "title": p.milestone_name,
-                    "milestone_name": p.milestone_name,
-                    "installment_type": "creator",
-                    "amount": p.amount,
-                    "paid_date": p.payment_date,
-                    "payment_date": p.payment_date,
-                    "receipt_image": None,
-                    "receipt_url": None,
-                    "status": p.status,
-                    "is_paid": p.status == "Released",
-                })
+
+        # Retrieve related pitch details if created via Pitch or matching campaign
+        pitch = None
+        if getattr(campaign, "created_via", "") == "pitch" or Pitch.objects.filter(campaign_name=campaign.name, brand=campaign.brand).exists():
+            pitch = (
+                Pitch.objects.filter(campaign_name=campaign.name, brand=campaign.brand, creator=campaign.creator).order_by("-id").first()
+                or Pitch.objects.filter(campaign_name=campaign.name, brand=campaign.brand).order_by("-id").first()
+                or Pitch.objects.filter(brand=campaign.brand, creator=campaign.creator).order_by("-id").first()
+            )
+
+        # Prepare unified negotiation history
+        negotiation_history = []
+        if pitch and pitch.counter_history:
+            negotiation_history = list(pitch.counter_history)
+        elif campaign.counter_history:
+            negotiation_history = list(campaign.counter_history)
+
+        # Resolve real final accepted price for pitch-created campaigns
+        final_negotiated_price = None
+        if pitch:
+            if pitch.counter_history and isinstance(pitch.counter_history, list) and len(pitch.counter_history) > 0:
+                final_negotiated_price = pitch.counter_history[-1].get("price")
+            elif pitch.counter_offer:
+                final_negotiated_price = pitch.counter_offer
+            elif pitch.budget:
+                final_negotiated_price = pitch.budget
+        if not final_negotiated_price:
+            if campaign.counter_history and isinstance(campaign.counter_history, list) and len(campaign.counter_history) > 0:
+                final_negotiated_price = campaign.counter_history[-1].get("price")
+            elif campaign.counter_price:
+                final_negotiated_price = campaign.counter_price
+            else:
+                final_negotiated_price = campaign.budget
+
+        context["pitch"] = pitch
+        context["negotiation_history"] = negotiation_history
+        context["initial_proposal_title"] = "Initial Pitch" if (pitch or campaign.created_via == "pitch") else "Initial Campaign Request"
+        context["initial_sender_type"] = "Creator" if (pitch or campaign.created_via == "pitch") else "Business"
+        context["initial_sender_name"] = (campaign.creator.username if campaign.creator else "Creator") if (pitch or campaign.created_via == "pitch") else (campaign.brand.username if campaign.brand else "Brand")
+        context["initial_budget"] = pitch.budget if pitch and pitch.budget else campaign.budget
+        context["final_accepted_price"] = final_negotiated_price
+        context["latest_counter_offer"] = pitch.counter_offer if (pitch and pitch.counter_offer) else campaign.counter_price
+        context["latest_counter_note"] = pitch.counter_note if (pitch and pitch.counter_note) else campaign.counter_note
+        context["latest_counter_count"] = pitch.counter_count if (pitch and pitch.counter_count) else campaign.counter_round
 
         context["negotiation"] = negotiation
         context["workspace_installments"] = workspace_installments
@@ -290,7 +320,8 @@ class PitchIndexView(IndexView):
             return self.get_edit_url(instance)
 
         if not self.model:
-            return column_class("campaign_name", label=gettext_lazy("Campaign Name"), accessor=str, get_url=get_url)
+            return column_class(field_name, get_url=get_url, **kwargs)
+
         return self._get_custom_column(field_name, column_class, get_url=get_url, **kwargs)
 
     def get_list_more_buttons(self, instance):
@@ -320,10 +351,21 @@ class PitchInspectView(InspectView):
         context = super().get_context_data(**kwargs)
         pitch = self.get_object()
         st = str(pitch.status).lower().strip()
+
+        # Calculate real final accepted price for pitch
+        final_price = None
+        if pitch.counter_history and isinstance(pitch.counter_history, list) and len(pitch.counter_history) > 0:
+            final_price = pitch.counter_history[-1].get("price")
+        elif pitch.counter_offer:
+            final_price = pitch.counter_offer
+        elif pitch.budget:
+            final_price = pitch.budget
+
         context["instance"] = pitch
         context["object"] = pitch
         context["pitch_status"] = st
         context["status"] = st
+        context["final_accepted_price"] = final_price
         return context
 
     def post(self, request, *args, **kwargs):
@@ -340,7 +382,10 @@ class PitchInspectView(InspectView):
 
         elif action == "accept_pitch" or status_val == "accepted":
             # Admin accepts pitch directly and converts to live campaign
+            last_price = (self.object.counter_history[-1].get("price") if (self.object.counter_history and isinstance(self.object.counter_history, list) and len(self.object.counter_history) > 0) else None) or self.object.counter_offer or self.object.budget
             self.object.status = "accepted"
+            self.object.budget = last_price
+            self.object.counter_offer = last_price
             self.object.save()
             from .models import Campaign
             campaign = Campaign.objects.filter(name=self.object.campaign_name, brand=self.object.brand).first()
@@ -368,7 +413,10 @@ class PitchInspectView(InspectView):
                     name=self.object.campaign_name,
                     brand=self.object.brand,
                     creator=self.object.creator,
-                    budget=self.object.budget,
+                    budget=last_price,
+                    counter_price=last_price,
+                    counter_note=self.object.counter_note,
+                    counter_history=self.object.counter_history,
                     category=niche_val,
                     medium=platform_val,
                     brief=self.object.description or f"Campaign proposal based on pitch: {self.object.campaign_name}",
@@ -378,9 +426,24 @@ class PitchInspectView(InspectView):
                     created_via="pitch",
                 )
             else:
+                campaign.budget = last_price
+                campaign.counter_price = last_price
+                campaign.counter_note = self.object.counter_note
+                campaign.counter_history = self.object.counter_history
+                campaign.created_via = "pitch"
                 if not campaign.category or campaign.category == "General":
                     campaign.category = niche_val
-                    campaign.save(update_fields=["category"])
+                campaign.save()
+
+            try:
+                from WorkspacePayment.models import WorkspacePaymentNegotiation
+                neg, _ = WorkspacePaymentNegotiation.objects.get_or_create(campaign=campaign)
+                neg.final_price = last_price
+                neg.status = 'creator_accepted'
+                neg.save()
+            except Exception as e:
+                print("Error setting WorkspacePaymentNegotiation in Wagtail accept_pitch:", e)
+
             from .views import populate_deliverables_from_pitch
             populate_deliverables_from_pitch(campaign, self.object)
             messages.success(request, f"Pitch '{self.object.campaign_name}' accepted and converted to Live Campaign.")
