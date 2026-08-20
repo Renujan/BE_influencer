@@ -138,6 +138,12 @@ class BusinessProfile(models.Model):
     is_featured = models.BooleanField(default=False, help_text="Mark as Featured / Top profile")
     featured_at = models.DateTimeField(null=True, blank=True)
 
+    # Account Deletion Request
+    deletion_requested = models.BooleanField(default=False, help_text="Business has requested account deletion")
+    deletion_request_date = models.DateTimeField(null=True, blank=True)
+    deletion_reason = models.TextField(blank=True, null=True)
+    deletion_decline_reason = models.TextField(blank=True, null=True)
+
     @property
     def role(self):
         return "business"
@@ -206,6 +212,12 @@ class CreatorProfile(models.Model):
     # Featured (Top) creator flag and timestamp
     is_featured = models.BooleanField(default=False, help_text="Mark as Featured / Top profile")
     featured_at = models.DateTimeField(null=True, blank=True)
+
+    # Account Deletion Request
+    deletion_requested = models.BooleanField(default=False, help_text="Creator has requested account deletion")
+    deletion_request_date = models.DateTimeField(null=True, blank=True)
+    deletion_reason = models.TextField(blank=True, null=True)
+    deletion_decline_reason = models.TextField(blank=True, null=True)
 
     saved_brands = models.ManyToManyField('BusinessProfile', blank=True, related_name="saved_by_creators")
 

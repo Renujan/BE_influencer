@@ -6,7 +6,12 @@ from django.utils.translation import gettext as _
 from django.urls import reverse, path
 from .models import BusinessProfile, CreatorProfile, Niche, BusinessType, Country, Medium, CreatorSocialAccount
 from Setting.models import CreatorSettings, BusinessSettings
-from .views import download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view, admin_approve_creator_view, admin_restrict_creator_view, admin_toggle_featured_view
+from .views import (
+    download_profile_pdf_view, admin_approve_business_view, admin_restrict_business_view,
+    admin_approve_creator_view, admin_restrict_creator_view, admin_toggle_featured_view,
+    admin_accept_delete_creator_view, admin_decline_delete_creator_view,
+    admin_accept_delete_business_view, admin_decline_delete_business_view
+)
 from portfolio.views import admin_portfolio_list_view, admin_portfolio_detail_view
 from .social_views import (
     admin_social_account_list_view,
@@ -703,6 +708,10 @@ def register_user_profile_pdf_urls():
         path("user-profiles/restrict/<int:profile_id>/", admin_restrict_business_view, name="wagtail_restrict_business"),
         path("user-profiles/approve-creator/<int:profile_id>/", admin_approve_creator_view, name="wagtail_approve_creator"),
         path("user-profiles/restrict-creator/<int:profile_id>/", admin_restrict_creator_view, name="wagtail_restrict_creator"),
+        path("user-profiles/accept-delete-creator/<int:profile_id>/", admin_accept_delete_creator_view, name="wagtail_accept_delete_creator"),
+        path("user-profiles/decline-delete-creator/<int:profile_id>/", admin_decline_delete_creator_view, name="wagtail_decline_delete_creator"),
+        path("user-profiles/accept-delete-business/<int:profile_id>/", admin_accept_delete_business_view, name="wagtail_accept_delete_business"),
+        path("user-profiles/decline-delete-business/<int:profile_id>/", admin_decline_delete_business_view, name="wagtail_decline_delete_business"),
         path("user-profiles/toggle-featured/<str:profile_type>/<int:profile_id>/", admin_toggle_featured_view, name="wagtail_toggle_featured"),
         path("portfolios/", admin_portfolio_list_view, name="admin_portfolio_list"),
         path("portfolios/<int:creator_id>/", admin_portfolio_detail_view, name="admin_portfolio_detail"),

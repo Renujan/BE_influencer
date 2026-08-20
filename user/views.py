@@ -376,9 +376,18 @@ class RegisterView(APIView):
                 profile.business_type = single_bt
             elif business_types_data:
                 profile.business_type = ", ".join(business_types_data)
-            else:
-                profile.business_type = ""
-                
+            # Add mediums
+            mediums_data = request.data.get("mediums", [])
+            if isinstance(mediums_data, str):
+                mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
+            profile.mediums.clear()
+            for medium_name in mediums_data:
+                medium_obj = Medium.objects.filter(name__iexact=medium_name).first()
+                if not medium_obj and str(medium_name).isdigit():
+                    medium_obj = Medium.objects.filter(id=medium_name).first()
+                if medium_obj:
+                    profile.mediums.add(medium_obj)
+
             profile.save()
             profile_data = BusinessProfileSerializer(profile).data
         else:
@@ -607,6 +616,17 @@ class GoogleLoginView(APIView):
                     for bt_name in business_types_data:
                         bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
                         profile.business_types.add(bt_obj)
+
+                    mediums_data = request.data.get("mediums", [])
+                    if isinstance(mediums_data, str):
+                        mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
+                    for medium_name in mediums_data:
+                        medium_obj = Medium.objects.filter(name__iexact=medium_name).first()
+                        if not medium_obj and str(medium_name).isdigit():
+                            medium_obj = Medium.objects.filter(id=medium_name).first()
+                        if medium_obj:
+                            profile.mediums.add(medium_obj)
+
                     profile.save()
                 else:
                     country_obj = None
@@ -685,6 +705,18 @@ class GoogleLoginView(APIView):
                         for bt_name in business_types_data:
                             bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
                             profile.business_types.add(bt_obj)
+
+                        mediums_data = request.data.get("mediums", [])
+                        if isinstance(mediums_data, str):
+                            mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
+                        profile.mediums.clear()
+                        for medium_name in mediums_data:
+                            medium_obj = Medium.objects.filter(name__iexact=medium_name).first()
+                            if not medium_obj and str(medium_name).isdigit():
+                                medium_obj = Medium.objects.filter(id=medium_name).first()
+                            if medium_obj:
+                                profile.mediums.add(medium_obj)
+
                         profile.save()
                     else:
                         profile.phone = request.data.get("phone", "")
@@ -787,6 +819,17 @@ class GoogleLoginView(APIView):
                 for bt_name in business_types_data:
                     bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
                     profile.business_types.add(bt_obj)
+
+                mediums_data = request.data.get("mediums", [])
+                if isinstance(mediums_data, str):
+                    mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
+                for medium_name in mediums_data:
+                    medium_obj = Medium.objects.filter(name__iexact=medium_name).first()
+                    if not medium_obj and str(medium_name).isdigit():
+                        medium_obj = Medium.objects.filter(id=medium_name).first()
+                    if medium_obj:
+                        profile.mediums.add(medium_obj)
+
                 profile.save()
             else:
                 country_obj = None
@@ -1256,6 +1299,171 @@ def admin_restrict_creator_view(request, profile_id):
     except Exception:
         return redirect("/admin/creatorprofile/")
 
+def safely_delete_creator_user(user, profile=None):
+    from notifications.models import Notification
+    from portfolio.models import PortfolioItem
+    from RateCard.models import RateCard
+    from user.models import CreatorRate, CreatorSocialAccount
+    from Setting.models import CreatorSettings, CreatorPayoutMethod
+    from campegin.models import Pitch, Campaign, WorkspaceMessage, AdminComplianceTicket
+    from complaint.models import Complaint, SupportMessage
+    from CreatorRating.models import CreatorRating, BusinessRating
+    from business_service.models import BusinessServiceRequest
+
+    if user:
+        user._is_being_deleted = True
+        user_id = user.id
+        
+        # Clean up related records explicitly to prevent cascade / post_delete signal issues
+        Notification.objects.filter(user_id=user_id).delete()
+        PortfolioItem.objects.filter(creator_id=user_id).delete()
+        Pitch.objects.filter(creator_id=user_id).delete()
+        RateCard.objects.filter(creator_id=user_id).delete()
+        CreatorSocialAccount.objects.filter(user_id=user_id).delete()
+        Complaint.objects.filter(user_id=user_id).delete()
+        SupportMessage.objects.filter(user_id=user_id).delete()
+        CreatorRating.objects.filter(creator_id=user_id).delete()
+        CreatorRating.objects.filter(brand_id=user_id).delete()
+        BusinessRating.objects.filter(creator_id=user_id).delete()
+        BusinessRating.objects.filter(brand_id=user_id).delete()
+        BusinessServiceRequest.objects.filter(user_id=user_id).delete()
+
+    if profile:
+        profile._is_being_deleted = True
+        profile_id = profile.id
+        CreatorRate.objects.filter(creator_id=profile_id).delete()
+        CreatorPayoutMethod.objects.filter(creator_id=profile_id).delete()
+        CreatorSettings.objects.filter(creator_id=profile_id).delete()
+
+    if user:
+        user_id = user.id
+        user.delete()
+        Notification.objects.filter(user_id=user_id).delete()
+    elif profile:
+        profile.delete()
+
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_accept_delete_creator_view(request, profile_id):
+    profile = get_object_or_404(CreatorProfile, pk=profile_id)
+    username = profile.user.username if profile.user else f"ID {profile_id}"
+    user = profile.user
+    safely_delete_creator_user(user, profile)
+    messages.success(request, f"Creator '{username}' account has been permanently deleted.")
+    return redirect("/admin/creatorprofile/")
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_decline_delete_creator_view(request, profile_id):
+    profile = get_object_or_404(CreatorProfile, pk=profile_id)
+    decline_reason = request.POST.get("decline_reason", "").strip() or request.GET.get("decline_reason", "").strip()
+
+    profile.deletion_requested = False
+    profile.deletion_request_date = None
+    profile.deletion_decline_reason = decline_reason
+    profile.save()
+
+    if profile.user:
+        from notifications.models import Notification
+        msg = f"Your account deletion request was declined by Super Admin. Reason: \"{decline_reason}\"" if decline_reason else "Your account deletion request was declined by Super Admin. Your account remains active."
+        Notification.objects.create(
+            user=profile.user,
+            target_role="creator",
+            title="Account Deletion Request Declined",
+            message=msg,
+            category="signup",
+            icon="fas fa-times-circle",
+            target_url="/creator/settings?tab=security"
+        )
+
+    msg_suffix = f" with reason: '{decline_reason}'" if decline_reason else ""
+    messages.info(request, f"Account deletion request for creator '{profile.user.username if profile.user else profile_id}' was declined{msg_suffix}. Account remains active.")
+    try:
+        from django.urls import reverse
+        inspect_url = reverse("creatorprofile:inspect", args=[profile_id])
+        return redirect(inspect_url)
+    except Exception:
+        return redirect("/admin/creatorprofile/")
+
+
+def safely_delete_business_user(user, profile=None):
+    from notifications.models import Notification
+    from Setting.models import BusinessSettings, BusinessPayoutMethod
+    from campegin.models import Campaign, WorkspaceMessage, AdminComplianceTicket
+    from complaint.models import Complaint, SupportMessage
+    from CreatorRating.models import CreatorRating, BusinessRating
+    from business_service.models import BusinessServiceRequest
+
+    if user:
+        user._is_being_deleted = True
+        user_id = user.id
+
+        # Clean up related records explicitly to prevent cascade / post_delete signal issues
+        Notification.objects.filter(user_id=user_id).delete()
+        Campaign.objects.filter(brand_id=user_id).delete()
+        Complaint.objects.filter(user_id=user_id).delete()
+        SupportMessage.objects.filter(user_id=user_id).delete()
+        CreatorRating.objects.filter(brand_id=user_id).delete()
+        CreatorRating.objects.filter(creator_id=user_id).delete()
+        BusinessRating.objects.filter(brand_id=user_id).delete()
+        BusinessRating.objects.filter(creator_id=user_id).delete()
+        BusinessServiceRequest.objects.filter(user_id=user_id).delete()
+
+    if profile:
+        profile._is_being_deleted = True
+        profile_id = profile.id
+        BusinessPayoutMethod.objects.filter(business_id=profile_id).delete()
+        BusinessSettings.objects.filter(business_id=profile_id).delete()
+
+    if user:
+        user_id = user.id
+        user.delete()
+        Notification.objects.filter(user_id=user_id).delete()
+    elif profile:
+        profile.delete()
+
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_accept_delete_business_view(request, profile_id):
+    profile = get_object_or_404(BusinessProfile, pk=profile_id)
+    username = profile.company_name or (profile.user.username if profile.user else f"ID {profile_id}")
+    user = profile.user
+    safely_delete_business_user(user, profile)
+    messages.success(request, f"Business '{username}' account has been permanently deleted.")
+    return redirect("/admin/businessprofile/")
+
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_decline_delete_business_view(request, profile_id):
+    profile = get_object_or_404(BusinessProfile, pk=profile_id)
+    decline_reason = request.POST.get("decline_reason", "").strip() or request.GET.get("decline_reason", "").strip()
+
+    profile.deletion_requested = False
+    profile.deletion_request_date = None
+    profile.deletion_decline_reason = decline_reason
+    profile.save()
+
+    if profile.user:
+        from notifications.models import Notification
+        msg = f"Your account deletion request was declined by Super Admin. Reason: \"{decline_reason}\"" if decline_reason else "Your account deletion request was declined by Super Admin. Your account remains active."
+        Notification.objects.create(
+            user=profile.user,
+            target_role="business",
+            title="Account Deletion Request Declined",
+            message=msg,
+            category="signup",
+            icon="fas fa-times-circle",
+            target_url="/dashboard/settings?tab=security"
+        )
+
+    msg_suffix = f" with reason: '{decline_reason}'" if decline_reason else ""
+    messages.info(request, f"Account deletion request for business '{profile.company_name or (profile.user.username if profile.user else profile_id)}' was declined{msg_suffix}. Account remains active.")
+    try:
+        from django.urls import reverse
+        inspect_url = reverse("businessprofile:inspect", args=[profile_id])
+        return redirect(inspect_url)
+    except Exception:
+        return redirect("/admin/businessprofile/")
+
 
 from io import BytesIO
 
@@ -1450,3 +1658,216 @@ def toggle_save_brand(request):
             return Response({"status": "saved", "brand_id": brand_id})
     except Exception as e:
         return Response({"error": str(e)}, status=400)
+
+
+class RequestCreatorDeletionView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        profile = getattr(user, "creator_profile", None)
+        if not profile:
+            return Response({"error": "Only creators can request creator account deletion."}, status=status.HTTP_403_FORBIDDEN)
+
+        reason = request.data.get("reason", "").strip()
+        from django.utils import timezone
+        profile.deletion_requested = True
+        profile.deletion_request_date = timezone.now()
+        profile.deletion_reason = reason
+        profile.save()
+
+        return Response({
+            "success": True,
+            "message": "Account deletion request submitted. Super Admin review is required to finalize deletion.",
+            "deletion_requested": True,
+            "deletion_request_date": profile.deletion_request_date.isoformat(),
+            "deletion_reason": profile.deletion_reason,
+        }, status=status.HTTP_200_OK)
+
+
+class CancelCreatorDeletionView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        profile = getattr(user, "creator_profile", None)
+        if not profile:
+            return Response({"error": "Only creators can cancel deletion request."}, status=status.HTTP_403_FORBIDDEN)
+
+        profile.deletion_requested = False
+        profile.deletion_request_date = None
+        profile.deletion_reason = ""
+        profile.save()
+
+        return Response({
+            "success": True,
+            "message": "Account deletion request has been cancelled.",
+            "deletion_requested": False,
+        }, status=status.HTTP_200_OK)
+
+
+class AdminHandleCreatorDeletionView(APIView):
+    permission_classes = [permissions.AllowAny]  # Admin endpoints in this app use token or staff check
+
+    def post(self, request):
+        creator_id = request.data.get("creator_id") or request.data.get("profile_id")
+        action = request.data.get("action")  # "accept" or "decline"
+
+        if not creator_id or not action:
+            return Response({"error": "creator_id and action ('accept' or 'decline') are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile = CreatorProfile.objects.filter(pk=creator_id).first() or CreatorProfile.objects.filter(user_id=creator_id).first()
+        if not profile:
+            return Response({"error": "Creator profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        decline_reason = request.data.get("decline_reason", "").strip() or request.data.get("message", "").strip()
+
+        if action == "accept":
+            username = profile.user.username if profile.user else f"ID {profile.id}"
+            user = profile.user
+            safely_delete_creator_user(user, profile)
+            return Response({
+                "success": True,
+                "message": f"Creator '{username}' account has been permanently deleted.",
+                "deleted": True
+            }, status=status.HTTP_200_OK)
+        elif action == "decline":
+            profile.deletion_requested = False
+            profile.deletion_request_date = None
+            profile.deletion_decline_reason = decline_reason
+            profile.save()
+
+            if profile.user:
+                from notifications.models import Notification
+                msg = f"Your account deletion request was declined by Super Admin. Reason: \"{decline_reason}\"" if decline_reason else "Your account deletion request was declined by Super Admin. Your account remains active."
+                Notification.objects.create(
+                    user=profile.user,
+                    target_role="creator",
+                    title="Account Deletion Request Declined",
+                    message=msg,
+                    category="signup",
+                    icon="fas fa-times-circle",
+                    target_url="/creator/settings?tab=security"
+                )
+
+            return Response({
+                "success": True,
+                "message": f"Account deletion request for creator '{profile.user.username if profile.user else profile.id}' has been declined.",
+                "deletion_requested": False,
+                "decline_reason": decline_reason
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Invalid action. Must be 'accept' or 'decline'."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RequestBusinessDeletionView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        profile = getattr(user, "business_profile", None)
+        if not profile:
+            return Response({"error": "Only businesses can request deletion through this endpoint."}, status=status.HTTP_403_FORBIDDEN)
+
+        reason = request.data.get("reason", "").strip()
+        from django.utils import timezone
+        profile.deletion_requested = True
+        profile.deletion_request_date = timezone.now()
+        profile.deletion_reason = reason
+        profile.deletion_decline_reason = None
+        profile.save()
+
+        from notifications.models import Notification
+        Notification.objects.create(
+            target_role="admin",
+            title="Business Requested Account Deletion",
+            message=f"Business '{profile.company_name or user.username}' ({user.email}) requested account deletion. Super Admin review is required.",
+            category="signup",
+            icon="fas fa-user-slash",
+            target_url=f"/admin/businessprofile/inspect/{profile.id}/"
+        )
+
+        return Response({
+            "success": True,
+            "message": "Account deletion request submitted. An administrator will review your request.",
+            "deletion_requested": True,
+            "deletion_request_date": profile.deletion_request_date.isoformat(),
+            "deletion_reason": profile.deletion_reason,
+        }, status=status.HTTP_200_OK)
+
+
+class CancelBusinessDeletionView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        profile = getattr(user, "business_profile", None)
+        if not profile:
+            return Response({"error": "Only businesses can cancel deletion request."}, status=status.HTTP_403_FORBIDDEN)
+
+        profile.deletion_requested = False
+        profile.deletion_request_date = None
+        profile.deletion_reason = ""
+        profile.save()
+
+        return Response({
+            "success": True,
+            "message": "Account deletion request has been cancelled.",
+            "deletion_requested": False,
+        }, status=status.HTTP_200_OK)
+
+
+class AdminHandleBusinessDeletionView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        business_id = request.data.get("business_id") or request.data.get("profile_id")
+        action = request.data.get("action")  # "accept" or "decline"
+
+        if not business_id or not action:
+            return Response({"error": "business_id and action ('accept' or 'decline') are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile = BusinessProfile.objects.filter(pk=business_id).first() or BusinessProfile.objects.filter(user_id=business_id).first()
+        if not profile:
+            return Response({"error": "Business profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        decline_reason = request.data.get("decline_reason", "").strip() or request.data.get("message", "").strip()
+
+        if action == "accept":
+            username = profile.company_name or (profile.user.username if profile.user else f"ID {profile.id}")
+            user = profile.user
+            safely_delete_business_user(user, profile)
+            return Response({
+                "success": True,
+                "message": f"Business '{username}' account has been permanently deleted.",
+                "deleted": True
+            }, status=status.HTTP_200_OK)
+        elif action == "decline":
+            profile.deletion_requested = False
+            profile.deletion_request_date = None
+            profile.deletion_decline_reason = decline_reason
+            profile.save()
+
+            if profile.user:
+                from notifications.models import Notification
+                msg = f"Your account deletion request was declined by Super Admin. Reason: \"{decline_reason}\"" if decline_reason else "Your account deletion request was declined by Super Admin. Your account remains active."
+                Notification.objects.create(
+                    user=profile.user,
+                    target_role="business",
+                    title="Account Deletion Request Declined",
+                    message=msg,
+                    category="signup",
+                    icon="fas fa-times-circle",
+                    target_url="/dashboard/settings?tab=security"
+                )
+
+            return Response({
+                "success": True,
+                "message": f"Account deletion request for business '{profile.company_name or (profile.user.username if profile.user else profile.id)}' has been declined.",
+                "deletion_requested": False,
+                "decline_reason": decline_reason
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Invalid action. Must be 'accept' or 'decline'."}, status=status.HTTP_400_BAD_REQUEST)
+
+

@@ -111,7 +111,9 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
         "OPTIONS": {
-            "timeout": 30,
+            "timeout": 60,
+            "transaction_mode": "IMMEDIATE",
+            "init_command": "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=60000; PRAGMA synchronous=NORMAL;",
         },
     }
 }
@@ -185,6 +187,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 10_000
 # Wagtail settings
 
 WAGTAIL_SITE_NAME = "backend"
+WAGTAIL_AUTO_UPDATE_REFERENCE_INDEX = False
 
 # Search
 # https://docs.wagtail.org/en/stable/topics/search/backends.html

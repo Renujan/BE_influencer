@@ -44,7 +44,7 @@ def propose_final_price(request):
 
     target_status = 'pending_business_approval' if is_creator_role else 'pending_creator_approval'
 
-    negotiation = WorkspacePaymentNegotiation.objects.filter(campaign=campaign).first()
+    negotiation = WorkspacePaymentNegotiation.objects.filter(campaign=campaign).order_by('-id').first()
     if not negotiation:
         negotiation = WorkspacePaymentNegotiation(
             campaign=campaign,
@@ -61,8 +61,79 @@ def propose_final_price(request):
 
     negotiation.save()
 
-    serializer = WorkspacePaymentNegotiationSerializer(negotiation)
+    serializer = WorkspacePaymentNegotiationSerializer(negotiation, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def business_action(request):
+    campaign_id = request.data.get('campaign_id')
+    action = request.data.get('action') # 'accept' or 'revise'
+    revision_reason = request.data.get('revision_reason', '')
+
+    if not campaign_id or action not in ['accept', 'revise']:
+        return Response({'error': 'campaign_id and valid action (accept or revise) are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign_id=campaign_id).order_by('-id').first()
+        if not negotiation:
+            from campegin.models import Campaign
+            campaign = Campaign.objects.filter(id=campaign_id).first()
+            if not campaign:
+                return Response({'error': 'No payment negotiation found for this campaign.'}, status=status.HTTP_404_NOT_FOUND)
+            negotiation = WorkspacePaymentNegotiation.objects.create(
+                campaign=campaign,
+                final_price=campaign.budget or campaign.counter_price or None,
+                status='creator_accepted' if action == 'accept' else 'pending_creator_approval'
+            )
+
+        if action == 'accept':
+            negotiation.status = 'creator_accepted'
+            negotiation.revision_reason = None
+            campaign = negotiation.campaign
+            if campaign and negotiation.final_price is not None:
+                campaign.budget = negotiation.final_price
+                campaign.counter_price = negotiation.final_price
+                campaign.save()
+        elif action == 'revise':
+            requested_price = request.data.get('requested_price') or request.data.get('price') or request.data.get('final_price')
+            if requested_price is not None:
+                try:
+                    p_val = float(str(requested_price).replace(',', '').replace('$', '').replace('Rs', '').strip())
+                    if p_val > 0:
+                        camp = getattr(negotiation, 'campaign', None)
+                        if camp:
+                            min_b = float(getattr(camp, 'min_budget', None) or getattr(camp, 'min_price', None) or 10000)
+                            max_b = float(getattr(camp, 'max_budget', None) or getattr(camp, 'max_price', None) or 50000)
+                            c_min = float(getattr(camp, 'creator_min_price', None) or getattr(camp, 'min_price', None) or 20000)
+                            c_max = float(getattr(camp, 'creator_max_price', None) or getattr(camp, 'max_price', None) or 49000)
+                            overall_min = min(min_b, c_min)
+                            overall_max = max(max_b, c_max)
+
+                            if p_val < overall_min or p_val > overall_max:
+                                return Response({
+                                    'error': f'Proposed price ({p_val:,.0f}) must be within the overall allowed range ({overall_min:,.0f} - {overall_max:,.0f}).'
+                                }, status=status.HTTP_400_BAD_REQUEST)
+
+                        negotiation.final_price = p_val
+                except ValueError:
+                    pass
+                except Exception:
+                    pass
+            negotiation.status = 'pending_creator_approval'
+            if revision_reason:
+                negotiation.revision_reason = str(revision_reason).strip()
+
+        if request.user and request.user.is_authenticated:
+            negotiation.action_by = request.user
+
+        negotiation.save()
+
+        serializer = WorkspacePaymentNegotiationSerializer(negotiation, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
@@ -76,55 +147,81 @@ def creator_action(request):
         return Response({'error': 'campaign_id and valid action (accept or revise) are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        negotiation = WorkspacePaymentNegotiation.objects.get(campaign_id=campaign_id)
-    except WorkspacePaymentNegotiation.DoesNotExist:
-        return Response({'error': 'No payment negotiation found for this campaign.'}, status=status.HTTP_404_NOT_FOUND)
+        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign_id=campaign_id).order_by('-id').first()
+        if not negotiation:
+            from campegin.models import Campaign
+            campaign = Campaign.objects.filter(id=campaign_id).first()
+            if not campaign:
+                return Response({'error': 'No payment negotiation found for this campaign.'}, status=status.HTTP_404_NOT_FOUND)
+            negotiation = WorkspacePaymentNegotiation.objects.create(
+                campaign=campaign,
+                final_price=campaign.budget or campaign.counter_price or None,
+                status='revision_requested' if action == 'revise' else 'creator_accepted'
+            )
 
-    if action == 'accept':
-        negotiation.status = 'creator_accepted'
-        negotiation.revision_reason = None
-        # Sync campaign budget and counter_price with accepted final_price
-        campaign = negotiation.campaign
-        campaign.budget = negotiation.final_price
-        campaign.counter_price = negotiation.final_price
-        campaign.save()
-    elif action == 'revise':
-        if not revision_reason or not str(revision_reason).strip():
-            return Response({'error': 'A reason is required when requesting a revision.'}, status=status.HTTP_400_BAD_REQUEST)
-        negotiation.status = 'revision_requested'
-        
-        reason_str = str(revision_reason).strip()
-        requested_price = request.data.get('requested_price') or request.data.get('price')
-        if requested_price and not reason_str.startswith('Requested Price:'):
-            try:
-                p_val = float(str(requested_price).replace(',', '').replace('$', '').replace('Rs', '').strip())
-                if p_val > 0:
-                    min_b = float(getattr(negotiation.campaign, 'min_budget', None) or getattr(negotiation.campaign, 'min_price', None) or 10000)
-                    max_b = float(getattr(negotiation.campaign, 'max_budget', None) or getattr(negotiation.campaign, 'max_price', None) or 50000)
-                    c_min = float(getattr(negotiation.campaign, 'creator_min_price', None) or getattr(negotiation.campaign, 'min_price', None) or 20000)
-                    c_max = float(getattr(negotiation.campaign, 'creator_max_price', None) or getattr(negotiation.campaign, 'max_price', None) or 49000)
-                    overall_min = min(min_b, c_min)
-                    overall_max = max(max_b, c_max)
+        if action == 'accept':
+            negotiation.status = 'creator_accepted'
+            negotiation.revision_reason = None
+            # Sync campaign budget and counter_price with accepted final_price
+            campaign = negotiation.campaign
+            if campaign and negotiation.final_price is not None:
+                campaign.budget = negotiation.final_price
+                campaign.counter_price = negotiation.final_price
+                campaign.save()
+        elif action == 'revise':
+            if not revision_reason or not str(revision_reason).strip():
+                return Response({'error': 'A reason is required when requesting a revision.'}, status=status.HTTP_400_BAD_REQUEST)
+            negotiation.status = 'revision_requested'
+            
+            reason_str = str(revision_reason).strip()
+            requested_price = request.data.get('requested_price') or request.data.get('price')
+            
+            if requested_price is None and "Requested Price:" in reason_str:
+                try:
+                    import re
+                    match = re.search(r'Requested Price:\s*[\$Rs]*([\d,]+(?:\.\d+)?)', reason_str)
+                    if match:
+                        requested_price = match.group(1)
+                except Exception:
+                    pass
 
-                    if p_val < overall_min or p_val > overall_max:
-                        return Response({
-                            'error': f'Requested price ({p_val:,.0f}) must be within the overall allowed range ({overall_min:,.0f} - {overall_max:,.0f}).'
-                        }, status=status.HTTP_400_BAD_REQUEST)
+            if requested_price is not None:
+                try:
+                    p_val = float(str(requested_price).replace(',', '').replace('$', '').replace('Rs', '').strip())
+                    if p_val > 0:
+                        camp = getattr(negotiation, 'campaign', None)
+                        if camp:
+                            min_b = float(getattr(camp, 'min_budget', None) or getattr(camp, 'min_price', None) or 10000)
+                            max_b = float(getattr(camp, 'max_budget', None) or getattr(camp, 'max_price', None) or 50000)
+                            c_min = float(getattr(camp, 'creator_min_price', None) or getattr(camp, 'min_price', None) or 20000)
+                            c_max = float(getattr(camp, 'creator_max_price', None) or getattr(camp, 'max_price', None) or 49000)
+                            overall_min = min(min_b, c_min)
+                            overall_max = max(max_b, c_max)
 
-                    reason_str = f"Requested Price: ${p_val:,.2f} — Reason: {reason_str}"
-                    negotiation.final_price = p_val
-            except Exception:
-                pass
-                
-        negotiation.revision_reason = reason_str
+                            if p_val < overall_min or p_val > overall_max:
+                                return Response({
+                                    'error': f'Requested price ({p_val:,.0f}) must be within the overall allowed range ({overall_min:,.0f} - {overall_max:,.0f}).'
+                                }, status=status.HTTP_400_BAD_REQUEST)
 
-    if request.user and request.user.is_authenticated:
-        negotiation.action_by = request.user
+                        if not reason_str.startswith('Requested Price:'):
+                            reason_str = f"Requested Price: ${p_val:,.2f} — Reason: {reason_str}"
+                        negotiation.final_price = p_val
+                except ValueError:
+                    pass
+                except Exception:
+                    pass
+                    
+            negotiation.revision_reason = reason_str
 
-    negotiation.save()
+        if request.user and request.user.is_authenticated:
+            negotiation.action_by = request.user
 
-    serializer = WorkspacePaymentNegotiationSerializer(negotiation)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+        negotiation.save()
+
+        serializer = WorkspacePaymentNegotiationSerializer(negotiation, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -133,7 +230,7 @@ def get_negotiation(request, campaign_id):
     try:
         from campegin.models import Campaign
         campaign = Campaign.objects.filter(id=campaign_id).first()
-        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign_id=campaign_id).first()
+        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign_id=campaign_id).order_by('-id').first()
         
         created_via = str(campaign.created_via or '').lower().strip() if campaign else ''
 
@@ -166,7 +263,7 @@ def get_negotiation(request, campaign_id):
                     status='creator_accepted'
                 )
             else:
-                if last_price and negotiation.final_price != float(last_price):
+                if last_price and negotiation.status not in ['revision_requested', 'pending_creator_approval', 'pending_business_approval'] and negotiation.final_price != float(last_price):
                     negotiation.final_price = float(last_price)
                     negotiation.status = 'creator_accepted'
                     negotiation.save(update_fields=['final_price', 'status'])
@@ -186,7 +283,7 @@ def get_negotiation(request, campaign_id):
         if not negotiation:
             return Response({'error': 'No payment negotiation found for this campaign.'}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = WorkspacePaymentNegotiationSerializer(negotiation)
+        serializer = WorkspacePaymentNegotiationSerializer(negotiation, context={'request': request})
         return Response(serializer.data)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -196,7 +293,7 @@ def get_negotiation(request, campaign_id):
 @permission_classes([AllowAny])
 def list_all_negotiations(request):
     negotiations = WorkspacePaymentNegotiation.objects.all().order_by('-updated_at')
-    serializer = WorkspacePaymentNegotiationSerializer(negotiations, many=True)
+    serializer = WorkspacePaymentNegotiationSerializer(negotiations, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -210,7 +307,7 @@ def admin_approve_negotiation(request):
     if negotiation_id:
         negotiation = WorkspacePaymentNegotiation.objects.filter(id=negotiation_id).first()
     elif campaign_id:
-        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign_id=campaign_id).first()
+        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign_id=campaign_id).order_by('-id').first()
 
     if not negotiation:
         return Response({'error': 'Payment negotiation entry not found.'}, status=status.HTTP_404_NOT_FOUND)
@@ -220,7 +317,7 @@ def admin_approve_negotiation(request):
         negotiation.action_by = request.user
     negotiation.save()
 
-    serializer = WorkspacePaymentNegotiationSerializer(negotiation)
+    serializer = WorkspacePaymentNegotiationSerializer(negotiation, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -237,7 +334,7 @@ def update_platform_charge(request):
     if negotiation_id:
         negotiation = WorkspacePaymentNegotiation.objects.filter(id=negotiation_id).first()
     elif campaign_id:
-        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign_id=campaign_id).first()
+        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign_id=campaign_id).order_by('-id').first()
 
     if not negotiation:
         return Response({'error': 'Payment negotiation entry not found.'}, status=status.HTTP_404_NOT_FOUND)

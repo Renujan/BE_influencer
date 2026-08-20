@@ -131,26 +131,31 @@ def create_campaign_notification(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=Campaign)
 def create_campaign_delete_notification(sender, instance, **kwargs):
-    if instance.brand:
-        Notification.objects.create(
-            user=instance.brand,
-            target_role="business",
-            title="Campaign Deleted",
-            message=f"Campaign '{instance.name}' was removed.",
-            category="campaign",
-            icon="fas fa-trash",
-            target_url="/dashboard/campaigns"
-        )
-    if instance.creator:
-        Notification.objects.create(
-            user=instance.creator,
-            target_role="creator",
-            title="Campaign Deleted",
-            message=f"Campaign '{instance.name}' was removed.",
-            category="campaign",
-            icon="fas fa-trash",
-            target_url="/creator/campaigns"
-        )
+    try:
+        if getattr(instance, '_skip_signal', False):
+            return
+        if instance.brand and not getattr(instance.brand, '_is_being_deleted', False):
+            Notification.objects.create(
+                user=instance.brand,
+                target_role="business",
+                title="Campaign Deleted",
+                message=f"Campaign '{instance.name}' was removed.",
+                category="campaign",
+                icon="fas fa-trash",
+                target_url="/dashboard/campaigns"
+            )
+        if instance.creator and not getattr(instance.creator, '_is_being_deleted', False):
+            Notification.objects.create(
+                user=instance.creator,
+                target_role="creator",
+                title="Campaign Deleted",
+                message=f"Campaign '{instance.name}' was removed.",
+                category="campaign",
+                icon="fas fa-trash",
+                target_url="/creator/campaigns"
+            )
+    except Exception:
+        pass
 
 # --- Pitch Signals ---
 @receiver(pre_save, sender=Pitch)
@@ -239,18 +244,23 @@ def create_pitch_notification(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=Pitch)
 def create_pitch_delete_notification(sender, instance, **kwargs):
-    camp_name = getattr(instance, 'campaign_name', '') or "Campaign"
-    creator_user = getattr(instance, 'creator', None)
-    if creator_user:
-        Notification.objects.create(
-            user=creator_user,
-            target_role="creator",
-            title="Pitch Withdrawn",
-            message=f"Pitch for '{camp_name}' was removed.",
-            category="campaign",
-            icon="fas fa-trash",
-            target_url="/creator/pitches"
-        )
+    try:
+        if getattr(instance, '_skip_signal', False):
+            return
+        camp_name = getattr(instance, 'campaign_name', '') or "Campaign"
+        creator_user = getattr(instance, 'creator', None)
+        if creator_user and not getattr(creator_user, '_is_being_deleted', False):
+            Notification.objects.create(
+                user=creator_user,
+                target_role="creator",
+                title="Pitch Withdrawn",
+                message=f"Pitch for '{camp_name}' was removed.",
+                category="campaign",
+                icon="fas fa-trash",
+                target_url="/creator/pitches"
+            )
+    except Exception:
+        pass
 
 # --- Workspace Chat Signals ---
 @receiver(post_save, sender=WorkspaceMessage)
@@ -452,15 +462,22 @@ def create_portfolio_notification(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=PortfolioItem)
 def create_portfolio_delete_notification(sender, instance, **kwargs):
-    Notification.objects.create(
-        user=instance.creator,
-        target_role="creator",
-        title="Portfolio Item Deleted",
-        message=f"Portfolio item '{instance.title}' was deleted.",
-        category="signup",
-        icon="fas fa-trash",
-        target_url="/creator/portfolio"
-    )
+    try:
+        if getattr(instance, '_skip_signal', False):
+            return
+        creator_user = getattr(instance, 'creator', None)
+        if creator_user and not getattr(creator_user, '_is_being_deleted', False):
+            Notification.objects.create(
+                user=creator_user,
+                target_role="creator",
+                title="Portfolio Item Deleted",
+                message=f"Portfolio item '{instance.title}' was deleted.",
+                category="signup",
+                icon="fas fa-trash",
+                target_url="/creator/portfolio"
+            )
+    except Exception:
+        pass
 
 # --- Business Service Request Signals ---
 from business_service.models import BusinessServiceRequest

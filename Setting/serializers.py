@@ -73,6 +73,10 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
         rep["rates"] = CreatorRateSerializer(instance.rates.all(), many=True).data
         # Representation of payout methods
         rep["payout_methods"] = CreatorPayoutMethodSerializer(instance.payout_methods.all(), many=True).data
+        rep["deletion_requested"] = instance.deletion_requested
+        rep["deletion_request_date"] = instance.deletion_request_date.isoformat() if instance.deletion_request_date else None
+        rep["deletion_reason"] = instance.deletion_reason
+        rep["deletion_decline_reason"] = instance.deletion_decline_reason
         return rep
 
     def validate(self, attrs):
@@ -242,8 +246,8 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
                     sa_obj.is_connected = bool(acc_item["is_connected"])
                 elif "connected" in acc_item:
                     sa_obj.is_connected = bool(acc_item["connected"])
-                if "is_verified" in acc_item:
-                    sa_obj.is_verified = bool(acc_item["is_verified"])
+                if not sa_obj.is_connected:
+                    sa_obj.is_verified = False
                 sa_obj.save()
                 
         return instance
@@ -304,6 +308,10 @@ class BusinessFullSettingsSerializer(serializers.Serializer):
             rep["district"] = instance.district.name
             
         rep["mediums"] = [m.name for m in instance.mediums.all()]
+        rep["deletion_requested"] = instance.deletion_requested
+        rep["deletion_request_date"] = instance.deletion_request_date.isoformat() if instance.deletion_request_date else None
+        rep["deletion_reason"] = instance.deletion_reason
+        rep["deletion_decline_reason"] = instance.deletion_decline_reason
         return rep
 
     def validate(self, attrs):

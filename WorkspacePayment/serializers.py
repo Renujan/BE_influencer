@@ -184,7 +184,7 @@ class WorkspacePaymentNegotiationSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         camp = instance.campaign
-        if camp:
+        if camp and instance.status not in ["revision_requested", "pending_creator_approval", "pending_business_approval"]:
             created_via = str(getattr(camp, "created_via", "") or "").lower().strip()
             if created_via == "pitch" or getattr(camp, "is_pitch", False):
                 from campegin.models import Pitch
@@ -210,7 +210,7 @@ class WorkspacePaymentNegotiationSerializer(serializers.ModelSerializer):
                 if resolved_price:
                     try:
                         resolved_float = float(resolved_price)
-                        if instance.final_price != resolved_float:
+                        if instance.final_price != resolved_float and instance.status != "revision_requested":
                             instance.final_price = resolved_float
                             instance.status = "creator_accepted"
                             instance.save(update_fields=["final_price", "status"])

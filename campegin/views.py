@@ -19,6 +19,7 @@ from .serializers import (
 )
 from notifications.models import Notification
 from chat_monitor.models import ChatReview
+from user.permissions import IsApprovedBusiness
 
 def build_campaign_pdf_context(campaign):
     from WorkspacePayment.models import WorkspaceInstallment, WorkspacePaymentNegotiation
@@ -187,11 +188,34 @@ class CampaignViewSet(viewsets.ModelViewSet):
         return qs.distinct()
 
     def create(self, request, *args, **kwargs):
-        data = request.data.copy()
-        # Remove file objects so CharField serialization does not throw errors
-        for field in ["voice_brief", "screenshare_brief", "video_brief"]:
-            if field in data and not isinstance(data[field], str):
-                data.pop(field)
+        # Extract data without using request.data.copy() to avoid pickling BufferedRandom uploaded files
+        data = {}
+        if hasattr(request.data, "lists"):
+            for key, val_list in request.data.lists():
+                if key in ["voice_brief", "screenshare_brief", "video_brief"]:
+                    val = val_list[-1] if val_list else None
+                    if isinstance(val, str):
+                        data[key] = val
+                elif len(val_list) == 1:
+                    data[key] = val_list[0]
+                else:
+                    data[key] = val_list
+        elif isinstance(request.data, dict):
+            for key, val in request.data.items():
+                if key in ["voice_brief", "screenshare_brief", "video_brief"]:
+                    if isinstance(val, str):
+                        data[key] = val
+                else:
+                    data[key] = val
+        else:
+            for key in request.data:
+                val = request.data.get(key)
+                if key in ["voice_brief", "screenshare_brief", "video_brief"]:
+                    if isinstance(val, str):
+                        data[key] = val
+                else:
+                    data[key] = val
+
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -208,11 +232,35 @@ class CampaignViewSet(viewsets.ModelViewSet):
                     {"detail": "Only pending campaigns can be edited."},
                     status=status.HTTP_403_FORBIDDEN
                 )
-        data = request.data.copy()
-        # Remove file objects so CharField serialization does not throw errors
-        for field in ["voice_brief", "screenshare_brief", "video_brief"]:
-            if field in data and not isinstance(data[field], str):
-                data.pop(field)
+
+        # Extract data without using request.data.copy() to avoid pickling BufferedRandom uploaded files
+        data = {}
+        if hasattr(request.data, "lists"):
+            for key, val_list in request.data.lists():
+                if key in ["voice_brief", "screenshare_brief", "video_brief"]:
+                    val = val_list[-1] if val_list else None
+                    if isinstance(val, str):
+                        data[key] = val
+                elif len(val_list) == 1:
+                    data[key] = val_list[0]
+                else:
+                    data[key] = val_list
+        elif isinstance(request.data, dict):
+            for key, val in request.data.items():
+                if key in ["voice_brief", "screenshare_brief", "video_brief"]:
+                    if isinstance(val, str):
+                        data[key] = val
+                else:
+                    data[key] = val
+        else:
+            for key in request.data:
+                val = request.data.get(key)
+                if key in ["voice_brief", "screenshare_brief", "video_brief"]:
+                    if isinstance(val, str):
+                        data[key] = val
+                else:
+                    data[key] = val
+
         medium_val = data.get("medium") or data.get("platform") or data.get("target_platform")
         if medium_val:
             data["medium"] = medium_val
@@ -253,16 +301,22 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if voice_file:
             path = default_storage.save(os.path.join('campaign_briefs', voice_file.name), voice_file)
             voice_brief_path = default_storage.url(path)
+        elif self.request.data.get("voice_brief") and isinstance(self.request.data.get("voice_brief"), str):
+            voice_brief_path = self.request.data.get("voice_brief")
 
         screenshare_brief_path = ""
         if screenshare_file:
             path = default_storage.save(os.path.join('campaign_briefs', screenshare_file.name), screenshare_file)
             screenshare_brief_path = default_storage.url(path)
+        elif self.request.data.get("screenshare_brief") and isinstance(self.request.data.get("screenshare_brief"), str):
+            screenshare_brief_path = self.request.data.get("screenshare_brief")
 
         video_brief_path = ""
         if video_file:
             path = default_storage.save(os.path.join('campaign_briefs', video_file.name), video_file)
             video_brief_path = default_storage.url(path)
+        elif self.request.data.get("video_brief") and isinstance(self.request.data.get("video_brief"), str):
+            video_brief_path = self.request.data.get("video_brief")
 
         start_date = serializer.validated_data.get("start_date") or self.request.data.get("start_date")
         from datetime import datetime
@@ -337,12 +391,20 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if voice_file:
             path = default_storage.save(os.path.join('campaign_briefs', voice_file.name), voice_file)
             kwargs["voice_brief"] = default_storage.url(path)
+        elif self.request.data.get("voice_brief") and isinstance(self.request.data.get("voice_brief"), str):
+            kwargs["voice_brief"] = self.request.data.get("voice_brief")
+
         if screenshare_file:
             path = default_storage.save(os.path.join('campaign_briefs', screenshare_file.name), screenshare_file)
             kwargs["screenshare_brief"] = default_storage.url(path)
+        elif self.request.data.get("screenshare_brief") and isinstance(self.request.data.get("screenshare_brief"), str):
+            kwargs["screenshare_brief"] = self.request.data.get("screenshare_brief")
+
         if video_file:
             path = default_storage.save(os.path.join('campaign_briefs', video_file.name), video_file)
             kwargs["video_brief"] = default_storage.url(path)
+        elif self.request.data.get("video_brief") and isinstance(self.request.data.get("video_brief"), str):
+            kwargs["video_brief"] = self.request.data.get("video_brief")
 
         campaign = serializer.save(**kwargs)
 
@@ -757,6 +819,34 @@ class CampaignViewSet(viewsets.ModelViewSet):
         campaign = self.get_object()
         counter_price = request.data.get("price")
         counter_note = request.data.get("note")
+
+        if counter_price is not None:
+            try:
+                c_price = float(counter_price)
+                if c_price <= 0:
+                    return Response({"error": "Counter price must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
+
+                cat_min = float(campaign.min_price or campaign.min_budget or 0)
+                cat_max = float(campaign.max_price or campaign.max_budget or campaign.per_creator_budget or 0)
+
+                cat_query = campaign.category
+                if cat_query:
+                    matched_category = CampaignCategory.objects.filter(
+                        models.Q(name__iexact=cat_query) | models.Q(type__iexact=cat_query)
+                    ).first()
+                    if matched_category:
+                        if matched_category.min_price and float(matched_category.min_price) > 0:
+                            cat_min = float(matched_category.min_price)
+                        if matched_category.max_price and float(matched_category.max_price) > 0:
+                            cat_max = float(matched_category.max_price)
+
+                if cat_min > 0 and c_price < cat_min:
+                    return Response({"error": f"Counter price cannot be less than minimum allowed price of {cat_min}."}, status=status.HTTP_400_BAD_REQUEST)
+                if cat_max > 0 and c_price > cat_max:
+                    return Response({"error": f"Counter price cannot exceed maximum allowed price of {cat_max}."}, status=status.HTTP_400_BAD_REQUEST)
+            except ValueError:
+                return Response({"error": "Invalid counter price provided."}, status=status.HTTP_400_BAD_REQUEST)
+
         campaign.counter_price = counter_price
         campaign.counter_note = counter_note
         campaign.status = "Business_Countered"
@@ -878,6 +968,34 @@ class RequestViewSet(viewsets.ModelViewSet):
             return Response({"error": "Maximum counter offer rounds reached."}, status=status.HTTP_400_BAD_REQUEST)
         counter_price = request.data.get("price")
         counter_note = request.data.get("note")
+
+        if counter_price is not None:
+            try:
+                c_price = float(counter_price)
+                if c_price <= 0:
+                    return Response({"error": "Counter price must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
+
+                cat_min = float(campaign.min_price or campaign.min_budget or 0)
+                cat_max = float(campaign.max_price or campaign.max_budget or campaign.per_creator_budget or 0)
+
+                cat_query = campaign.category
+                if cat_query:
+                    matched_category = CampaignCategory.objects.filter(
+                        models.Q(name__iexact=cat_query) | models.Q(type__iexact=cat_query)
+                    ).first()
+                    if matched_category:
+                        if matched_category.min_price and float(matched_category.min_price) > 0:
+                            cat_min = float(matched_category.min_price)
+                        if matched_category.max_price and float(matched_category.max_price) > 0:
+                            cat_max = float(matched_category.max_price)
+
+                if cat_min > 0 and c_price < cat_min:
+                    return Response({"error": f"Counter price cannot be less than minimum allowed price of {cat_min}."}, status=status.HTTP_400_BAD_REQUEST)
+                if cat_max > 0 and c_price > cat_max:
+                    return Response({"error": f"Counter price cannot exceed maximum allowed price of {cat_max}."}, status=status.HTTP_400_BAD_REQUEST)
+            except ValueError:
+                return Response({"error": "Invalid counter price provided."}, status=status.HTTP_400_BAD_REQUEST)
+
         campaign.counter_price = counter_price
         campaign.counter_note = counter_note
         campaign.counter_round = (campaign.counter_round or 0) + 1
@@ -959,6 +1077,34 @@ class RequestViewSet(viewsets.ModelViewSet):
         campaign = self.get_object()
         counter_price = request.data.get("price")
         counter_note = request.data.get("note")
+
+        if counter_price is not None:
+            try:
+                c_price = float(counter_price)
+                if c_price <= 0:
+                    return Response({"error": "Counter price must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
+
+                cat_min = float(campaign.min_price or campaign.min_budget or 0)
+                cat_max = float(campaign.max_price or campaign.max_budget or campaign.per_creator_budget or 0)
+
+                cat_query = campaign.category
+                if cat_query:
+                    matched_category = CampaignCategory.objects.filter(
+                        models.Q(name__iexact=cat_query) | models.Q(type__iexact=cat_query)
+                    ).first()
+                    if matched_category:
+                        if matched_category.min_price and float(matched_category.min_price) > 0:
+                            cat_min = float(matched_category.min_price)
+                        if matched_category.max_price and float(matched_category.max_price) > 0:
+                            cat_max = float(matched_category.max_price)
+
+                if cat_min > 0 and c_price < cat_min:
+                    return Response({"error": f"Counter price cannot be less than minimum allowed price of {cat_min}."}, status=status.HTTP_400_BAD_REQUEST)
+                if cat_max > 0 and c_price > cat_max:
+                    return Response({"error": f"Counter price cannot exceed maximum allowed price of {cat_max}."}, status=status.HTTP_400_BAD_REQUEST)
+            except ValueError:
+                return Response({"error": "Invalid counter price provided."}, status=status.HTTP_400_BAD_REQUEST)
+
         campaign.counter_price = counter_price
         campaign.counter_note = counter_note
         campaign.status = "Business_Countered"
@@ -1201,8 +1347,21 @@ class BusinessAnalyticsView(APIView):
             except Exception:
                 pass
 
-            # Only add to total_allocated_budget if final price was decided in workspace!
-            if price is not None:
+            if price is None:
+                c_via = str(getattr(c, 'created_via', '') or '').lower().strip()
+                if not c_via and getattr(c, 'creator', None):
+                    c_via = 'direct_request'
+                is_direct = ('direct' in c_via) and ('pitch' not in c_via) and ('request' not in c_via)
+                if not is_direct:
+                    st = str(c.status or '').lower().strip()
+                    if st in ['live', 'active', 'completed', 'finished', 'done']:
+                        if c.counter_price and float(c.counter_price) > 0:
+                            price = float(c.counter_price)
+                        elif c.budget and float(c.budget) > 0:
+                            price = float(c.budget)
+
+            # Only add to total_allocated_budget if final price was decided!
+            if price is not None and price > 0:
                 total_allocated_budget += price
 
             # Calculate duration for each campaign
@@ -1302,20 +1461,22 @@ class BusinessAnalyticsView(APIView):
                 # 1. Target / Max Budget: max_budget if present and > 0, else budget
                 t_budget = float(c.max_budget if (c.max_budget and float(c.max_budget) > 0) else (c.budget or 0))
 
-                # 2. Final Committed Price (Purple Bar): Pull directly from WorkspacePaymentNegotiation final_price
+                # 2. Final Committed Price (Purple Bar): Pull directly from WorkspacePaymentNegotiation final_price or counter offer
                 neg = WorkspacePaymentNegotiation.objects.filter(campaign=c).order_by('-id').first()
                 f_price = 0.0
                 if neg and neg.final_price and float(neg.final_price) > 0:
                     f_price = float(neg.final_price)
 
-                # Fallback to Pitch counter_offer if final_price is not set
                 if f_price == 0.0:
-                    pitch = Pitch.objects.filter(counter_offer__isnull=False).first()
-                    if pitch and pitch.counter_offer and float(pitch.counter_offer) > 0:
-                        f_price = float(pitch.counter_offer)
-
-                if f_price == 0.0:
-                    f_price = float(c.budget or 0)
+                    c_via = str(getattr(c, 'created_via', '') or '').lower().strip()
+                    if not c_via and getattr(c, 'creator', None):
+                        c_via = 'direct_request'
+                    is_direct = ('direct' in c_via) and ('pitch' not in c_via) and ('request' not in c_via)
+                    if not is_direct:
+                        if c.counter_price and float(c.counter_price) > 0:
+                            f_price = float(c.counter_price)
+                        elif c.budget and float(c.budget) > 0:
+                            f_price = float(c.budget)
 
                 # 3. Actual Spend / Funds Released (Green Bar): Sum paid business installments + paid business platform fee
                 f_released = 0.0

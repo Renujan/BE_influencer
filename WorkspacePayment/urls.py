@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path('propose-final-price/', views.propose_final_price, name='propose-final-price'),
     path('creator-action/', views.creator_action, name='creator-action'),
+    path('business-action/', views.business_action, name='business-action'),
     path('negotiation/<int:campaign_id>/', views.get_negotiation, name='get-negotiation'),
     path('all-negotiations/', views.list_all_negotiations, name='list-all-negotiations'),
     path('admin-approve/', views.admin_approve_negotiation, name='admin-approve-negotiation'),

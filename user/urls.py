@@ -3,7 +3,9 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     SendOTPView, VerifyOTPView, RegisterView, LoginView, GoogleLoginView, MeView,
     NicheViewSet, BusinessTypeViewSet, CountryViewSet, MediumViewSet, CreatorViewSet, BusinessViewSet, PendingUsersView, ApproveUserView, RestrictUserView,
-    SubmitVerificationView, CreatorSubmitVerificationView, WithdrawFundsView, toggle_save_brand
+    SubmitVerificationView, CreatorSubmitVerificationView, WithdrawFundsView, toggle_save_brand,
+    RequestCreatorDeletionView, CancelCreatorDeletionView, AdminHandleCreatorDeletionView,
+    RequestBusinessDeletionView, CancelBusinessDeletionView, AdminHandleBusinessDeletionView
 )
 from .geo_views import external_countries, currency, states, cities
 
@@ -27,6 +29,16 @@ urlpatterns = [
     path("auth/business/submit-verification/", SubmitVerificationView.as_view(), name="submit_verification"),
     path("auth/creator/submit-verification/", CreatorSubmitVerificationView.as_view(), name="creator_submit_verification"),
     path("auth/withdraw/", WithdrawFundsView.as_view(), name="withdraw"),
+
+    # Creator Account Deletion Request endpoints
+    path("creator/request-deletion/", RequestCreatorDeletionView.as_view(), name="creator_request_deletion"),
+    path("creator/cancel-deletion/", CancelCreatorDeletionView.as_view(), name="creator_cancel_deletion"),
+    path("admin/handle-creator-deletion/", AdminHandleCreatorDeletionView.as_view(), name="admin_handle_creator_deletion"),
+
+    # Business Account Deletion Request endpoints
+    path("business/request-deletion/", RequestBusinessDeletionView.as_view(), name="business_request_deletion"),
+    path("business/cancel-deletion/", CancelBusinessDeletionView.as_view(), name="business_cancel_deletion"),
+    path("admin/handle-business-deletion/", AdminHandleBusinessDeletionView.as_view(), name="admin_handle_business_deletion"),
 
     # Geo Proxy endpoints
     path("geo/countries/", external_countries, name="external_countries"),

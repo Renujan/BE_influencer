@@ -208,17 +208,12 @@ class CampaignSerializer(serializers.ModelSerializer):
                 data["budget"] = str(instance.counter_price)
         return data
 
-    platform = serializers.SerializerMethodField()
-
-    def get_platform(self, obj):
-        return obj.medium or ""
-
     class Meta:
         model = Campaign
         fields = [
             "id", "name", "brand", "brand_name", "creator", "creator_name",
             "status", "budget", "min_budget", "max_budget", "per_creator_budget", "min_price", "max_price", "rate_card_id", "start_date", "end_date", "progress", "brief", "admin_review",
-            "category", "delivery_language", "country", "province", "district", "medium", "platform", "voice_brief", "screenshare_brief", "video_brief",
+            "category", "delivery_language", "country", "province", "district", "voice_brief", "screenshare_brief", "video_brief",
             "counter_price", "counter_note", "counter_round", "counter_history", "decline_reason", "created_via", "created_time", "created_at",
             "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews", "creator_rating", "business_rating"
         ]

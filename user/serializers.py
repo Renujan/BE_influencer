@@ -167,6 +167,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
     country = CountrySerializer(read_only=True)
     province = ProvinceSerializer(read_only=True)
     district = DistrictSerializer(read_only=True)
+    mediums = MediumSerializer(many=True, read_only=True)
     campaign_count = serializers.SerializerMethodField()
     creators_hired_count = serializers.SerializerMethodField()
     total_spent = serializers.SerializerMethodField()
@@ -177,13 +178,14 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusinessProfile
         fields = [
-            "id", "user", "company_name", "business_type", "business_types", "website", "bio",
+            "id", "user", "company_name", "business_type", "business_types", "mediums", "website", "bio",
             "phone", "secondary_phone", "time_zone", "avatar_url", "country", "province", "district",
             "facebook_url", "instagram_handle", "tiktok_handle", "youtube_url",
             "linkedin_url", "twitter_handle", "otp_verified", "status",
             "verification_documents_submitted", "business_reg_number", "business_document",
              "campaign_count", "creators_hired_count", "total_spent", "settings",
-             "is_featured", "featured_at", "active_campaigns"
+             "is_featured", "featured_at", "active_campaigns",
+             "deletion_requested", "deletion_request_date", "deletion_reason", "deletion_decline_reason"
         ]
 
     def get_settings(self, instance):
@@ -248,7 +250,8 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
             "social_accounts", "otp_verified", "status",
             "verification_documents_submitted", "document_type", "document_front",
             "document_back", "other_details", "campaign_count", "followers_count", "settings",
-            "is_featured", "featured_at", "portfolio", "average_rating", "total_ratings_count"
+            "is_featured", "featured_at", "portfolio", "average_rating", "total_ratings_count",
+            "deletion_requested", "deletion_request_date", "deletion_reason", "deletion_decline_reason"
         ]
 
     def get_campaign_count(self, instance):
