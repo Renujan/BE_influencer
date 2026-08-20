@@ -296,27 +296,44 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         from django.core.files.storage import default_storage
         import os
+        import urllib.parse
+
+        def clean_media_path(val):
+            if not val or not isinstance(val, str):
+                return ""
+            s = urllib.parse.unquote(val.strip())
+            if "://" in s:
+                from urllib.parse import urlparse
+                s = urlparse(s).path
+                s = urllib.parse.unquote(s)
+            while s.startswith('/media/'):
+                s = s[7:]
+            while s.startswith('media/'):
+                s = s[6:]
+            while s.startswith('/'):
+                s = s[1:]
+            return s
 
         voice_brief_path = ""
         if voice_file:
             path = default_storage.save(os.path.join('campaign_briefs', voice_file.name), voice_file)
-            voice_brief_path = default_storage.url(path)
+            voice_brief_path = path
         elif self.request.data.get("voice_brief") and isinstance(self.request.data.get("voice_brief"), str):
-            voice_brief_path = self.request.data.get("voice_brief")
+            voice_brief_path = clean_media_path(self.request.data.get("voice_brief"))
 
         screenshare_brief_path = ""
         if screenshare_file:
             path = default_storage.save(os.path.join('campaign_briefs', screenshare_file.name), screenshare_file)
-            screenshare_brief_path = default_storage.url(path)
+            screenshare_brief_path = path
         elif self.request.data.get("screenshare_brief") and isinstance(self.request.data.get("screenshare_brief"), str):
-            screenshare_brief_path = self.request.data.get("screenshare_brief")
+            screenshare_brief_path = clean_media_path(self.request.data.get("screenshare_brief"))
 
         video_brief_path = ""
         if video_file:
             path = default_storage.save(os.path.join('campaign_briefs', video_file.name), video_file)
-            video_brief_path = default_storage.url(path)
+            video_brief_path = path
         elif self.request.data.get("video_brief") and isinstance(self.request.data.get("video_brief"), str):
-            video_brief_path = self.request.data.get("video_brief")
+            video_brief_path = clean_media_path(self.request.data.get("video_brief"))
 
         start_date = serializer.validated_data.get("start_date") or self.request.data.get("start_date")
         from datetime import datetime
@@ -386,25 +403,42 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         from django.core.files.storage import default_storage
         import os
+        import urllib.parse
+
+        def clean_media_path(val):
+            if not val or not isinstance(val, str):
+                return ""
+            s = urllib.parse.unquote(val.strip())
+            if "://" in s:
+                from urllib.parse import urlparse
+                s = urlparse(s).path
+                s = urllib.parse.unquote(s)
+            while s.startswith('/media/'):
+                s = s[7:]
+            while s.startswith('media/'):
+                s = s[6:]
+            while s.startswith('/'):
+                s = s[1:]
+            return s
 
         kwargs = {}
         if voice_file:
             path = default_storage.save(os.path.join('campaign_briefs', voice_file.name), voice_file)
-            kwargs["voice_brief"] = default_storage.url(path)
+            kwargs["voice_brief"] = path
         elif self.request.data.get("voice_brief") and isinstance(self.request.data.get("voice_brief"), str):
-            kwargs["voice_brief"] = self.request.data.get("voice_brief")
+            kwargs["voice_brief"] = clean_media_path(self.request.data.get("voice_brief"))
 
         if screenshare_file:
             path = default_storage.save(os.path.join('campaign_briefs', screenshare_file.name), screenshare_file)
-            kwargs["screenshare_brief"] = default_storage.url(path)
+            kwargs["screenshare_brief"] = path
         elif self.request.data.get("screenshare_brief") and isinstance(self.request.data.get("screenshare_brief"), str):
-            kwargs["screenshare_brief"] = self.request.data.get("screenshare_brief")
+            kwargs["screenshare_brief"] = clean_media_path(self.request.data.get("screenshare_brief"))
 
         if video_file:
             path = default_storage.save(os.path.join('campaign_briefs', video_file.name), video_file)
-            kwargs["video_brief"] = default_storage.url(path)
+            kwargs["video_brief"] = path
         elif self.request.data.get("video_brief") and isinstance(self.request.data.get("video_brief"), str):
-            kwargs["video_brief"] = self.request.data.get("video_brief")
+            kwargs["video_brief"] = clean_media_path(self.request.data.get("video_brief"))
 
         campaign = serializer.save(**kwargs)
 

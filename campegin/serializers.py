@@ -206,6 +206,12 @@ class CampaignSerializer(serializers.ModelSerializer):
                     data["counter_price"] = str(last_p)
             elif instance.counter_price:
                 data["budget"] = str(instance.counter_price)
+
+        import re
+        for f in ["voice_brief", "screenshare_brief", "video_brief"]:
+            val = data.get(f)
+            if val and isinstance(val, str):
+                data[f] = re.sub(r"^/media/+media/", "/media/", val)
         return data
 
     class Meta:
