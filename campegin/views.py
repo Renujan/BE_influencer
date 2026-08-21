@@ -1500,8 +1500,6 @@ class BusinessAnalyticsView(APIView):
         from datetime import datetime
         user = request.user
         qs = Campaign.objects.filter(brand=user)
-        if not qs.exists():
-            qs = Campaign.objects.all()
         total_campaigns_count = qs.count()
 
         # 1. Average progress across all campaigns created by this business user
@@ -1532,8 +1530,6 @@ class BusinessAnalyticsView(APIView):
                     if st in ['live', 'active', 'completed', 'finished', 'done']:
                         if c.counter_price and float(c.counter_price) > 0:
                             price = float(c.counter_price)
-                        elif c.budget and float(c.budget) > 0:
-                            price = float(c.budget)
 
             # Only add to total_allocated_budget if final price was decided!
             if price is not None and price > 0:
@@ -1547,9 +1543,7 @@ class BusinessAnalyticsView(APIView):
                     d2 = datetime.strptime(str(c.end_date).strip(), "%Y-%m-%d")
                     days = max(1, (d2 - d1).days)
                 except Exception:
-                    days = 28
-            elif c.created_at:
-                days = 28
+                    days = 0
 
             if days > 0:
                 durations.append(days)
@@ -1585,31 +1579,18 @@ class BusinessAnalyticsView(APIView):
         except Exception as e:
             print("Error computing total_paid_amount:", e)
 
-        if total_paid_amount == 0:
-            try:
-                from campegin.models import PaymentInstallment
-                legacy_paid = PaymentInstallment.objects.filter(campaign__brand=user, status__in=["Released", "Funded"])
-                sum_val = float(legacy_paid.aggregate(total=Sum("amount"))["total"] or 0)
-                if sum_val > 0:
-                    total_paid_amount = sum_val
-                    last_obj = legacy_paid.last()
-                    if last_obj:
-                        last_paid_milestone = last_obj.milestone_name
-            except Exception:
-                pass
-
-        avg_engagement = round(3.0 + (avg_progress / 100) * 9.0, 1)
+        avg_engagement = round(3.0 + (avg_progress / 100) * 9.0, 1) if total_campaigns_count > 0 else 0.0
         total_reach = int(total_allocated_budget * 1000)
         total_impressions = int(total_allocated_budget * 2500)
         total_roi = 4.1 if total_allocated_budget > 0 else 0.0
 
         # Top campaigns by engagement/progress
-        top_campaigns_qs = qs.exclude(status="Pending").order_by("-progress")[:5]
+        top_campaigns_qs = qs.exclude(status="Pending").order_by("-progress")[:5] if total_campaigns_count > 0 else []
         top_campaigns = []
         for c in top_campaigns_qs:
-            er = round(3.0 + (c.progress / 100) * 9.0, 1) if c.progress else 6.5
+            er = round(3.0 + (c.progress / 100) * 9.0, 1) if c.progress else 0.0
             spend = float(c.budget or 0)
-            reach_val = f"{round(spend/1000, 1)}M"
+            reach_val = f"{round(spend/1000, 1)}M" if spend > 0 else "0"
             top_campaigns.append({
                 "name": c.name,
                 "er": er,
@@ -1626,17 +1607,17 @@ class BusinessAnalyticsView(APIView):
             from campegin.models import Pitch
             from django.db.models import Sum, Q
             live_statuses = ["live", "active", "admin_approved", "in_progress", "completed", "approved"]
-            live_qs = [c for c in qs.order_by('id') if c.status and str(c.status).lower() in live_statuses]
-            if not live_qs:
+            live_qs = [c for c in qs.order_by('id') if c.status and str(c.status).lower() in live_statuses] if total_campaigns_count > 0 else []
+            if not live_qs and total_campaigns_count > 0:
                 live_qs = [c for c in qs.order_by('id') if str(c.status).lower() not in ["under_review", "draft", "cancelled"]]
-            if not live_qs:
+            if not live_qs and total_campaigns_count > 0:
                 live_qs = list(qs.order_by('id'))
 
             for c in live_qs:
                 # 1. Target / Max Budget: max_budget if present and > 0, else budget
                 t_budget = float(c.max_budget if (c.max_budget and float(c.max_budget) > 0) else (c.budget or 0))
 
-                # 2. Final Committed Price (Purple Bar): Pull directly from WorkspacePaymentNegotiation final_price or counter offer
+                # 2. Final Committed Price (Purple Bar): Pull directly from WorkspacePaymentNegotiation final_price or counter offer ONLY
                 neg = WorkspacePaymentNegotiation.objects.filter(campaign=c).order_by('-id').first()
                 f_price = 0.0
                 if neg and neg.final_price and float(neg.final_price) > 0:
@@ -1650,8 +1631,6 @@ class BusinessAnalyticsView(APIView):
                     if not is_direct:
                         if c.counter_price and float(c.counter_price) > 0:
                             f_price = float(c.counter_price)
-                        elif c.budget and float(c.budget) > 0:
-                            f_price = float(c.budget)
 
                 # 3. Actual Spend / Funds Released (Green Bar): Sum paid business installments + paid business platform fee
                 f_released = 0.0
@@ -1668,16 +1647,17 @@ class BusinessAnalyticsView(APIView):
                 medium_str = c.medium or ""
                 deliv_str = ", ".join([d.name for d in c.deliverables.all()])
 
-                budget_vs_spend.append({
-                    "id": c.id,
-                    "campaign": name_label,
-                    "target_budget": t_budget,
-                    "final_price": f_price,
-                    "funds_released": f_released,
-                    "medium": medium_str,
-                    "deliverables_text": deliv_str,
-                    "status": c.status,
-                })
+                if f_price > 0 or f_released > 0:
+                    budget_vs_spend.append({
+                        "id": c.id,
+                        "campaign": name_label,
+                        "target_budget": t_budget,
+                        "final_price": f_price,
+                        "funds_released": f_released,
+                        "medium": medium_str,
+                        "deliverables_text": deliv_str,
+                        "status": c.status,
+                    })
         except Exception as e:
             print("Error computing budget_vs_spend:", e)
 
