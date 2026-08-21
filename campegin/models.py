@@ -55,7 +55,7 @@ class CampaignCategoryForm(WagtailAdminModelForm):
 class CampaignDeliverableForm(WagtailAdminModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from .models import CampaignPlatform
+        from .models import CampaignPlatform, CampaignCategory
         platform_choices = [(p.name, p.name) for p in CampaignPlatform.objects.all()]
         if not platform_choices:
             platform_choices = [
@@ -70,6 +70,13 @@ class CampaignDeliverableForm(WagtailAdminModelForm):
             choices=[("", "Select Platform")] + platform_choices,
             attrs={"class": "w-full"}
         )
+        if "category" in self.fields:
+            cat_choices = [(c.id, c.name or f"{c.platform} - {c.type}") for c in CampaignCategory.objects.all()]
+            self.fields["category"].widget = forms.Select(
+                choices=[("", "Select Campaign Category *")] + cat_choices,
+                attrs={"class": "w-full"}
+            )
+            self.fields["category"].required = True
 
 class CampaignNiche(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -116,6 +123,8 @@ class Campaign(models.Model):
     progress = models.IntegerField(default=0)
     brief = models.TextField(blank=True, null=True)
     category = models.CharField(max_length=100, blank=True, null=True)
+    campaign_category = models.CharField(max_length=100, blank=True, null=True)
+    niche = models.CharField(max_length=100, blank=True, null=True)
     delivery_language = models.CharField(max_length=100, blank=True, null=True)
     country = models.CharField(max_length=255, blank=True, null=True)
     province = models.CharField(max_length=255, blank=True, null=True)
@@ -151,6 +160,8 @@ class Campaign(models.Model):
         FieldPanel('progress'),
         FieldPanel('brief'),
         FieldPanel('category'),
+        FieldPanel('campaign_category'),
+        FieldPanel('niche'),
         FieldPanel('delivery_language'),
         FieldPanel('country'),
         FieldPanel('province'),
@@ -189,10 +200,9 @@ class Campaign(models.Model):
             if self.pk:
                 try:
                     total_dels = self.deliverables.count()
-                    if total_dels > 0:
-                        approved_dels = self.deliverables.filter(status__in=["Approved", "Published"]).count()
-                        deliverable_bonus = int((approved_dels / total_dels) * 25)
-                        return min(95, 70 + deliverable_bonus)
+                    approved_dels = self.deliverables.filter(status__in=["PUBLISHED", "Approved", "Published"]).count()
+                    deliverable_bonus = int((approved_dels / total_dels) * 25)
+                    return min(95, 70 + deliverable_bonus)
                 except Exception:
                     pass
 
@@ -227,8 +237,12 @@ class Campaign(models.Model):
     get_business_name.short_description = "Business Name"
 
     def get_creator_name(self):
-        return self.creator.username if self.creator else "-"
+        return self.creator.username if self.creator else "Open Request"
     get_creator_name.short_description = "Creator Name"
+
+    def get_brand_name(self):
+        return self.brand.username if self.brand else "-"
+    get_brand_name.short_description = "Brand"
 
     @property
     def creator_name(self):
@@ -334,15 +348,20 @@ class CampaignMilestone(models.Model):
 @register_snippet
 class Deliverable(models.Model):
     STATUS_CHOICES = (
+        ("PENDING_SUBMISSION", "Pending Submission"),
+        ("PENDING_BUSINESS_REVIEW", "Pending Business Review"),
+        ("REVISION_REQUIRED", "Revision Required"),
+        ("PENDING_ADMIN_APPROVAL", "Pending Admin Approval"),
+        ("PUBLISHED", "Published"),
+        # Legacy status support
         ("Revision Requested", "Revision Requested"),
         ("Pending Review", "Pending Review"),
         ("Approved", "Approved"),
-        ("Published", "Published"),
     )
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name="deliverables")
     name = models.CharField(max_length=255) # e.g. "Reel #1"
     type = models.CharField(max_length=50) # e.g. "reel", "post"
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Revision Requested")
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="PENDING_SUBMISSION")
     deadline = models.CharField(max_length=100, blank=True, null=True) # e.g. "May 14"
     brief = models.TextField(blank=True, null=True)
     views = models.CharField(max_length=100, blank=True, null=True)
@@ -484,11 +503,13 @@ class CampaignLanguage(models.Model):
 class CampaignDeliverable(models.Model):
     name = models.CharField(max_length=255)
     platform = models.CharField(max_length=100, blank=True, null=True, default="")
+    category = models.ForeignKey("CampaignCategory", on_delete=models.SET_NULL, null=True, blank=True, related_name="deliverables")
 
     base_form_class = CampaignDeliverableForm
 
     panels = [
         FieldPanel("platform"),
+        FieldPanel("category"),
         FieldPanel("name"),
     ]
 
@@ -497,9 +518,13 @@ class CampaignDeliverable(models.Model):
         verbose_name_plural = "Campaign Deliverables"
 
     def __str__(self):
+        parts = []
         if self.platform:
-            return f"{self.platform} - {self.name}"
-        return self.name
+            parts.append(self.platform)
+        if self.category:
+            parts.append(self.category.name or self.category.type)
+        parts.append(self.name)
+        return " - ".join(parts)
 
 from wagtail.admin.panels import FieldPanel
 from wagtail.admin.forms import WagtailAdminModelForm

@@ -295,9 +295,10 @@ class CampaignDeliverableViewSet(SnippetViewSet):
     menu_label = "Deliverables"
     icon = "doc-full"
     add_to_admin_menu = False
-    list_display = ("id", "platform", "name")
-    list_export = ("id", "platform", "name")
-    list_filter = ("platform",)
+    list_display = ("id", "platform", "category", "name")
+    list_export = ("id", "platform", "category", "name")
+    list_filter = ("platform", "category")
+    inspect_view_enabled = True
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
 

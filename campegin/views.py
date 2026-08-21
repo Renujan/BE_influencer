@@ -216,6 +216,21 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 else:
                     data[key] = val
 
+        name_val = str(data.get("name", "")).strip()
+        if not name_val:
+            return Response({"name": ["Campaign name is required."]}, status=status.HTTP_400_BAD_REQUEST)
+        if Campaign.objects.filter(brand=request.user, name__iexact=name_val).exists():
+            return Response({"name": ["A campaign with this name already exists. Please choose a unique campaign name."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Distinguish Campaign Category and Niche
+        cat_val = data.get("campaign_category") or data.get("deliverable_category") or data.get("campaign_type") or data.get("category")
+        niche_val = data.get("niche") or data.get("niches")
+        if cat_val:
+            data["category"] = cat_val
+            data["campaign_category"] = cat_val
+        if niche_val:
+            data["niche"] = niche_val
+
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -260,6 +275,22 @@ class CampaignViewSet(viewsets.ModelViewSet):
                         data[key] = val
                 else:
                     data[key] = val
+
+        if "name" in data:
+            name_val = str(data.get("name", "")).strip()
+            if not name_val:
+                return Response({"name": ["Campaign name is required."]}, status=status.HTTP_400_BAD_REQUEST)
+            if Campaign.objects.filter(brand=request.user, name__iexact=name_val).exclude(id=instance.id).exists():
+                return Response({"name": ["A campaign with this name already exists. Please choose a unique campaign name."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Distinguish Campaign Category and Niche
+        cat_val = data.get("campaign_category") or data.get("deliverable_category") or data.get("campaign_type") or data.get("category")
+        niche_val = data.get("niche") or data.get("niches")
+        if cat_val:
+            data["category"] = cat_val
+            data["campaign_category"] = cat_val
+        if niche_val:
+            data["niche"] = niche_val
 
         medium_val = data.get("medium") or data.get("platform") or data.get("target_platform")
         if medium_val:
@@ -347,6 +378,8 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         created_time = self.request.data.get("created_time") or serializer.validated_data.get("created_time") or datetime.now().isoformat()
         medium_val = self.request.data.get("medium") or self.request.data.get("platform") or self.request.data.get("target_platform") or serializer.validated_data.get("medium", "")
+        niche_val = self.request.data.get("niche") or self.request.data.get("niches") or serializer.validated_data.get("niche") or ""
+        cat_val = self.request.data.get("campaign_category") or self.request.data.get("deliverable_category") or self.request.data.get("campaign_type") or self.request.data.get("category") or serializer.validated_data.get("category") or ""
 
         campaign = serializer.save(
             brand=self.request.user,
@@ -355,7 +388,10 @@ class CampaignViewSet(viewsets.ModelViewSet):
             voice_brief=voice_brief_path or serializer.validated_data.get("voice_brief", ""),
             screenshare_brief=screenshare_brief_path or serializer.validated_data.get("screenshare_brief", ""),
             video_brief=video_brief_path or serializer.validated_data.get("video_brief", ""),
-            medium=medium_val
+            medium=medium_val,
+            category=cat_val or serializer.validated_data.get("category", ""),
+            campaign_category=cat_val or serializer.validated_data.get("campaign_category", ""),
+            niche=niche_val or serializer.validated_data.get("niche", "")
         )
         
         # Auto create default tasks for this campaign
@@ -387,7 +423,8 @@ class CampaignViewSet(viewsets.ModelViewSet):
                         campaign=campaign,
                         name=del_name,
                         type="post",
-                        brief=item.get("brief", "")
+                        brief=item.get("brief", ""),
+                        status="PENDING_SUBMISSION",
                     )
                     # Automatically add business custom deliverable to Super Admin CampaignDeliverables options list
                     clean_name = del_name.split(" × ", 1)[-1].strip() if " × " in del_name else del_name.strip()
@@ -454,7 +491,8 @@ class CampaignViewSet(viewsets.ModelViewSet):
                         campaign=campaign,
                         name=del_name,
                         type="post",
-                        brief=item.get("brief", "")
+                        brief=item.get("brief", ""),
+                        status="PENDING_SUBMISSION",
                     )
                     # Automatically add business custom deliverable to Super Admin CampaignDeliverables options list
                     clean_name = del_name.split(" × ", 1)[-1].strip() if " × " in del_name else del_name.strip()
@@ -696,7 +734,8 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if assetFileName:
             deliverable.assetFileName = str(assetFileName)
 
-        deliverable.status = "Pending Admin Review"
+        if deliverable.status not in ["PUBLISHED", "Approved", "Published", "PENDING_ADMIN_APPROVAL", "Pending Final Admin Approval"]:
+            deliverable.status = "PENDING_BUSINESS_REVIEW"
 
         if views is not None:
             deliverable.views = views
@@ -728,7 +767,22 @@ class CampaignViewSet(viewsets.ModelViewSet):
         revision_file = request.FILES.get("revision_reference_file")
 
         if status_action:
-            deliverable.status = status_action
+            normalized = str(status_action).strip()
+            if normalized in ["PENDING_ADMIN_APPROVAL", "Pending Final Admin Approval"]:
+                if request.user.is_staff or request.user.is_superuser:
+                    deliverable.status = "PUBLISHED"
+                else:
+                    deliverable.status = "PENDING_ADMIN_APPROVAL"
+            elif normalized in ["REVISION_REQUIRED", "Revision Requested", "Revision Requested (Pending Admin)"]:
+                deliverable.status = "REVISION_REQUIRED"
+            elif normalized in ["PUBLISHED", "Approved", "Published"]:
+                deliverable.status = "PUBLISHED"
+            elif normalized in ["PENDING_BUSINESS_REVIEW", "Pending Business Review", "Pending Admin Review", "Pending"]:
+                deliverable.status = "PENDING_BUSINESS_REVIEW"
+            elif normalized in ["PENDING_SUBMISSION", "Pending Submission"]:
+                deliverable.status = "PENDING_SUBMISSION"
+            else:
+                deliverable.status = normalized
         if name:
             deliverable.name = name
             clean_name = name.split(" × ", 1)[-1].strip() if " × " in name else name.strip()
@@ -752,7 +806,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
         # Update progression based on deliverables
         total_dels = campaign.deliverables.count()
         if total_dels > 0:
-            approved_dels = campaign.deliverables.filter(status__in=["Approved", "Published"]).count()
+            approved_dels = campaign.deliverables.filter(status__in=["PUBLISHED", "Approved", "Published"]).count()
             campaign.progress = int((approved_dels / total_dels) * 100)
             campaign.save()
 
@@ -1236,8 +1290,11 @@ class CampaignDeliverableApiViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         platform = self.request.query_params.get("platform")
+        category = self.request.query_params.get("category")
         if platform:
             qs = qs.filter(platform__iexact=platform)
+        if category:
+            qs = qs.filter(category_id=category)
         return qs
 
 
@@ -1262,14 +1319,33 @@ class CampaignSettingsView(APIView):
     def post(self, request):
         name = request.data.get("name") or request.data.get("deliverable")
         platform = request.data.get("platform") or ""
+        category_id = request.data.get("category")
         if name and isinstance(name, str) and name.strip():
             raw_name = name.strip()
             clean_name = raw_name.split(" × ", 1)[-1].strip() if " × " in raw_name else raw_name
-            obj, created = CampaignDeliverable.objects.get_or_create(name=clean_name, defaults={"platform": platform})
-            if not created and platform and obj.platform != platform:
-                obj.platform = platform
-                obj.save()
-            return Response({"id": obj.id, "name": obj.name, "platform": obj.platform, "created": created})
+            defaults = {"platform": platform}
+            if category_id:
+                try:
+                    defaults["category_id"] = int(category_id)
+                except (ValueError, TypeError):
+                    pass
+            obj, created = CampaignDeliverable.objects.get_or_create(name=clean_name, defaults=defaults)
+            if not created:
+                changed = False
+                if platform and obj.platform != platform:
+                    obj.platform = platform
+                    changed = True
+                if category_id:
+                    try:
+                        cid = int(category_id)
+                        if obj.category_id != cid:
+                            obj.category_id = cid
+                            changed = True
+                    except (ValueError, TypeError):
+                        pass
+                if changed:
+                    obj.save()
+            return Response(CampaignDeliverableSerializer(obj).data)
         return Response({"error": "Invalid deliverable name"}, status=status.HTTP_400_BAD_REQUEST)
 
 

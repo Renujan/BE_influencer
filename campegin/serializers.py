@@ -207,6 +207,28 @@ class CampaignSerializer(serializers.ModelSerializer):
             elif instance.counter_price:
                 data["budget"] = str(instance.counter_price)
 
+        if not data.get("min_price") and not data.get("max_price"):
+            from .models import CampaignCategory
+            from django.db.models import Q
+            cat_val = getattr(instance, "category", "") or ""
+            if cat_val:
+                matched_cat = CampaignCategory.objects.filter(
+                    Q(name__iexact=cat_val) | Q(type__iexact=cat_val)
+                ).first()
+                if not matched_cat and getattr(instance, "medium", None):
+                    matched_cat = CampaignCategory.objects.filter(
+                        Q(platform__iexact=instance.medium)
+                    ).first()
+                if matched_cat:
+                    if matched_cat.min_price and not data.get("min_price"):
+                        data["min_price"] = str(matched_cat.min_price)
+                    if matched_cat.max_price and not data.get("max_price"):
+                        data["max_price"] = str(matched_cat.max_price)
+                    if not data.get("min_budget") and matched_cat.min_price:
+                        data["min_budget"] = str(matched_cat.min_price)
+                    if not data.get("max_budget") and matched_cat.max_price:
+                        data["max_budget"] = str(matched_cat.max_price)
+
         import re
         for f in ["voice_brief", "screenshare_brief", "video_brief"]:
             val = data.get(f)
@@ -219,7 +241,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         fields = [
             "id", "name", "brand", "brand_name", "creator", "creator_name",
             "status", "budget", "min_budget", "max_budget", "per_creator_budget", "min_price", "max_price", "rate_card_id", "start_date", "end_date", "progress", "brief", "admin_review",
-            "category", "delivery_language", "country", "province", "district", "voice_brief", "screenshare_brief", "video_brief",
+            "category", "campaign_category", "niche", "delivery_language", "country", "province", "district", "voice_brief", "screenshare_brief", "video_brief",
             "counter_price", "counter_note", "counter_round", "counter_history", "decline_reason", "created_via", "created_time", "created_at",
             "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews", "creator_rating", "business_rating"
         ]
@@ -236,9 +258,28 @@ class CampaignLanguageSerializer(serializers.ModelSerializer):
         fields = ["id", "name"]
 
 class CampaignDeliverableSerializer(serializers.ModelSerializer):
+    category = serializers.PrimaryKeyRelatedField(
+        queryset=CampaignCategory.objects.all(),
+        required=True,
+        allow_null=False,
+        error_messages={"required": "Campaign category is required.", "null": "Campaign category is required."}
+    )
+    category_name = serializers.SerializerMethodField(read_only=True)
+    category_type = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = CampaignDeliverable
-        fields = ["id", "name", "platform"]
+        fields = ["id", "name", "platform", "category", "category_name", "category_type"]
+
+    def get_category_name(self, obj):
+        if obj.category:
+            return obj.category.name or obj.category.type or ""
+        return ""
+
+    def get_category_type(self, obj):
+        if obj.category:
+            return obj.category.type or obj.category.name or ""
+        return ""
 
 class CampaignPlatformSerializer(serializers.ModelSerializer):
     logo = serializers.SerializerMethodField()

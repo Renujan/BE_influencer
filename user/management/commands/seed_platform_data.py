@@ -54,28 +54,31 @@ class Command(BaseCommand):
         self.stdout.write("Campaign languages seeded.")
 
         deliverables_data = [
-            {"platform": "Instagram", "name": "Instagram Story (24hr)"},
-            {"platform": "Instagram", "name": "Instagram Feed Post (Photo/Carousel)"},
-            {"platform": "Instagram", "name": "Instagram Reel / Short Video (15s - 60s)"},
-            {"platform": "Instagram", "name": "Instagram Broadcast Channel Mention"},
-            {"platform": "TikTok", "name": "TikTok In-Feed Video (15s - 60s)"},
-            {"platform": "TikTok", "name": "TikTok Series Video"},
-            {"platform": "TikTok", "name": "TikTok Live Stream Mention"},
-            {"platform": "YouTube", "name": "YouTube Shorts (60s)"},
-            {"platform": "YouTube", "name": "YouTube Video Integration / Mid-Roll (60s - 90s)"},
-            {"platform": "YouTube", "name": "YouTube Dedicated Video (8 - 15 min)"},
-            {"platform": "Facebook", "name": "Facebook Video / Reel"},
-            {"platform": "Facebook", "name": "Facebook Post (Image / Link)"},
-            {"platform": "Facebook", "name": "Facebook Live Session"},
-            {"platform": "LinkedIn", "name": "LinkedIn Text / Image Article Post"},
-            {"platform": "LinkedIn", "name": "LinkedIn Short Video (1 - 3 min)"},
-            {"platform": "LinkedIn", "name": "LinkedIn Newsletter Feature"},
-            {"platform": "X", "name": "X Sponsored Tweet / Thread"},
-            {"platform": "X", "name": "X Short Video Clip"},
-            {"platform": "X", "name": "X Space Mention / Host"},
+            {"platform": "Facebook", "category_type": "Page Feed Post", "name": "1080x1080 High-Res Media Post, Copywriting with Preview Card & Link"},
+            {"platform": "Facebook", "category_type": "Story", "name": "1080x1920 (9:16 Vertical), 15s Duration, Sticker Link & 24-Hour Expiry"},
+            {"platform": "Facebook", "category_type": "Reel", "name": "1080x1920 Full HD (9:16), 15s - 60s Duration, Dynamic Transitions & Viral Audio Mix"},
+            {"platform": "Instagram", "category_type": "Story", "name": "1080x1920 (9:16 Vertical), 15s Clip or Photo, Interactive Link Sticker, Poll/CTA & 24hr Visibility"},
+            {"platform": "Instagram", "category_type": "Feed Post (Photo)", "name": "1080x1350 (4:5 Portrait) or 1080x1080 (1:1), 4K Color Graded, Engaging Caption & Co-Tags"},
+            {"platform": "Instagram", "category_type": "Reel / Short Video", "name": "1080x1920 (9:16 Vertical HD), 15s - 60s Duration, High-Energy Visuals, On-Screen Captions & Trending Audio"},
+            {"platform": "Instagram", "category_type": "Carousel Post", "name": "3–10 Curated Slides (1080x1350), Storytelling Visuals, Product Breakdown & Step-by-Step Guide"},
+            {"platform": "Instagram", "category_type": "Collab Post", "name": "Co-Author Feed/Reel Post (1080x1920/1080x1350), Dual Feed Distribution & Combined Analytics"},
+            {"platform": "TikTok", "category_type": "TikTok Video", "name": "1080x1920 (9:16 Mobile-First), 15s - 60s Duration, Native In-App Sound, Hook in First 3s & CTA"},
+            {"platform": "TikTok", "category_type": "Multi-Part Series", "name": "2–3 Connected Episodic Videos (1080x1920), 30s - 60s each, Narrative Arc & Part 2 Teaser"},
+            {"platform": "TikTok", "category_type": "Live Stream", "name": "60-Minute Real-Time Broadcast, Live Demonstration, Audience Q&A & Pinned Showcase Link"},
+            {"platform": "YouTube", "category_type": "YouTube Shorts", "name": "1080x1920 (9:16 Vertical HD), 60fps, 15s - 60s Duration, Dynamic Edits, Audio Mix & Pinned Comment"},
+            {"platform": "YouTube", "category_type": "YouTube Integration", "name": "1080p/4K 16:9 Mid-Roll, 60s - 90s Segment, Verbal Shoutout & Pinned Description Link"},
+            {"platform": "YouTube", "category_type": "YouTube Dedicated Video", "name": "4K UHD (16:9 Landscape), 8 - 15 min Duration, Dedicated Brand Story, Custom Thumbnail & Video Chapters"},
+            {"platform": "LinkedIn", "category_type": "B2B Article / Post", "name": "1200x627 High-Res Document/Infographic, Professional B2B Insights & Key Industry Takeaways"},
+            {"platform": "X", "category_type": "Post / Thread", "name": "Multi-Post Structured Thread, 1080p Video Clip / Infographic (16:9), Pinned Post Support"},
         ]
         for d in deliverables_data:
-            CampaignDeliverable.objects.get_or_create(name=d["name"], defaults={"platform": d["platform"]})
+            cat = CampaignCategory.objects.filter(platform__iexact=d["platform"], type__iexact=d["category_type"]).first()
+            if not cat:
+                cat = CampaignCategory.objects.filter(platform__iexact=d["platform"]).first()
+            obj, created = CampaignDeliverable.objects.get_or_create(name=d["name"], defaults={"platform": d["platform"], "category": cat})
+            if not created and cat and obj.category != cat:
+                obj.category = cat
+                obj.save()
         self.stdout.write("Campaign deliverables seeded.")
 
         platforms_data = [
