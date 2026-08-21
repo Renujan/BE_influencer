@@ -234,6 +234,35 @@ class CampaignSerializer(serializers.ModelSerializer):
             val = data.get(f)
             if val and isinstance(val, str):
                 data[f] = re.sub(r"^/media/+media/", "/media/", val)
+
+        platform_val = getattr(instance, "platform", "") or getattr(instance, "medium", "") or ""
+        if not platform_val:
+            from .models import CampaignCategory
+            from django.db.models import Q
+            cat_val = getattr(instance, "category", "") or getattr(instance, "campaign_category", "") or ""
+            if cat_val:
+                matched_cat = CampaignCategory.objects.filter(
+                    Q(name__iexact=cat_val) | Q(type__iexact=cat_val)
+                ).first()
+                if matched_cat and matched_cat.platform:
+                    platform_val = matched_cat.platform
+        if not platform_val and instance.deliverables.exists():
+            for d in instance.deliverables.all():
+                d_txt = f"{d.name} {getattr(d, 'format', '')} {getattr(d, 'type', '')}".lower()
+                if "insta" in d_txt: platform_val = "Instagram"; break
+                elif "you" in d_txt or "yt" in d_txt: platform_val = "YouTube"; break
+                elif "tik" in d_txt: platform_val = "TikTok"; break
+                elif "face" in d_txt or "fb" in d_txt: platform_val = "Facebook"; break
+                elif "link" in d_txt: platform_val = "LinkedIn"; break
+                elif "twitter" in d_txt or "x " in d_txt: platform_val = "Twitter/X"; break
+
+        if not platform_val:
+            platform_val = "Instagram"
+
+        data["platform"] = platform_val
+        data["target_platform"] = platform_val
+        data["platforms"] = [p.strip() for p in platform_val.split(",") if p.strip()] if platform_val else [platform_val]
+        data.pop("medium", None)
         return data
 
     class Meta:
@@ -241,7 +270,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         fields = [
             "id", "name", "brand", "brand_name", "creator", "creator_name",
             "status", "budget", "min_budget", "max_budget", "per_creator_budget", "min_price", "max_price", "rate_card_id", "start_date", "end_date", "progress", "brief", "admin_review",
-            "category", "campaign_category", "niche", "delivery_language", "country", "province", "district", "voice_brief", "screenshare_brief", "video_brief",
+            "category", "campaign_category", "niche", "delivery_language", "country", "province", "district", "platform", "voice_brief", "screenshare_brief", "video_brief",
             "counter_price", "counter_note", "counter_round", "counter_history", "decline_reason", "created_via", "created_time", "created_at",
             "tasks", "milestones", "deliverables", "payments", "files", "messages", "tickets", "reviews", "creator_rating", "business_rating"
         ]
@@ -345,7 +374,7 @@ class PitchSerializer(serializers.ModelSerializer):
         model = Pitch
         fields = [
             "id", "creator", "creator_name", "brand", "brand_name",
-            "campaign_name", "budget", "sent_date", "tags", "status",
+            "campaign_name", "budget", "sent_date", "start_date", "end_date", "platform", "tags", "status",
             "description", "deliverables", "counter_offer", "counter_note", "counter_count", "counter_history", "attachment", "decline_reason", "campaign_id"
         ]
         read_only_fields = ["creator"]

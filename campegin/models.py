@@ -130,6 +130,7 @@ class Campaign(models.Model):
     province = models.CharField(max_length=255, blank=True, null=True)
     district = models.CharField(max_length=255, blank=True, null=True)
     medium = models.CharField(max_length=255, blank=True, null=True)
+    platform = models.CharField(max_length=255, blank=True, null=True)
     voice_brief = models.FileField(upload_to="brief_media/", blank=True, null=True)
     screenshare_brief = models.FileField(upload_to="brief_media/", blank=True, null=True)
     video_brief = models.FileField(upload_to="brief_media/", blank=True, null=True)
@@ -166,6 +167,7 @@ class Campaign(models.Model):
         FieldPanel('country'),
         FieldPanel('province'),
         FieldPanel('district'),
+        FieldPanel('platform'),
         FieldPanel('medium'),
         FieldPanel('voice_brief'),
         FieldPanel('screenshare_brief'),
@@ -623,6 +625,9 @@ class Pitch(models.Model):
     campaign_name = models.CharField(max_length=255)
     budget = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     sent_date = models.CharField(max_length=100)
+    start_date = models.CharField(max_length=100, blank=True, null=True)
+    end_date = models.CharField(max_length=100, blank=True, null=True)
+    platform = models.CharField(max_length=255, blank=True, null=True)
     tags = models.JSONField(default=list, blank=True, null=True)
     status = models.CharField(max_length=35, choices=STATUS_CHOICES, default="pending_admin")
     description = models.TextField(blank=True, null=True)

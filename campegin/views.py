@@ -231,6 +231,26 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if niche_val:
             data["niche"] = niche_val
 
+        # Extract Platform
+        platform_val = data.get("platform") or data.get("target_platform") or data.get("medium")
+        if not platform_val and "platforms" in data:
+            p_val = data.get("platforms")
+            if isinstance(p_val, list):
+                platform_val = ", ".join(str(x) for x in p_val if x)
+            elif isinstance(p_val, str):
+                try:
+                    import json
+                    parsed = json.loads(p_val)
+                    if isinstance(parsed, list):
+                        platform_val = ", ".join(str(x) for x in parsed if x)
+                    else:
+                        platform_val = p_val
+                except Exception:
+                    platform_val = p_val
+        if platform_val:
+            data["platform"] = platform_val
+            data["medium"] = platform_val
+
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -292,9 +312,24 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if niche_val:
             data["niche"] = niche_val
 
-        medium_val = data.get("medium") or data.get("platform") or data.get("target_platform")
-        if medium_val:
-            data["medium"] = medium_val
+        platform_val = data.get("platform") or data.get("target_platform") or data.get("medium")
+        if not platform_val and "platforms" in data:
+            p_val = data.get("platforms")
+            if isinstance(p_val, list):
+                platform_val = ", ".join(str(x) for x in p_val if x)
+            elif isinstance(p_val, str):
+                try:
+                    import json
+                    parsed = json.loads(p_val)
+                    if isinstance(parsed, list):
+                        platform_val = ", ".join(str(x) for x in parsed if x)
+                    else:
+                        platform_val = p_val
+                except Exception:
+                    platform_val = p_val
+        if platform_val:
+            data["platform"] = platform_val
+            data["medium"] = platform_val
         if "start_date" in data:
             s_date = str(data["start_date"]).strip()
             if s_date:
@@ -303,6 +338,14 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 if not re.search(r'\b(19\d\d|20\d\d)\b', s_date):
                     s_date = f"{s_date}, {datetime.now().year}"
                 data["start_date"] = s_date
+        if "end_date" in data:
+            e_date = str(data["end_date"]).strip()
+            if e_date:
+                import re
+                from datetime import datetime
+                if not re.search(r'\b(19\d\d|20\d\d)\b', e_date):
+                    e_date = f"{e_date}, {datetime.now().year}"
+                data["end_date"] = e_date
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
@@ -367,6 +410,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
             video_brief_path = clean_media_path(self.request.data.get("video_brief"))
 
         start_date = serializer.validated_data.get("start_date") or self.request.data.get("start_date")
+        end_date = serializer.validated_data.get("end_date") or self.request.data.get("end_date")
         from datetime import datetime
         import re
         if not start_date:
@@ -376,19 +420,40 @@ class CampaignViewSet(viewsets.ModelViewSet):
             if not re.search(r'\b(19\d\d|20\d\d)\b', start_date):
                 start_date = f"{start_date}, {datetime.now().year}"
 
+        if end_date:
+            end_date = str(end_date).strip()
+            if not re.search(r'\b(19\d\d|20\d\d)\b', end_date):
+                end_date = f"{end_date}, {datetime.now().year}"
+
         created_time = self.request.data.get("created_time") or serializer.validated_data.get("created_time") or datetime.now().isoformat()
-        medium_val = self.request.data.get("medium") or self.request.data.get("platform") or self.request.data.get("target_platform") or serializer.validated_data.get("medium", "")
+        platform_val = self.request.data.get("platform") or self.request.data.get("target_platform") or self.request.data.get("medium") or serializer.validated_data.get("platform", "") or serializer.validated_data.get("medium", "")
+        if not platform_val and "platforms" in self.request.data:
+            p_val = self.request.data.get("platforms")
+            if isinstance(p_val, list):
+                platform_val = ", ".join(str(x) for x in p_val if x)
+            elif isinstance(p_val, str):
+                try:
+                    import json
+                    parsed = json.loads(p_val)
+                    if isinstance(parsed, list):
+                        platform_val = ", ".join(str(x) for x in parsed if x)
+                    else:
+                        platform_val = p_val
+                except Exception:
+                    platform_val = p_val
         niche_val = self.request.data.get("niche") or self.request.data.get("niches") or serializer.validated_data.get("niche") or ""
         cat_val = self.request.data.get("campaign_category") or self.request.data.get("deliverable_category") or self.request.data.get("campaign_type") or self.request.data.get("category") or serializer.validated_data.get("category") or ""
 
         campaign = serializer.save(
             brand=self.request.user,
             start_date=start_date,
+            end_date=end_date or serializer.validated_data.get("end_date", ""),
             created_time=created_time,
             voice_brief=voice_brief_path or serializer.validated_data.get("voice_brief", ""),
             screenshare_brief=screenshare_brief_path or serializer.validated_data.get("screenshare_brief", ""),
             video_brief=video_brief_path or serializer.validated_data.get("video_brief", ""),
-            medium=medium_val,
+            platform=platform_val,
+            medium=platform_val,
             category=cat_val or serializer.validated_data.get("category", ""),
             campaign_category=cat_val or serializer.validated_data.get("campaign_category", ""),
             niche=niche_val or serializer.validated_data.get("niche", "")
@@ -1751,14 +1816,27 @@ class PitchViewSet(viewsets.ModelViewSet):
                     {"error": "Daily request limit reached. Creators can only send a maximum of 2 pitch requests per day."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+
+        camp_name = str(request.data.get("campaign_name", "")).strip()
+        brand_id = request.data.get("brand")
+        if camp_name:
+            if Campaign.objects.filter(name__iexact=camp_name).filter(models.Q(brand_id=brand_id) | models.Q(brand=request.user)).exists():
+                return Response(
+                    {"campaign_name": ["A campaign with this name already exists. Please choose a unique campaign name."]},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         attachment = self.request.FILES.get("attachment")
+        start_date = self.request.data.get("start_date") or serializer.validated_data.get("start_date") or ""
+        end_date = self.request.data.get("end_date") or serializer.validated_data.get("end_date") or ""
+        platform = self.request.data.get("platform") or serializer.validated_data.get("platform") or ""
         if attachment:
-            serializer.save(creator=self.request.user, attachment=attachment, status="pending_admin")
+            serializer.save(creator=self.request.user, attachment=attachment, status="pending_admin", start_date=start_date, end_date=end_date, platform=platform)
         else:
-            serializer.save(creator=self.request.user, status="pending_admin")
+            serializer.save(creator=self.request.user, status="pending_admin", start_date=start_date, end_date=end_date, platform=platform)
 
     def perform_destroy(self, instance):
         if instance.brand and instance.creator:
@@ -1894,10 +1972,12 @@ class PitchViewSet(viewsets.ModelViewSet):
             counter_price=final_budget,
             counter_history=pitch.counter_history,
             category=niche_val,
-            medium=platform_val,
+            platform=pitch.platform or platform_val,
+            medium=pitch.platform or platform_val,
             brief=request.data.get("brief") or pitch.description or f"Campaign proposal based on pitch: {pitch.campaign_name}",
             status="Live",
-            start_date=request.data.get("start_date") or pitch.sent_date or "2026-08-01",
+            start_date=pitch.start_date or request.data.get("start_date") or pitch.sent_date or "2026-08-01",
+            end_date=pitch.end_date or request.data.get("end_date") or "",
             created_via="pitch",
         )
 
