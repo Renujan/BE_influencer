@@ -269,13 +269,15 @@ def create_workspace_message_notification(sender, instance, created, **kwargs):
         camp = instance.campaign
         sender_user = instance.sender
         snippet = (instance.text[:50] + "...") if len(instance.text) > 50 else instance.text
+        b_name = getattr(camp, 'brand_name', None) or (camp.brand.username if getattr(camp, 'brand', None) else "Brand")
+        c_name = getattr(camp, 'creator_name', None) or (camp.creator.username if getattr(camp, 'creator', None) else "Creator")
 
         if camp.brand and sender_user == camp.brand and camp.creator:
             Notification.objects.create(
                 user=camp.creator,
                 target_role="creator",
                 title="New Workspace Message",
-                message=f"Message from '{camp.brand_name}': {snippet}",
+                message=f"Message from '{b_name}': {snippet}",
                 category="compliance",
                 icon="fas fa-comment-dots",
                 target_url=f"/workspace/{camp.id}"
@@ -285,7 +287,7 @@ def create_workspace_message_notification(sender, instance, created, **kwargs):
                 user=camp.brand,
                 target_role="business",
                 title="New Workspace Message",
-                message=f"Message from '{camp.creator_name}': {snippet}",
+                message=f"Message from '{c_name}': {snippet}",
                 category="compliance",
                 icon="fas fa-comment-dots",
                 target_url=f"/workspace/{camp.id}"

@@ -3,6 +3,9 @@
 {% block titletag %}Campaign Details - {{ instance.name }}{% endblock %}
 
 {% block extra_css %}
+<!-- cspell:disable -->
+<!-- spell-checker: disable -->
+<!-- ltex: enabled=false -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
     .custom-inspect-wrapper {
@@ -468,15 +471,15 @@
                 {% elif instance.status == 'Rejected' %}background-color: #ffe4e6; color: #991b1b; border: 1px solid #fecaca;
                 {% elif instance.status == 'Completed' %}background-color: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe;
                 {% elif instance.status in 'Countered,Countered_Pending' %}background-color: #ede9fe; color: #7c3aed; border: 1px solid #ddd6fe;
-                {% elif instance.status in 'Business_Counter_Pending,Business_Countered' %}background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a;
+                {% elif instance.status in 'Business_Counter_Pending,Business_Countered' %}background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe;
+                {% elif instance.status == 'Accepted_Pending_Admin' %}background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a;
                 {% endif %}">
                 Current Status:&nbsp;
                 {% if instance.status == 'Under_Review' %}⏳ Under Review — Campaign is pending admin approval before being forwarded to the creator.
                 {% elif instance.status == 'Pending' %}📤 Pending Creator Review — Campaign is visible to the creator. Awaiting their decision.
-                {% elif instance.status == 'Countered_Pending' %}⏳ Creator Counter Pending Admin — Creator sent a counter offer. Awaiting your approval.
-                {% elif instance.status == 'Countered' %}📤 Creator Counter Forwarded — Creator counter approved and visible to the business.
-                {% elif instance.status == 'Business_Counter_Pending' %}⏳ Business Counter Pending Admin — Business replied with a counter. Awaiting your approval.
-                {% elif instance.status == 'Business_Countered' %}📤 Business Counter Forwarded — Business counter approved and visible to the creator.
+                {% elif instance.status == 'Countered' or instance.status == 'Countered_Pending' %}💬 Creator Counter Sent — Creator sent a counter offer. Visible to the business (negotiation ongoing).
+                {% elif instance.status == 'Business_Countered' or instance.status == 'Business_Counter_Pending' %}💬 Business Counter Sent — Business replied with a counter. Visible to the creator (negotiation ongoing).
+                {% elif instance.status == 'Accepted_Pending_Admin' %}⏳ Counter Offer Accepted — Counter offer accepted by parties. Awaiting Admin Approval to move to Live.
                 {% elif instance.status == 'Live' %}🟢 Live — Campaign is active and running.
                 {% elif instance.status == 'Rejected' %}❌ Rejected — This campaign has been rejected.
                 {% elif instance.status == 'Completed' %}🎉 Completed — Campaign has finished successfully.
@@ -1248,27 +1251,6 @@
                         <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">Review the campaign and choose to approve/publish, reject, or mark it as completed.</p>
                     </div>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        {% if instance.status == "Countered_Pending" %}
-                            <button type="submit" name="status" value="Approve_Creator_Counter" class="btn-header-primary" style="background-color: #16a34a; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                Approve Creator Counter ({{ instance.currency_symbol }}{{ instance.counter_price }})
-                            </button>
-                        {% endif %}
-
-                        {% if instance.status == "Business_Counter_Pending" %}
-                            <button type="submit" name="status" value="Approve_Business_Counter" class="btn-header-primary" style="background-color: #2563eb; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                Approve Business Counter ({{ instance.currency_symbol }}{{ instance.counter_price }})
-                            </button>
-                        {% endif %}
-
-                        {% if instance.status == "Countered_Pending" or instance.status == "Business_Counter_Pending" %}
-                            <button type="submit" name="status" value="Reject_Counter" class="btn-header-primary" style="background-color: #dc2626; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Reject this counter offer?');">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                Reject Counter Offer
-                            </button>
-                        {% endif %}
-
                         {% if instance.status == "Under_Review" or instance.status == "Rejected" %}
                             <button type="submit" name="status" value="Live" class="btn-header-primary" style="background-color: #16a34a; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; stroke: white;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
@@ -1278,13 +1260,7 @@
                         
                         {% if instance.status == "Accepted_Pending_Admin" %}
                             <button type="submit" name="status" value="Live" class="btn-header-primary" style="background-color: #059669; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Approve agreed counter offer and move campaign to Live?');">
-                                <i class="fas fa-play-circle"></i> Approve &amp; Move to Live
-                            </button>
-                        {% endif %}
-
-                        {% if instance.status == "Countered" or instance.status == "Business_Countered" %}
-                            <button type="submit" name="status" value="Live_Countered" class="btn-header-primary" style="background-color: #059669; border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; color: white !important; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onclick="return confirm('Accept counter offer price of {{ instance.currency_symbol }}{{ instance.counter_price }}?');">
-                                <i class="fas fa-handshake"></i> Accept Counter Offer ({{ instance.currency_symbol }}{{ instance.counter_price }})
+                                <i class="fas fa-play-circle"></i> Approve Agreed Counter &amp; Move to Live ({{ instance.currency_symbol }}{{ instance.counter_price|default:instance.budget }})
                             </button>
                         {% endif %}
 

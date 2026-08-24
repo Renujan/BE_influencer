@@ -1,8 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django import forms
+from modelcluster.models import ClusterableModel
+from modelcluster.fields import ParentalKey
 from wagtail.snippets.models import register_snippet
-from wagtail.admin.panels import FieldPanel
+from wagtail.admin.panels import FieldPanel, InlinePanel
 from wagtail.admin.forms import WagtailAdminModelForm
 import re
 
@@ -42,6 +44,14 @@ def extract_currency_symbol(currency_str):
         return match.group(1).strip()
     return currency_str
 
+class FlexibleDecimalField(forms.DecimalField):
+    def to_python(self, value):
+        if value is None or value == "":
+            return None
+        if isinstance(value, str):
+            value = value.replace("$", "").replace(",", "").strip()
+        return super().to_python(value)
+
 class CampaignCategoryForm(WagtailAdminModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -51,11 +61,61 @@ class CampaignCategoryForm(WagtailAdminModelForm):
             choices=[("", "Select Platform")] + platform_choices,
             attrs={"class": "w-full"}
         )
+        if "min_price" in self.fields:
+            self.fields["min_price"] = FlexibleDecimalField(
+                max_digits=12, decimal_places=2, required=False, initial=0.00
+            )
+        if "max_price" in self.fields:
+            self.fields["max_price"] = FlexibleDecimalField(
+                max_digits=12, decimal_places=2, required=False, initial=0.00
+            )
+
+    def clean_min_price(self):
+        val = self.cleaned_data.get("min_price")
+        if val is None or val == "":
+            return 0.00
+        return val
+
+    def clean_max_price(self):
+        val = self.cleaned_data.get("max_price")
+        if val is None or val == "":
+            return 0.00
+        return val
 
 class CampaignDeliverableForm(WagtailAdminModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from .models import CampaignPlatform, CampaignCategory
+        from .models import CampaignPlatform, CampaignCategory, CampaignDeliverable
+
+        # Handle prepopulation from request GET params or instance
+        if hasattr(self, "request") and self.request and self.request.method == "GET":
+            req_platform = self.request.GET.get("platform")
+            req_category = self.request.GET.get("category")
+            if req_platform and "platform" in self.fields:
+                self.initial["platform"] = req_platform
+            if req_category and "category" in self.fields:
+                self.initial["category"] = req_category
+
+        target_category = None
+        if self.instance and self.instance.pk and self.instance.category:
+            target_category = self.instance.category
+            if not self.initial.get("platform"):
+                self.initial["platform"] = self.instance.platform or self.instance.category.platform
+            if not self.initial.get("category"):
+                self.initial["category"] = self.instance.category_id
+        elif self.initial.get("category"):
+            try:
+                target_category = CampaignCategory.objects.get(pk=self.initial["category"])
+            except Exception:
+                pass
+
+        # Gather ALL deliverables attached to this category and bundle into initial name field
+        if target_category:
+            all_delivs = list(CampaignDeliverable.objects.filter(category=target_category).order_by("id"))
+            if all_delivs:
+                deliv_names = [d.name.strip() for d in all_delivs if d.name and d.name.strip()]
+                self.initial["name"] = ", ".join(deliv_names)
+
         platform_choices = [(p.name, p.name) for p in CampaignPlatform.objects.all()]
         if not platform_choices:
             platform_choices = [
@@ -67,16 +127,54 @@ class CampaignDeliverableForm(WagtailAdminModelForm):
                 ("X", "X"),
             ]
         self.fields["platform"].widget = forms.Select(
-            choices=[("", "Select Platform")] + platform_choices,
-            attrs={"class": "w-full"}
+            choices=[("", "Select Platform *")] + platform_choices,
+            attrs={"class": "w-full custom-select", "id": "id_platform"}
         )
+        self.fields["platform"].required = True
+
         if "category" in self.fields:
             cat_choices = [(c.id, c.name or f"{c.platform} - {c.type}") for c in CampaignCategory.objects.all()]
             self.fields["category"].widget = forms.Select(
                 choices=[("", "Select Campaign Category *")] + cat_choices,
-                attrs={"class": "w-full"}
+                attrs={"class": "w-full custom-select", "id": "id_category"}
             )
             self.fields["category"].required = True
+
+        if "name" in self.fields:
+            self.fields["name"].widget = forms.HiddenInput(attrs={"id": "id_name"})
+            self.fields["name"].required = True
+            self.fields["name"].help_text = "Add deliverables using the interactive tool."
+
+    def save(self, commit=True):
+        raw_name = self.cleaned_data.get("name", "")
+        category = self.cleaned_data.get("category")
+        platform = self.cleaned_data.get("platform") or (category.platform if category else "")
+
+        items = [line.strip() for chunk in str(raw_name).replace("\r", "\n").split("\n") for line in chunk.split(",") if line.strip()]
+
+        if not items:
+            self.instance.platform = platform
+            return super().save(commit=commit)
+
+        first_item = items[0]
+        self.instance.name = first_item
+        self.instance.platform = platform
+        if category:
+            self.instance.category = category
+        instance = super().save(commit=commit)
+
+        from .models import CampaignDeliverable
+        if category:
+            for extra_name in items[1:]:
+                CampaignDeliverable.objects.get_or_create(
+                    name=extra_name,
+                    category=category,
+                    defaults={"platform": platform}
+                )
+            # Remove any deliverables for this category that the user removed from the tags list
+            CampaignDeliverable.objects.filter(category=category).exclude(name__in=items).delete()
+
+        return instance
 
 class CampaignNiche(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -105,7 +203,10 @@ class Campaign(models.Model):
         ("Countered", "Countered"),
         ("Business_Counter_Pending", "Business Counter Pending Approval"),
         ("Business_Countered", "Business Countered"),
+        ("Accepted_Pending_Admin", "Counter Accepted Pending Admin Approval"),
         ("Under_Review", "Under Review"),
+        ("Counter_Declined", "Counter Declined - Pending Final Choice"),
+        ("Negotiation_Paused", "Negotiation Paused"),
     )
     name = models.CharField(max_length=255)
     brand = models.ForeignKey(User, on_delete=models.CASCADE, related_name="brand_campaigns")
@@ -198,6 +299,8 @@ class Campaign(models.Model):
             return 40
         elif status in ["Countered", "Countered_Pending", "Business_Counter_Pending", "Business_Countered"]:
             return 55
+        elif status in ["Accepted_Pending_Admin", "accepted_pending_admin"]:
+            return 60
         elif status in ["Live", "live", "Active", "active", "In_Progress", "in_progress"]:
             if self.pk:
                 try:
@@ -249,6 +352,10 @@ class Campaign(models.Model):
     @property
     def creator_name(self):
         return self.creator.username if self.creator else (self.influencer or "")
+
+    @property
+    def brand_name(self):
+        return self.brand.username if self.brand else ""
 
     def get_last_chat_time(self):
         last_msg = self.messages.all().order_by("-id").first()
@@ -453,11 +560,11 @@ class AdminComplianceTicket(models.Model):
     def __str__(self):
         return f"{self.campaign.name} - {self.category} ({self.status})"
 
-class CampaignCategory(models.Model):
-    name = models.CharField(max_length=255, blank=True, default="")
-    platform = models.CharField(max_length=100, blank=True, default="")
-    type = models.CharField(max_length=100, blank=True, default="")
-    duration = models.CharField(max_length=100, blank=True, default="")
+class CampaignCategory(ClusterableModel):
+    name = models.CharField(max_length=255, blank=True, null=True, default="")
+    platform = models.CharField(max_length=100, blank=True, null=True, default="")
+    type = models.CharField(max_length=100, blank=True, null=True, default="")
+    duration = models.CharField(max_length=100, blank=True, null=True, default="")
     min_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True)
     max_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True)
 
@@ -465,11 +572,10 @@ class CampaignCategory(models.Model):
 
     panels = [
         FieldPanel("platform"),
-        FieldPanel("type"),
-        FieldPanel("duration"),
         FieldPanel("name"),
         FieldPanel("min_price"),
         FieldPanel("max_price"),
+        InlinePanel("deliverables", label="Deliverables", help_text="Add multiple deliverable specifications for this category"),
     ]
 
     class Meta:
@@ -477,14 +583,29 @@ class CampaignCategory(models.Model):
         verbose_name_plural = "Campaign Categories"
 
     def __str__(self):
-        return self.name or f"{self.platform} - {self.type} ({self.duration})"
+        return self.name or f"{self.platform} - {self.type or ''} ({self.duration or ''})".strip()
+
+    def deliverables_count(self):
+        items = []
+        for d in self.deliverables.all():
+            if d.name:
+                for chunk in str(d.name).replace("\r", "\n").split("\n"):
+                    for part in chunk.split(","):
+                        p = part.strip()
+                        if p and p not in items:
+                            items.append(p)
+        count = len(items)
+        return f"{count} Deliverable{'s' if count != 1 else ''}"
+    deliverables_count.short_description = "Deliverables"
 
     def save(self, *args, **kwargs):
+        if not self.type and self.name:
+            self.type = self.name
         parts = [p for p in [self.platform, self.type] if p]
         base = " - ".join(parts) if parts else (self.name or "")
         if self.duration:
             self.name = f"{base} ({self.duration})" if base else self.duration
-        elif base:
+        elif base and not self.name:
             self.name = base
         super().save(*args, **kwargs)
 
@@ -505,9 +626,7 @@ class CampaignLanguage(models.Model):
 class CampaignDeliverable(models.Model):
     name = models.CharField(max_length=255)
     platform = models.CharField(max_length=100, blank=True, null=True, default="")
-    category = models.ForeignKey("CampaignCategory", on_delete=models.SET_NULL, null=True, blank=True, related_name="deliverables")
-
-    base_form_class = CampaignDeliverableForm
+    category = ParentalKey("CampaignCategory", on_delete=models.CASCADE, null=True, blank=True, related_name="deliverables")
 
     panels = [
         FieldPanel("platform"),
@@ -671,4 +790,12 @@ class Pitch(models.Model):
                 pass
 
         return "$"
+
+    @property
+    def brand_name(self):
+        return self.brand.username if self.brand else ""
+
+    @property
+    def creator_name(self):
+        return self.creator.username if self.creator else ""
 

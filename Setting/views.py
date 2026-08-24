@@ -135,3 +135,35 @@ class UploadBankBookView(APIView):
             file_url = '/' + file_url
             
         return Response({"bank_book_url": file_url}, status=status.HTTP_200_OK)
+
+class UploadCoverImageView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        file_obj = request.FILES.get("cover_image") or request.FILES.get("cover") or request.FILES.get("file")
+        if not file_obj:
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+            return Response({"error": "Invalid file type. Only image files are allowed."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = request.user
+        role = "business" if hasattr(user, "business_profile") else "influencer"
+        profile = user.business_profile if role == "business" else user.creator_profile
+        
+        file_name = f"covers/{role}_{user.id}{ext}"
+        if default_storage.exists(file_name):
+            default_storage.delete(file_name)
+            
+        saved_path = default_storage.save(file_name, file_obj)
+        cover_image_url = default_storage.url(saved_path)
+        
+        if not cover_image_url.startswith('http') and not cover_image_url.startswith('/'):
+            cover_image_url = '/' + cover_image_url
+            
+        profile.cover_image_url = cover_image_url
+        profile.save()
+        
+        return Response({"cover_image_url": cover_image_url}, status=status.HTTP_200_OK)
+

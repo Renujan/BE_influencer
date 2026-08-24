@@ -34,6 +34,7 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
     district = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     bio = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     avatar_url = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    cover_image_url = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     wallet_balance = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     next_payout_date = serializers.CharField(read_only=True, required=False)
     
@@ -109,6 +110,7 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
         instance.location = validated_data.get("location", instance.location)
         instance.bio = validated_data.get("bio", instance.bio)
         instance.avatar_url = validated_data.get("avatar_url", instance.avatar_url)
+        instance.cover_image_url = validated_data.get("cover_image_url", instance.cover_image_url)
         
         if "country" in validated_data:
             country_name = validated_data["country"]
@@ -278,6 +280,7 @@ class BusinessFullSettingsSerializer(serializers.Serializer):
     province = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     district = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     avatar_url = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    cover_image_url = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     
     # Social links
     facebook_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
@@ -347,6 +350,7 @@ class BusinessFullSettingsSerializer(serializers.Serializer):
         instance.secondary_phone = validated_data.get("secondary_phone", instance.secondary_phone)
         instance.time_zone = validated_data.get("time_zone", instance.time_zone)
         instance.avatar_url = validated_data.get("avatar_url", instance.avatar_url)
+        instance.cover_image_url = validated_data.get("cover_image_url", instance.cover_image_url)
         
         if "country" in validated_data:
             country_name = validated_data["country"]

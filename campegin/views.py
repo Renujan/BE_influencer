@@ -65,39 +65,6 @@ def build_campaign_pdf_context(campaign):
                 "status_lower": str(pay.status).lower(),
                 "is_paid": pay.status == "Released",
             })
-    else:
-        # Fallback to default installments calculated from campaign budget/price
-        try:
-            budget_val = float(campaign.counter_price or campaign.budget or 0)
-        except Exception:
-            budget_val = 0
-        if budget_val > 0:
-            payments_list = [
-                {
-                    "milestone_name": "Milestone 1 - Initial Deposit / Content Draft",
-                    "title": "Milestone 1 - Initial Deposit / Content Draft",
-                    "type_label": "Business (Inbound)",
-                    "amount": round(budget_val * 0.5, 2),
-                    "payment_date": campaign.start_date or "-",
-                    "paid_date": campaign.start_date or "-",
-                    "status": "In Escrow" if campaign.status in ["Live", "Completed"] else "Pending",
-                    "status_display": "In Escrow" if campaign.status in ["Live", "Completed"] else "Pending",
-                    "status_lower": "in_escrow" if campaign.status in ["Live", "Completed"] else "pending",
-                    "is_paid": False,
-                },
-                {
-                    "milestone_name": "Milestone 2 - Final Deliverable Release",
-                    "title": "Milestone 2 - Final Deliverable Release",
-                    "type_label": "Creator (Outbound)",
-                    "amount": round(budget_val * 0.5, 2),
-                    "payment_date": campaign.end_date or "-",
-                    "paid_date": campaign.end_date or "-",
-                    "status": "Released" if campaign.status == "Completed" else "Pending",
-                    "status_display": "Released" if campaign.status == "Completed" else "Pending",
-                    "status_lower": "released" if campaign.status == "Completed" else "pending",
-                    "is_paid": campaign.status == "Completed",
-                }
-            ]
 
     milestones_list = []
     if payments_list:
@@ -458,24 +425,6 @@ class CampaignViewSet(viewsets.ModelViewSet):
             campaign_category=cat_val or serializer.validated_data.get("campaign_category", ""),
             niche=niche_val or serializer.validated_data.get("niche", "")
         )
-        
-        # Auto create default tasks for this campaign
-        CampaignTask.objects.create(campaign=campaign, title="Brief approval", is_done=True)
-        CampaignTask.objects.create(campaign=campaign, title="Content moodboard", is_done=True)
-        CampaignTask.objects.create(campaign=campaign, title="Draft #1 review", is_done=False, due_date="May 14")
-        CampaignTask.objects.create(campaign=campaign, title="Final delivery", is_done=False, due_date="May 18")
-
-        # Auto create default milestones
-        CampaignMilestone.objects.create(campaign=campaign, title="Kickoff", is_done=True)
-        CampaignMilestone.objects.create(campaign=campaign, title="Drafts approved", is_done=True)
-        CampaignMilestone.objects.create(campaign=campaign, title="Content live", is_done=False)
-        CampaignMilestone.objects.create(campaign=campaign, title="Final payout", is_done=False)
-
-        # Auto create default escrow payments
-        budget_val = float(campaign.budget) if campaign.budget else 5000.0
-        PaymentInstallment.objects.create(campaign=campaign, milestone_name="Kickoff payment", amount=1000.0, status="Released", payment_date="May 02")
-        PaymentInstallment.objects.create(campaign=campaign, milestone_name="Drafts approved", amount=1500.0, status="Released", payment_date="May 10")
-        PaymentInstallment.objects.create(campaign=campaign, milestone_name="Final delivery", amount=max(budget_val - 2500.0, 0.0), status="In Escrow")
 
         import json
         deliverables_json = self.request.data.get("deliverables")
@@ -494,7 +443,36 @@ class CampaignViewSet(viewsets.ModelViewSet):
                     # Automatically add business custom deliverable to Super Admin CampaignDeliverables options list
                     clean_name = del_name.split(" × ", 1)[-1].strip() if " × " in del_name else del_name.strip()
                     if clean_name:
-                        CampaignDeliverable.objects.get_or_create(name=clean_name)
+                        plat = item.get("platform") or campaign.platform or campaign.medium or ""
+                        cat_id = item.get("category")
+                        if not cat_id:
+                            target_cat_str = getattr(campaign, "campaign_category", None) or getattr(campaign, "category", None)
+                            if target_cat_str and isinstance(target_cat_str, str):
+                                cat_obj = CampaignCategory.objects.filter(type__iexact=target_cat_str.strip()).first() or CampaignCategory.objects.filter(name__iexact=target_cat_str.strip()).first()
+                                if cat_obj:
+                                    cat_id = cat_obj.id
+
+                        defaults = {"platform": plat}
+                        if cat_id:
+                            try:
+                                defaults["category_id"] = int(cat_id)
+                            except (ValueError, TypeError):
+                                pass
+
+                        cd_obj, created = CampaignDeliverable.objects.get_or_create(name=clean_name, defaults=defaults)
+                        if not created:
+                            changed = False
+                            if plat and not cd_obj.platform:
+                                cd_obj.platform = plat
+                                changed = True
+                            if cat_id and not cd_obj.category_id:
+                                try:
+                                    cd_obj.category_id = int(cat_id)
+                                    changed = True
+                                except (ValueError, TypeError):
+                                    pass
+                            if changed:
+                                cd_obj.save()
             except Exception as e:
                 print("Error parsing deliverables:", e)
 
@@ -562,7 +540,36 @@ class CampaignViewSet(viewsets.ModelViewSet):
                     # Automatically add business custom deliverable to Super Admin CampaignDeliverables options list
                     clean_name = del_name.split(" × ", 1)[-1].strip() if " × " in del_name else del_name.strip()
                     if clean_name:
-                        CampaignDeliverable.objects.get_or_create(name=clean_name)
+                        plat = item.get("platform") or campaign.platform or campaign.medium or ""
+                        cat_id = item.get("category")
+                        if not cat_id:
+                            target_cat_str = getattr(campaign, "campaign_category", None) or getattr(campaign, "category", None)
+                            if target_cat_str and isinstance(target_cat_str, str):
+                                cat_obj = CampaignCategory.objects.filter(type__iexact=target_cat_str.strip()).first() or CampaignCategory.objects.filter(name__iexact=target_cat_str.strip()).first()
+                                if cat_obj:
+                                    cat_id = cat_obj.id
+
+                        defaults = {"platform": plat}
+                        if cat_id:
+                            try:
+                                defaults["category_id"] = int(cat_id)
+                            except (ValueError, TypeError):
+                                pass
+
+                        cd_obj, created = CampaignDeliverable.objects.get_or_create(name=clean_name, defaults=defaults)
+                        if not created:
+                            changed = False
+                            if plat and not cd_obj.platform:
+                                cd_obj.platform = plat
+                                changed = True
+                            if cat_id and not cd_obj.category_id:
+                                try:
+                                    cd_obj.category_id = int(cat_id)
+                                    changed = True
+                                except (ValueError, TypeError):
+                                    pass
+                            if changed:
+                                cd_obj.save()
             except Exception as e:
                 print("Error parsing deliverables:", e)
 
@@ -1293,27 +1300,21 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def admin_approve_counter(self, request, pk=None):
         campaign = self.get_object()
-        if campaign.status in ["Countered_Pending", "Countered"]:
-            campaign.status = "Countered"
-        elif campaign.status in ["Business_Counter_Pending", "Business_Countered"]:
-            campaign.status = "Business_Countered"
-        elif campaign.status in ["Accepted_Pending_Admin", "Accepted"]:
-            if campaign.counter_price:
-                campaign.budget = campaign.counter_price
-            elif campaign.counter_history and len(campaign.counter_history) > 0:
-                last_p = campaign.counter_history[-1].get("price")
-                if last_p:
-                    campaign.budget = last_p
-            campaign.status = "Live"
-        else:
-            campaign.status = "Live" if "accepted" in str(campaign.status).lower() else "Countered"
+        if campaign.counter_price:
+            campaign.budget = campaign.counter_price
+        elif campaign.counter_history and len(campaign.counter_history) > 0:
+            last_p = campaign.counter_history[-1].get("price")
+            if last_p:
+                campaign.budget = last_p
+        campaign.status = "Live"
+        campaign.progress = campaign.calculate_flow_progress()
         campaign.save()
 
         Notification.objects.create(
-            title="Campaign Live" if campaign.status == "Live" else "Campaign Counter Approved",
-            message=f"Campaign '{campaign.name}' is now Live." if campaign.status == "Live" else f"A counter offer was approved for '{campaign.name}'.",
+            title="Campaign Live",
+            message=f"Campaign '{campaign.name}' is now Live with agreed budget of {campaign.budget}.",
             category="campaign",
-            icon="fas fa-play-circle" if campaign.status == "Live" else "fas fa-handshake",
+            icon="fas fa-play-circle",
             target_url=f"/admin/snippets/campegin/campaign/inspect/{campaign.id}/"
         )
         return Response(CampaignSerializer(campaign).data)
@@ -1362,6 +1363,27 @@ class CampaignDeliverableApiViewSet(viewsets.ModelViewSet):
             qs = qs.filter(category_id=category)
         return qs
 
+    def create(self, request, *args, **kwargs):
+        name = request.data.get("name", "")
+        category = request.data.get("category")
+        platform = request.data.get("platform", "")
+
+        if isinstance(name, str) and ("," in name or "\n" in name):
+            items = [line.strip() for chunk in name.replace("\r", "\n").split("\n") for line in chunk.split(",") if line.strip()]
+            if len(items) > 1:
+                created_objs = []
+                for item_name in items:
+                    clean_name = item_name.split(" × ", 1)[-1].strip() if " × " in item_name else item_name
+                    obj, _ = CampaignDeliverable.objects.get_or_create(
+                        name=clean_name,
+                        category_id=category,
+                        defaults={"platform": platform}
+                    )
+                    created_objs.append(obj)
+                return Response(CampaignDeliverableSerializer(created_objs, many=True).data, status=status.HTTP_201_CREATED)
+
+        return super().create(request, *args, **kwargs)
+
 
 class CampaignSettingsView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -1384,7 +1406,7 @@ class CampaignSettingsView(APIView):
     def post(self, request):
         name = request.data.get("name") or request.data.get("deliverable")
         platform = request.data.get("platform") or ""
-        category_id = request.data.get("category")
+        category_id = request.data.get("category") or request.data.get("category_id")
         if name and isinstance(name, str) and name.strip():
             raw_name = name.strip()
             clean_name = raw_name.split(" × ", 1)[-1].strip() if " × " in raw_name else raw_name
@@ -1393,7 +1415,9 @@ class CampaignSettingsView(APIView):
                 try:
                     defaults["category_id"] = int(category_id)
                 except (ValueError, TypeError):
-                    pass
+                    cat_obj = CampaignCategory.objects.filter(type__iexact=str(category_id).strip()).first() or CampaignCategory.objects.filter(name__iexact=str(category_id).strip()).first()
+                    if cat_obj:
+                        defaults["category_id"] = cat_obj.id
             obj, created = CampaignDeliverable.objects.get_or_create(name=clean_name, defaults=defaults)
             if not created:
                 changed = False
@@ -1407,7 +1431,10 @@ class CampaignSettingsView(APIView):
                             obj.category_id = cid
                             changed = True
                     except (ValueError, TypeError):
-                        pass
+                        cat_obj = CampaignCategory.objects.filter(type__iexact=str(category_id).strip()).first() or CampaignCategory.objects.filter(name__iexact=str(category_id).strip()).first()
+                        if cat_obj and obj.category_id != cat_obj.id:
+                            obj.category_id = cat_obj.id
+                            changed = True
                 if changed:
                     obj.save()
             return Response(CampaignDeliverableSerializer(obj).data)

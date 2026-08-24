@@ -179,7 +179,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         model = BusinessProfile
         fields = [
             "id", "user", "company_name", "business_type", "business_types", "mediums", "website", "bio",
-            "phone", "secondary_phone", "time_zone", "avatar_url", "country", "province", "district",
+            "phone", "secondary_phone", "time_zone", "avatar_url", "cover_image_url", "country", "province", "district",
             "facebook_url", "instagram_handle", "tiktok_handle", "youtube_url",
             "linkedin_url", "twitter_handle", "otp_verified", "status",
             "verification_documents_submitted", "business_reg_number", "business_document",
@@ -244,7 +244,7 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CreatorProfile
         fields = [
-            "id", "user", "phone", "location", "country", "bio", "avatar_url",
+            "id", "user", "phone", "location", "country", "bio", "avatar_url", "cover_image_url",
             "wallet_balance", "next_payout_date", "niches", "mediums", "rates",
             "province", "district", 
             "social_accounts", "otp_verified", "status",

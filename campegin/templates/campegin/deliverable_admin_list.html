@@ -1,0 +1,377 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block titletag %}Campaign Deliverables — Wagtail Admin{% endblock %}
+
+{% block extra_css %}
+<!-- cspell:disable -->
+<!-- spell-checker: disable -->
+<!-- ltex: enabled=false -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --cd-primary: #06b6d4;
+        --cd-primary-hover: #0891b2;
+        --cd-dark-bg: #0f172a;
+        --cd-slate-50: #f8fafc;
+        --cd-slate-100: #f1f5f9;
+        --cd-slate-200: #e2e8f0;
+        --cd-slate-300: #cbd5e1;
+        --cd-slate-600: #475569;
+        --cd-slate-700: #334155;
+        --cd-slate-800: #1e293b;
+    }
+
+    .cd-container {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        padding: 28px 32px;
+        max-width: 1440px;
+        margin: 0 auto;
+        color: #1e293b;
+        background-color: var(--cd-slate-50);
+        min-height: 100vh;
+    }
+
+    /* ── Wagtail Admin Header Banner ── */
+    .cd-header {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-radius: 14px;
+        padding: 26px 30px;
+        color: #ffffff;
+        margin-bottom: 22px;
+        box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.15);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .cd-header-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .cd-header-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: rgba(6, 182, 212, 0.15);
+        border: 1px solid rgba(6, 182, 212, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        color: #38bdf8;
+    }
+
+    .cd-header h1 {
+        font-size: 1.55rem;
+        font-weight: 800;
+        color: #ffffff;
+        margin: 0 0 4px 0;
+        letter-spacing: -0.02em;
+    }
+
+    .cd-header p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #94a3b8;
+    }
+
+    /* Main Global Add Button (Kept Intact at Top) */
+    .btn-cd-primary {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        color: #ffffff !important;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13.5px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-cd-primary:hover {
+        background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+        box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4);
+        transform: translateY(-1px);
+    }
+
+    /* ── Search & Filter Toolbar ── */
+    .cd-toolbar {
+        background: #ffffff;
+        border: 1px solid var(--cd-slate-200);
+        border-radius: 10px;
+        padding: 12px 18px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    }
+
+    .cd-search-form {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        max-width: 380px;
+    }
+
+    .cd-search-input {
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 13px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .cd-search-input:focus {
+        border-color: var(--cd-primary);
+    }
+
+    .cd-platform-pills {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .cd-pill {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid var(--cd-slate-200);
+        background: #ffffff;
+        color: #475569;
+        transition: all 0.15s ease;
+    }
+
+    .cd-pill:hover {
+        border-color: #94a3b8;
+        color: #0f172a;
+    }
+
+    .cd-pill.active {
+        background: #0f172a;
+        border-color: #0f172a;
+        color: #ffffff;
+    }
+
+    /* ── Clean Single-Level Grouped Table ── */
+    .cd-card {
+        background: #ffffff;
+        border: 1px solid var(--cd-slate-200);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .cd-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 13px;
+    }
+
+    .cd-table thead th {
+        background: #f8fafc;
+        padding: 14px 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        border-bottom: 1px solid var(--cd-slate-200);
+    }
+
+    .cd-table tbody td {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+
+    .cd-category-row {
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+
+    .cd-category-row:hover {
+        background-color: rgba(6, 182, 212, 0.03);
+    }
+
+    .cd-platform-tag {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 6px;
+        font-size: 11.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: #0f172a;
+        color: #ffffff;
+    }
+
+    .cd-cat-title-link {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 14.5px;
+        text-decoration: none;
+        transition: color 0.15s;
+    }
+
+    .cd-cat-title-link:hover {
+        color: var(--cd-primary);
+    }
+
+    .cd-cat-sub {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 3px;
+    }
+
+    .cd-badge-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 700;
+        background: rgba(6, 182, 212, 0.1);
+        color: #0891b2;
+        border: 1px solid rgba(6, 182, 212, 0.2);
+    }
+
+    .cd-badge-count.empty {
+        background: #f1f5f9;
+        color: #94a3b8;
+        border-color: #e2e8f0;
+    }
+
+    .cd-edit-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        border-radius: 6px;
+        font-size: 12.5px;
+        font-weight: 600;
+        text-decoration: none;
+        color: #334155;
+        border: 1px solid var(--cd-slate-200);
+        background: #ffffff;
+        transition: all 0.15s ease;
+    }
+
+    .cd-edit-btn:hover {
+        color: #0f172a;
+        border-color: var(--cd-primary);
+        background: rgba(6, 182, 212, 0.06);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cd-container">
+    <!-- Header Banner with Main Global Add Button (Kept Intact) -->
+    <div class="cd-header">
+        <div class="cd-header-title">
+            <div class="cd-header-icon">
+                📦
+            </div>
+            <div>
+                <h1>Campaign Deliverables</h1>
+                <p>{{ total_categories_count }} Categories &bull; {{ total_deliverables_count }} Total Deliverables</p>
+            </div>
+        </div>
+        <div>
+            <a href="{{ add_deliverable_url }}" class="btn-cd-primary">
+                ➕ Add New Deliverable
+            </a>
+        </div>
+    </div>
+
+    <!-- Search & Filter Toolbar -->
+    <div class="cd-toolbar">
+        <form method="GET" action="" class="cd-search-form">
+            {% if selected_platform %}
+                <input type="hidden" name="platform" value="{{ selected_platform }}">
+            {% endif %}
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Search platform or category..." class="cd-search-input">
+            <button type="submit" class="btn-cd-primary" style="padding: 7px 12px; font-size: 12px;">Search</button>
+            {% if search_query or selected_platform %}
+                <a href="{% url 'wagtailsnippets_campegin_campaigndeliverable:list' %}" class="cd-pill" style="font-size: 11px; padding: 4px 8px;">Reset</a>
+            {% endif %}
+        </form>
+
+        <div class="cd-platform-pills">
+            <a href="{% url 'wagtailsnippets_campegin_campaigndeliverable:list' %}{% if search_query %}?q={{ search_query }}{% endif %}" class="cd-pill {% if not selected_platform %}active{% endif %}">
+                All Platforms
+            </a>
+            {% for plat in platform_list %}
+                <a href="{% url 'wagtailsnippets_campegin_campaigndeliverable:list' %}?platform={{ plat }}{% if search_query %}&q={{ search_query }}{% endif %}" class="cd-pill {% if selected_platform == plat %}active{% endif %}">
+                    {{ plat }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Single-Level Clean Grouped Table (No Action buttons) -->
+    <div class="cd-card">
+        <table class="cd-table">
+            <thead>
+                <tr>
+                    <th style="width: 180px;">Platform</th>
+                    <th>Campaign Category</th>
+                    <th style="width: 220px; text-align: right;">Total Deliverables</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categories_list %}
+                    <!-- Clean Grouped Category Row: Navigates to Edit page on click -->
+                    <tr class="cd-category-row" onclick="window.location.href='{{ cat.edit_url }}'">
+                        <td>
+                            <span class="cd-platform-tag">{{ cat.platform }}</span>
+                        </td>
+                        <td>
+                            <a href="{{ cat.edit_url }}" class="cd-cat-title-link" onclick="event.stopPropagation();">
+                                {{ cat.name }}
+                            </a>
+                            {% if cat.duration %}
+                                <div class="cd-cat-sub">Duration / Specs: {{ cat.duration }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: right;">
+                            <span class="cd-badge-count {% if cat.deliverables_count == 0 %}empty{% endif %}">
+                                📦 {{ cat.deliverables_count }} Deliverable{{ cat.deliverables_count|pluralize }}
+                            </span>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="3" style="text-align: center; padding: 48px; color: #64748b;">
+                            No categories or deliverables found matching your search.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

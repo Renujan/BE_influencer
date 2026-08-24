@@ -1,4 +1,5 @@
-from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup, IndexView, InspectView
+import json
+from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup, IndexView, InspectView, CreateView, EditView
 from wagtail.snippets.models import register_snippet
 from wagtail import hooks
 from wagtail.admin.menu import MenuItem
@@ -6,7 +7,7 @@ from wagtail.admin.views.generic.models import MenuItem as GenericMenuItem
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.urls import path, reverse
-from .models import Campaign, CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform, Pitch, extract_currency_symbol
+from .models import Campaign, CampaignCategory, CampaignLanguage, CampaignDeliverable, CampaignPlatform, Pitch, extract_currency_symbol, CampaignDeliverableForm, CampaignCategoryForm
 from WorkspacePayment.models import WorkspacePaymentNegotiation
 from .views import download_campaign_pdf_view
 
@@ -275,11 +276,16 @@ class CampaignCategoryViewSet(SnippetViewSet):
     icon = "tag"
     add_to_admin_menu = False
     filterset_class = CampaignCategoryFilterSet
-    list_display = ("platform", "type", "duration", "min_price", "max_price")
+    list_display = ("id", "platform", "name", "deliverables_count", "min_price", "max_price")
     list_export = ("id", "platform", "type", "duration", "name", "min_price", "max_price")
     list_filter = ("platform",)
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
+
+    def deliverables_count(self, obj):
+        count = obj.deliverables.count()
+        return f"{count} Deliverable{'s' if count != 1 else ''}"
+    deliverables_count.short_description = "Deliverables"
 
 class CampaignLanguageViewSet(SnippetViewSet):
     model = CampaignLanguage
@@ -290,17 +296,192 @@ class CampaignLanguageViewSet(SnippetViewSet):
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
 
+class CampaignDeliverableIndexView(IndexView):
+    template_name = "campegin/deliverable_admin_list.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from collections import defaultdict
+        from .models import CampaignCategory, CampaignDeliverable, CampaignPlatform
+
+        search_query = self.request.GET.get("q", "").strip().lower()
+        selected_platform = self.request.GET.get("platform", "").strip()
+
+        # Query all deliverables with related category
+        deliverables_qs = CampaignDeliverable.objects.select_related("category").all().order_by("platform", "id")
+
+        # Group deliverables by unique Category ID using defaultdict
+        grouped_categories = defaultdict(lambda: {
+            "id": None,
+            "name": "",
+            "platform": "",
+            "type": "",
+            "duration": "",
+            "min_price": None,
+            "max_price": None,
+            "deliverables": [],
+            "edit_category_url": "",
+            "add_deliverable_url": "",
+        })
+
+        for d in deliverables_qs:
+            cat = d.category
+            cat_id = cat.id if cat else f"raw_{d.platform}"
+            cat_name = cat.name if cat else (d.platform or "General Deliverables")
+            plat_name = (d.platform or (cat.platform if cat else "General")).strip().title()
+
+            if selected_platform and plat_name.lower() != selected_platform.lower():
+                continue
+
+            if search_query:
+                matches_cat = search_query in cat_name.lower() or search_query in plat_name.lower()
+                matches_deliv = search_query in (d.name or "").lower()
+                if not matches_cat and not matches_deliv:
+                    continue
+
+            item = grouped_categories[cat_id]
+            item["id"] = cat_id
+            item["name"] = cat_name
+            item["platform"] = plat_name
+            if cat:
+                item["type"] = getattr(cat, "type", "")
+                item["duration"] = getattr(cat, "duration", "")
+                item["min_price"] = getattr(cat, "min_price", None)
+                item["max_price"] = getattr(cat, "max_price", None)
+                item["edit_category_url"] = reverse("wagtailsnippets_campegin_campaigncategory:edit", args=[cat.id])
+                item["add_deliverable_url"] = f"{reverse('wagtailsnippets_campegin_campaigndeliverable:add')}?category={cat.id}&platform={plat_name}"
+            else:
+                item["add_deliverable_url"] = f"{reverse('wagtailsnippets_campegin_campaigndeliverable:add')}?platform={plat_name}"
+
+            # Append every single deliverable attached to this category
+            item["deliverables"].append({
+                "id": d.id,
+                "name": d.name,
+                "edit_url": reverse("wagtailsnippets_campegin_campaigndeliverable:edit", args=[d.id]),
+                "delete_url": reverse("wagtailsnippets_campegin_campaigndeliverable:delete", args=[d.id]),
+            })
+
+        # Also include any categories that might not have any deliverables yet
+        if not search_query:
+            all_categories = CampaignCategory.objects.all().order_by("platform", "id")
+            if selected_platform:
+                all_categories = all_categories.filter(platform__iexact=selected_platform)
+            for cat in all_categories:
+                if cat.id not in grouped_categories:
+                    plat_name = (cat.platform or "General").strip().title()
+                    grouped_categories[cat.id] = {
+                        "id": cat.id,
+                        "name": cat.name or f"{cat.platform} - {cat.type}",
+                        "platform": plat_name,
+                        "type": cat.type,
+                        "duration": cat.duration,
+                        "min_price": cat.min_price,
+                        "max_price": cat.max_price,
+                        "deliverables": [],
+                        "edit_category_url": reverse("wagtailsnippets_campegin_campaigncategory:edit", args=[cat.id]),
+                        "add_deliverable_url": f"{reverse('wagtailsnippets_campegin_campaigndeliverable:add')}?category={cat.id}&platform={plat_name}",
+                    }
+
+        # Convert to list and compute deliverables_count & primary edit_url
+        categories_list = []
+        total_deliv_count = 0
+        for cat_data in grouped_categories.values():
+            deliv_items = []
+            for d in cat_data["deliverables"]:
+                raw_name = d.get("name") if isinstance(d, dict) else getattr(d, "name", "")
+                if raw_name:
+                    for chunk in str(raw_name).replace("\r", "\n").split("\n"):
+                        for part in chunk.split(","):
+                            p = part.strip()
+                            if p and p not in deliv_items:
+                                deliv_items.append(p)
+            cat_data["deliverables_count"] = len(deliv_items)
+            if cat_data["deliverables"]:
+                cat_data["edit_url"] = cat_data["deliverables"][0]["edit_url"]
+            else:
+                cat_data["edit_url"] = cat_data["add_deliverable_url"]
+            total_deliv_count += cat_data["deliverables_count"]
+            categories_list.append(cat_data)
+
+        # Sort categories by platform, then name
+        categories_list.sort(key=lambda x: (x["platform"], x["name"]))
+
+        # Available platforms for filter pills
+        platform_pills = sorted(list(set(c["platform"] for c in categories_list if c["platform"])))
+
+        context["categories_list"] = categories_list
+        context["platform_list"] = platform_pills
+        context["total_categories_count"] = len(categories_list)
+        context["total_deliverables_count"] = total_deliv_count
+        context["search_query"] = self.request.GET.get("q", "")
+        context["selected_platform"] = selected_platform
+        context["add_deliverable_url"] = reverse("wagtailsnippets_campegin_campaigndeliverable:add")
+
+        return context
+
+
+def get_categories_json_context():
+    from .models import CampaignCategory, CampaignDeliverable
+    categories = CampaignCategory.objects.all().order_by("platform", "id")
+    categories_data = []
+    for c in categories:
+        delivs = list(CampaignDeliverable.objects.filter(category=c).order_by("id"))
+        deliv_items = []
+        for d in delivs:
+            if d.name:
+                for chunk in str(d.name).replace("\r", "\n").split("\n"):
+                    for part in chunk.split(","):
+                        p = part.strip()
+                        if p and not any(item["name"] == p for item in deliv_items):
+                            deliv_items.append({"id": d.id, "name": p})
+        categories_data.append({
+            "id": c.id,
+            "name": c.name or f"{c.platform} - {c.type}",
+            "type": c.type,
+            "platform": c.platform,
+            "duration": c.duration or "",
+            "min_price": str(c.min_price or "0"),
+            "max_price": str(c.max_price or "0"),
+            "deliverables": deliv_items
+        })
+    return json.dumps(categories_data)
+
+
+class CampaignDeliverableCreateView(CreateView):
+    template_name = "campegin/deliverable_admin_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["categories_json"] = get_categories_json_context()
+        return context
+
+
+class CampaignDeliverableEditView(EditView):
+    template_name = "campegin/deliverable_admin_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["categories_json"] = get_categories_json_context()
+        return context
+
+
 class CampaignDeliverableViewSet(SnippetViewSet):
     model = CampaignDeliverable
+    base_form_class = CampaignDeliverableForm
     menu_label = "Deliverables"
     icon = "doc-full"
     add_to_admin_menu = False
-    list_display = ("id", "platform", "category", "name")
+    index_view_class = CampaignDeliverableIndexView
+    add_view_class = CampaignDeliverableCreateView
+    edit_view_class = CampaignDeliverableEditView
+    list_display = ("platform", "category")
     list_export = ("id", "platform", "category", "name")
     list_filter = ("platform", "category")
     inspect_view_enabled = True
-    edit_template_name = "wagtailadmin/generic_edit_premium.html"
-    create_template_name = "wagtailadmin/generic_create_premium.html"
+    inspect_view_fields = ("platform", "category", "name")
+    index_template_name = "campegin/deliverable_admin_list.html"
+    edit_template_name = "campegin/deliverable_admin_form.html"
+    create_template_name = "campegin/deliverable_admin_form.html"
 
 class CampaignPlatformViewSet(SnippetViewSet):
     model = CampaignPlatform

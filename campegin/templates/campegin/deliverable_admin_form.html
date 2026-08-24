@@ -1,0 +1,680 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block titletag %}{% if object %}Edit Deliverable — {{ object.name }}{% else %}Add Campaign Deliverable{% endif %} — Wagtail Admin{% endblock %}
+
+{% block extra_css %}
+<!-- cspell:disable -->
+<!-- spell-checker: disable -->
+<!-- ltex: enabled=false -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --cd-primary: #06b6d4;
+        --cd-primary-hover: #0891b2;
+        --cd-slate-50: #f8fafc;
+        --cd-slate-100: #f1f5f9;
+        --cd-slate-200: #e2e8f0;
+        --cd-slate-300: #cbd5e1;
+        --cd-slate-600: #475569;
+        --cd-slate-700: #334155;
+        --cd-slate-800: #1e293b;
+    }
+
+    .custom-inspect-wrapper {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 28px 32px;
+        background-color: var(--cd-slate-50);
+        min-height: 100vh;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    /* ── Header Bar ── */
+    .custom-header-bar {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        padding: 24px 32px;
+        color: #ffffff;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+    }
+
+    .custom-header-title h1 {
+        font-size: 22px;
+        font-weight: 800;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+    }
+
+    .custom-header-title p {
+        font-size: 13px;
+        color: #94a3b8;
+        margin: 4px 0 0 0;
+    }
+
+    .btn-header-secondary {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #ffffff !important;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 13px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: background-color 0.2s;
+    }
+
+    .btn-header-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-header-primary {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        color: #ffffff !important;
+        padding: 10px 22px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        transition: all 0.2s ease;
+    }
+
+    .btn-header-primary:hover {
+        background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+        box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4);
+    }
+
+    /* ── Form Card ── */
+    .custom-body-card {
+        background: #ffffff;
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        border: 1px solid #e2e8f0;
+        border-top: none;
+        padding: 32px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+    }
+
+    .custom-section-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0 0 16px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e2e8f0;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .custom-field-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 18px;
+    }
+
+    .custom-form-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .custom-form-label .req {
+        color: #ef4444;
+    }
+
+    .custom-form-desc {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 4px;
+        margin-bottom: 10px;
+    }
+
+    /* Select & Inputs */
+    .custom-input,
+    .custom-select {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 14px;
+        color: #1e293b;
+        width: 100%;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .custom-input:focus,
+    .custom-select:focus {
+        border-color: var(--cd-primary);
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+    }
+
+    /* Category Info Card */
+    .cd-cat-info-card {
+        margin-top: 10px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        background: rgba(6, 182, 212, 0.06);
+        border: 1px solid rgba(6, 182, 212, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 12px;
+    }
+
+    .cd-cat-info-left {
+        font-weight: 600;
+        color: #0e7490;
+    }
+
+    .cd-cat-info-right {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        color: #059669;
+    }
+
+    /* Dynamic Deliverables Visual List (Field 3) */
+    .cd-tags-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+        min-height: 42px;
+        padding: 10px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+    }
+
+    .cd-tag-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: #0f172a;
+        color: #ffffff;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        animation: cdFadeIn 0.2s ease-out;
+    }
+
+    .cd-tag-pill.existing {
+        background: #334155;
+    }
+
+    .cd-tag-pill .badge-existing {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 1px 6px;
+        border-radius: 10px;
+    }
+
+    .cd-tag-remove {
+        background: rgba(255, 255, 255, 0.25);
+        border: none;
+        color: #ffffff;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        transition: background 0.15s;
+    }
+
+    .cd-tag-remove:hover {
+        background: #ef4444;
+    }
+
+    .cd-add-row {
+        display: flex;
+        gap: 10px;
+    }
+
+    .cd-add-input {
+        flex: 1;
+        padding: 10px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 13px;
+        outline: none;
+    }
+
+    .cd-add-input:focus {
+        border-color: var(--cd-primary);
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+    }
+
+    .btn-add-tag {
+        background: #0f172a;
+        color: #ffffff;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: background 0.15s;
+        flex-shrink: 0;
+    }
+
+    .btn-add-tag:hover {
+        background: #334155;
+    }
+
+    .custom-footer-actions {
+        display: flex;
+        justify-content: flex-start;
+        gap: 12px;
+        padding-top: 20px;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    @keyframes cdFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="custom-inspect-wrapper">
+    <!-- Header Bar -->
+    <div class="custom-header-bar">
+        <div class="custom-header-title">
+            <h1>{% if object %}Edit Deliverable: {{ object.name }}{% else %}Add Campaign Deliverable(s){% endif %}</h1>
+            <p>Cascading Category Selector & Multi-Deliverable Manager</p>
+        </div>
+        <div>
+            <a href="{% url 'wagtailsnippets_campegin_campaigndeliverable:list' %}" class="btn-header-secondary">
+                &larr; Back to Deliverables List
+            </a>
+        </div>
+    </div>
+
+    <!-- Body Content Card -->
+    <form method="POST" action="" class="custom-body-card" id="deliverable-form">
+        {% csrf_token %}
+
+        {% if form.errors %}
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 14px 18px; color: #b91c1c; font-size: 13px;">
+                <strong>Please fix the errors below:</strong>
+                <ul style="margin: 6px 0 0 16px; padding: 0;">
+                    {% for field, errs in form.errors.items %}
+                        <li>{{ field|title }}: {{ errs.0 }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div>
+            <h3 class="custom-section-title">1. Context & Hierarchy Selection</h3>
+
+            <!-- FIELD 1: Target Platform (Cascading Dropdown) -->
+            <div class="custom-field-box">
+                <label class="custom-form-label" for="id_platform">
+                    Field 1: Target Platform <span class="req">*</span>
+                </label>
+                <div class="custom-form-desc">
+                    Selecting a platform dynamically populates available Campaign Categories in Field 2.
+                </div>
+                {{ form.platform }}
+            </div>
+
+            <!-- FIELD 2: Campaign Category (Dynamically Filtered) -->
+            <div class="custom-field-box">
+                <label class="custom-form-label" for="id_category">
+                    Field 2: Campaign Category <span class="req">*</span>
+                </label>
+                <div class="custom-form-desc">
+                    Filtered by the selected Platform above.
+                </div>
+                {{ form.category }}
+
+                <!-- Category details preview -->
+                <div id="category-info-box" class="cd-cat-info-card" style="display: none;">
+                    <div class="cd-cat-info-left" id="category-info-text">
+                        Category Details
+                    </div>
+                    <div class="cd-cat-info-right" id="category-price-text">
+                        $0 - $0
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="custom-section-title">2. Deliverables Specification</h3>
+
+            <!-- FIELD 3: Deliverables (Visual Tag List + Add New) -->
+            <div class="custom-field-box">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label class="custom-form-label" style="margin-bottom: 0;">
+                        Field 3: Deliverables List <span class="req">*</span>
+                    </label>
+                    <span id="deliverables-counter" style="font-size: 12px; font-weight: 700; color: #06b6d4;">
+                        0 Deliverables
+                    </span>
+                </div>
+                <div class="custom-form-desc">
+                    Existing deliverables for this category appear as tags below. Add new deliverables one by one or separated by commas.
+                </div>
+
+                <!-- Visual Pills Container -->
+                <div class="cd-tags-container" id="deliverables-tags-container">
+                    <span id="no-tags-notice" style="color: #94a3b8; font-size: 13px; align-self: center;">
+                        No deliverables added yet. Type below and click "+ Add Deliverable".
+                    </span>
+                </div>
+
+                <!-- Add Input Row -->
+                <div class="cd-add-row">
+                    <input type="text" id="new-deliverable-input" class="cd-add-input" placeholder="Enter deliverable specification..." />
+                    <button type="button" id="btn-add-deliverable" class="btn-add-tag">
+                        ➕ Add Deliverable
+                    </button>
+                </div>
+
+                <!-- Hidden Input synced for form submission -->
+                <input type="hidden" name="name" id="id_name" value="{{ form.name.value|default:'' }}" />
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="custom-footer-actions">
+            <button type="submit" class="btn-header-primary" id="btn-save-form">
+                💾 Save Deliverables
+            </button>
+            <a href="{% url 'wagtailsnippets_campegin_campaigndeliverable:list' %}" class="btn-header-secondary" style="color: #334155 !important; background: #e2e8f0; border-color: #cbd5e1;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Embedded JSON of all Categories and existing deliverables -->
+<script id="categories-json-data" type="application/json">
+    {{ categories_json|safe }}
+</script>
+
+<!-- Vanilla JS: Cascading Dropdowns & Dynamic Deliverables Tag List -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const rawDataEl = document.getElementById('categories-json-data');
+    let categories = [];
+    try {
+        categories = JSON.parse(rawDataEl.textContent || '[]');
+    } catch (e) {
+        console.error('Failed to parse categories JSON:', e);
+    }
+
+    const platformSelect = document.getElementById('id_platform');
+    const categorySelect = document.getElementById('id_category');
+    const categoryInfoBox = document.getElementById('category-info-box');
+    const categoryInfoText = document.getElementById('category-info-text');
+    const categoryPriceText = document.getElementById('category-price-text');
+
+    const tagsContainer = document.getElementById('deliverables-tags-container');
+    const noTagsNotice = document.getElementById('no-tags-notice');
+    const newDeliverableInput = document.getElementById('new-deliverable-input');
+    const btnAddDeliverable = document.getElementById('btn-add-deliverable');
+    const hiddenNameInput = document.getElementById('id_name');
+    const counterBadge = document.getElementById('deliverables-counter');
+    const formEl = document.getElementById('deliverable-form');
+
+    // Deliverables state list: array of string names
+    let deliverablesList = [];
+
+    // Parse initial value from hidden input if present
+    const initialRaw = (hiddenNameInput.value || '').trim();
+    if (initialRaw) {
+        initialRaw.split(',').forEach(item => {
+            const clean = item.trim();
+            if (clean && !deliverablesList.includes(clean)) {
+                deliverablesList.push(clean);
+            }
+        });
+    }
+
+    // Function to render tags
+    function renderTags() {
+        tagsContainer.querySelectorAll('.cd-tag-pill').forEach(el => el.remove());
+
+        if (deliverablesList.length === 0) {
+            if (noTagsNotice) noTagsNotice.style.display = 'block';
+        } else {
+            if (noTagsNotice) noTagsNotice.style.display = 'none';
+
+            deliverablesList.forEach((delivName, index) => {
+                const pill = document.createElement('div');
+                pill.className = 'cd-tag-pill';
+                pill.innerHTML = `
+                    <span>${escapeHtml(delivName)}</span>
+                    <button type="button" class="cd-tag-remove" data-index="${index}" title="Remove deliverable">&times;</button>
+                `;
+                tagsContainer.appendChild(pill);
+            });
+        }
+
+        // Update hidden field & counter
+        hiddenNameInput.value = deliverablesList.join(', ');
+        counterBadge.textContent = `${deliverablesList.length} Deliverable${deliverablesList.length === 1 ? '' : 's'}`;
+    }
+
+    function addDeliverableItem(name) {
+        const trimmed = (name || '').trim();
+        if (!trimmed) return;
+
+        if (!deliverablesList.includes(trimmed)) {
+            deliverablesList.push(trimmed);
+            renderTags();
+        }
+    }
+
+    // Function to load all deliverables belonging to a Category
+    function loadCategoryDeliverables(selectedCatId, replaceExisting = false) {
+        if (!selectedCatId) {
+            if (replaceExisting) {
+                deliverablesList = [];
+                renderTags();
+            }
+            return;
+        }
+
+        const cat = categories.find(c => String(c.id) === String(selectedCatId));
+        if (cat && Array.isArray(cat.deliverables)) {
+            if (replaceExisting) {
+                deliverablesList = [];
+            }
+            cat.deliverables.forEach(d => {
+                const clean = (d.name || '').trim();
+                if (clean && !deliverablesList.includes(clean)) {
+                    deliverablesList.push(clean);
+                }
+            });
+            renderTags();
+        }
+    }
+
+    // Helper for HTML escaping
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Tag remove event delegation
+    tagsContainer.addEventListener('click', function (e) {
+        const removeBtn = e.target.closest('.cd-tag-remove');
+        if (removeBtn) {
+            const idx = parseInt(removeBtn.getAttribute('data-index'), 10);
+            if (!isNaN(idx) && idx >= 0 && idx < deliverablesList.length) {
+                deliverablesList.splice(idx, 1);
+                renderTags();
+            }
+        }
+    });
+
+    // Add button click
+    btnAddDeliverable.addEventListener('click', function () {
+        addDeliverableItem(newDeliverableInput.value);
+        newDeliverableInput.value = '';
+        newDeliverableInput.focus();
+    });
+
+    // Add on Enter key in text input
+    newDeliverableInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addDeliverableItem(newDeliverableInput.value);
+            newDeliverableInput.value = '';
+        }
+    });
+
+    // Function to filter Category dropdown by selected Platform
+    function filterCategoriesByPlatform(selectedPlatform, preselectedCatId) {
+        const currentCatVal = preselectedCatId || categorySelect.value;
+        categorySelect.innerHTML = '<option value="">Select Campaign Category *</option>';
+
+        if (!selectedPlatform) {
+            categoryInfoBox.style.display = 'none';
+            return;
+        }
+
+        const filtered = categories.filter(c => {
+            return (c.platform || '').toLowerCase() === selectedPlatform.toLowerCase();
+        });
+
+        let foundSelected = false;
+        filtered.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.name || `${c.platform} - ${c.type}`;
+            if (String(currentCatVal) === String(c.id)) {
+                opt.selected = true;
+                foundSelected = true;
+            }
+            categorySelect.appendChild(opt);
+        });
+
+        if (!foundSelected && filtered.length > 0) {
+            categorySelect.value = '';
+        }
+
+        updateCategoryInfo();
+    }
+
+    // Update Category Info Box & load existing deliverables for category
+    function updateCategoryInfo() {
+        const selectedCatId = categorySelect.value;
+        if (!selectedCatId) {
+            categoryInfoBox.style.display = 'none';
+            return;
+        }
+
+        const cat = categories.find(c => String(c.id) === String(selectedCatId));
+        if (cat) {
+            categoryInfoBox.style.display = 'flex';
+            categoryInfoText.innerHTML = `📌 <strong>${escapeHtml(cat.name)}</strong> ${cat.duration ? `&bull; Duration: ${escapeHtml(cat.duration)}` : ''}`;
+            
+            const minP = parseFloat(cat.min_price || '0');
+            const maxP = parseFloat(cat.max_price || '0');
+            if (minP > 0 || maxP > 0) {
+                categoryPriceText.textContent = `$${minP.toLocaleString()} – $${maxP.toLocaleString()}`;
+            } else {
+                categoryPriceText.textContent = '';
+            }
+        } else {
+            categoryInfoBox.style.display = 'none';
+        }
+    }
+
+    // Platform change handler
+    platformSelect.addEventListener('change', function () {
+        filterCategoriesByPlatform(this.value);
+    });
+
+    // Category change handler: instantly bundles and displays all deliverables for selected category
+    categorySelect.addEventListener('change', function () {
+        loadCategoryDeliverables(this.value, true);
+        updateCategoryInfo();
+    });
+
+    // Before submit verification
+    formEl.addEventListener('submit', function (e) {
+        // If user typed something in input without clicking Add, include it
+        if (newDeliverableInput.value.trim()) {
+            addDeliverableItem(newDeliverableInput.value.trim());
+            newDeliverableInput.value = '';
+        }
+
+        if (deliverablesList.length === 0) {
+            e.preventDefault();
+            alert('Please add at least one deliverable name before saving.');
+            newDeliverableInput.focus();
+            return false;
+        }
+        hiddenNameInput.value = deliverablesList.join(', ');
+    });
+
+    // Initialize dropdowns & tags on load
+    const initialPlatform = platformSelect.value;
+    const initialCategory = categorySelect.value;
+
+    if (initialPlatform) {
+        filterCategoriesByPlatform(initialPlatform, initialCategory);
+    } else if (initialCategory) {
+        const catObj = categories.find(c => String(c.id) === String(initialCategory));
+        if (catObj && catObj.platform) {
+            platformSelect.value = catObj.platform;
+            filterCategoriesByPlatform(catObj.platform, initialCategory);
+        }
+    }
+
+    if (categorySelect.value) {
+        loadCategoryDeliverables(categorySelect.value, false);
+    }
+
+    renderTags();
+});
+</script>
+{% endblock %}

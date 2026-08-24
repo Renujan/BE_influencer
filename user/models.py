@@ -110,6 +110,7 @@ class BusinessProfile(models.Model):
     secondary_phone = models.CharField(max_length=30, blank=True, null=True)
     time_zone = models.CharField(max_length=100, blank=True, null=True)
     avatar_url = models.CharField(max_length=255, blank=True, null=True)
+    cover_image_url = models.CharField(max_length=255, blank=True, null=True)
 
     # Social links
     facebook_url = models.URLField(blank=True, null=True)
@@ -182,6 +183,7 @@ class CreatorProfile(models.Model):
     province = models.ForeignKey(Province, on_delete=models.SET_NULL, null=True, blank=True, related_name="creators")
     district = models.ForeignKey("District", on_delete=models.SET_NULL, null=True, blank=True, related_name="creators")
     avatar_url = models.CharField(max_length=255, blank=True, null=True)
+    cover_image_url = models.CharField(max_length=255, blank=True, null=True)
     niches = models.ManyToManyField(Niche, blank=True, related_name="creators")
     mediums = models.ManyToManyField(Medium, blank=True, related_name="creators")
     wallet_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
