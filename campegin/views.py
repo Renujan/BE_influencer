@@ -1748,10 +1748,14 @@ def populate_deliverables_from_pitch(campaign, pitch):
             continue
 
         multiplier = 1
-        mult_match = re.match(r'^(\d+)\s*[×xX]\s*(.+)$', item_text)
+        mult_match = re.match(r'^(\d{1,2})\s*(?:[×]|(?:\s+[xX]\s+))\s*(.+)$', item_text)
         if mult_match:
-            multiplier = int(mult_match.group(1))
-            raw_title = mult_match.group(2).strip()
+            try:
+                multiplier = min(max(1, int(mult_match.group(1))), 10)
+                raw_title = mult_match.group(2).strip()
+            except (ValueError, TypeError):
+                multiplier = 1
+                raw_title = item_text
         else:
             raw_title = item_text
 
