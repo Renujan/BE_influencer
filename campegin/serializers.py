@@ -424,7 +424,8 @@ class PitchSerializer(serializers.ModelSerializer):
                 brief=obj.description or f"Campaign proposal based on pitch: {obj.campaign_name}",
                 status="Live",
                 progress=62,
-                start_date=obj.sent_date or "2026-08-01",
+                start_date=obj.start_date or obj.sent_date or "2026-08-01",
+                end_date=obj.end_date or "",
                 created_via="pitch",
             )
             try:

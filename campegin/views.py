@@ -21,17 +21,29 @@ from notifications.models import Notification
 from chat_monitor.models import ChatReview
 from user.permissions import IsApprovedBusiness
 
-def build_campaign_pdf_context(campaign):
+def build_campaign_pdf_context(campaign, user=None):
     from WorkspacePayment.models import WorkspaceInstallment, WorkspacePaymentNegotiation
     from .models import extract_currency_symbol
 
     curr_sym = campaign.currency_symbol or extract_currency_symbol(campaign) or "$"
     
+    # Check if viewer is a business user
+    is_business = False
+    if user:
+        if hasattr(user, "business_profile") or user == campaign.brand or (not user.is_staff and not hasattr(user, "creator_profile")):
+            is_business = True
+
     # Retrieve related records
     negotiation = campaign.payment_negotiations.first()
-    workspace_installments = list(campaign.workspace_installments.all().order_by("installment_type", "id"))
-    if not workspace_installments and negotiation:
-        workspace_installments = list(negotiation.installments.all().order_by("installment_type", "id"))
+    
+    inst_qs = campaign.workspace_installments.all()
+    if not inst_qs.exists() and negotiation:
+        inst_qs = negotiation.installments.all()
+
+    if is_business:
+        inst_qs = inst_qs.filter(installment_type="business")
+
+    workspace_installments = list(inst_qs.order_by("installment_type", "id"))
 
     payments_list = []
     if workspace_installments:
@@ -110,6 +122,7 @@ def build_campaign_pdf_context(campaign):
 
     return {
         "instance": campaign,
+        "is_business": is_business,
         "negotiation": negotiation,
         "milestones": milestones_list,
         "tasks": tasks_list,
@@ -581,7 +594,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
         from xhtml2pdf import pisa
 
         campaign = self.get_object()
-        context = build_campaign_pdf_context(campaign)
+        context = build_campaign_pdf_context(campaign, user=request.user)
         
         html = render_to_string("campegin/campaign_pdf.html", context)
         result = BytesIO()
@@ -1947,6 +1960,10 @@ def _execute_pitch_conversion(pitch, request_data=None):
         campaign.category = category_val
         campaign.campaign_category = category_val
         campaign.niche = niche_val_final
+        if pitch.start_date:
+            campaign.start_date = pitch.start_date
+        if pitch.end_date:
+            campaign.end_date = pitch.end_date
         if deliv_lang_str:
             campaign.delivery_language = deliv_lang_str
         if country_val:

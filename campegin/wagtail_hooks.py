@@ -602,7 +602,8 @@ class PitchInspectView(InspectView):
                     brief=self.object.description or f"Campaign proposal based on pitch: {self.object.campaign_name}",
                     status="Live",
                     progress=62,
-                    start_date=self.object.sent_date or "2026-08-01",
+                    start_date=self.object.start_date or self.object.sent_date or "2026-08-01",
+                    end_date=self.object.end_date or "",
                     created_via="pitch",
                 )
             else:
@@ -614,6 +615,10 @@ class PitchInspectView(InspectView):
                 campaign.category = category_val
                 campaign.campaign_category = category_val
                 campaign.niche = niche_val_final
+                if self.object.start_date:
+                    campaign.start_date = self.object.start_date
+                if self.object.end_date:
+                    campaign.end_date = self.object.end_date
                 if deliv_lang_str:
                     campaign.delivery_language = deliv_lang_str
                 if country_val:

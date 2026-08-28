@@ -170,7 +170,11 @@ def portfolio_items_view(request):
 
             title = (body.get("title") or "").strip()
             if not title:
-                return JsonResponse({"error": "title is required"}, status=400)
+                return JsonResponse({"error": "Title is required"}, status=400)
+            if len(title) < 3:
+                return JsonResponse({"error": "Title must be at least 3 letters"}, status=400)
+            if len(title) > 100:
+                return JsonResponse({"error": "Title cannot exceed 100 letters"}, status=400)
 
             platform = (body.get("platform") or "instagram").lower().strip()
             media_type = (body.get("media_type") or body.get("type") or "photo").lower().strip()
@@ -182,6 +186,8 @@ def portfolio_items_view(request):
                 er_val = 0.0
 
             brand = (body.get("brand") or "").strip()
+            if brand and len(brand) > 100:
+                return JsonResponse({"error": "Brand cannot exceed 100 letters"}, status=400)
             post_link = (body.get("post_link") or "").strip() or None
             is_featured = str(body.get("is_featured", "false")).lower() in ("true", "1", "yes")
 
@@ -237,8 +243,15 @@ def portfolio_item_detail_view(request, item_id):
             else:
                 body = request.POST
 
-            if "title" in body and body["title"]:
-                item.title = body["title"].strip()
+            if "title" in body:
+                t = (body["title"] or "").strip()
+                if not t:
+                    return JsonResponse({"error": "Title cannot be empty"}, status=400)
+                if len(t) < 3:
+                    return JsonResponse({"error": "Title must be at least 3 letters"}, status=400)
+                if len(t) > 100:
+                    return JsonResponse({"error": "Title cannot exceed 100 letters"}, status=400)
+                item.title = t
             if "platform" in body:
                 item.platform = body["platform"].lower().strip()
             if "media_type" in body:
@@ -258,7 +271,10 @@ def portfolio_item_detail_view(request, item_id):
                 except (ValueError, TypeError):
                     pass
             if "brand" in body:
-                item.brand = str(body["brand"]).strip()
+                b = str(body["brand"]).strip()
+                if len(b) > 100:
+                    return JsonResponse({"error": "Brand cannot exceed 100 letters"}, status=400)
+                item.brand = b
             if "post_link" in body:
                 raw_link = str(body["post_link"]).strip()
                 item.post_link = raw_link if raw_link else None

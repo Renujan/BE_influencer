@@ -67,9 +67,14 @@ def api_list_faq(request):
         # Build query for active FAQs
         queryset = FAQ.objects.filter(is_active=True)
 
-        if role:
+        audience_param = request.GET.get("target_audience") or request.GET.get("audience")
+        if audience_param:
+            queryset = queryset.filter(target_audience=audience_param.lower())
+        elif role:
             role = role.lower()
-            if role in ("business",):
+            if role in ("public", "landing"):
+                queryset = queryset.filter(target_audience="public")
+            elif role in ("business",):
                 queryset = queryset.filter(target_audience__in=["business", "both"])
             elif role in ("creator", "influencer"):
                 queryset = queryset.filter(target_audience__in=["creator", "both"])

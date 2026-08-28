@@ -4,6 +4,7 @@ from wagtail.snippets.models import register_snippet
 @register_snippet
 class FAQ(models.Model):
     TARGET_CHOICES = (
+        ("public", "Public (Landing Page)"),
         ("business", "Business"),
         ("creator", "Creator"),
         ("both", "Both"),
@@ -27,8 +28,8 @@ class FAQ(models.Model):
     target_audience = models.CharField(
         max_length=20,
         choices=TARGET_CHOICES,
-        default="both",
-        help_text="Determine whether this FAQ shows for businesses, creators, or both.",
+        default="public",
+        help_text="Determine whether this FAQ shows for public landing page, businesses, creators, or both.",
     )
     type = models.CharField(
         max_length=50,
@@ -64,11 +65,12 @@ class FAQ(models.Model):
         next_num = max_num + 1
         
         suffix_map = {
+            "public": "-PB",
             "business": "-BU",
             "creator": "-CR",
             "both": "-BO"
         }
-        suffix = suffix_map.get(self.target_audience, "-BO")
+        suffix = suffix_map.get(self.target_audience, "-PB")
         return f"FAQ{next_num:03d}{suffix}"
 
     def save(self, *args, **kwargs):
@@ -81,11 +83,12 @@ class FAQ(models.Model):
             if match:
                 base_part = match.group(1)
                 suffix_map = {
+                    "public": "-PB",
                     "business": "-BU",
                     "creator": "-CR",
                     "both": "-BO"
                 }
-                suffix = suffix_map.get(self.target_audience, "-BO")
+                suffix = suffix_map.get(self.target_audience, "-PB")
                 self.faq_id = f"{base_part}{suffix}"
         super().save(*args, **kwargs)
 

@@ -124,7 +124,7 @@
             <td>
                 <div class="header-title">Campaign Report</div>
                 <div class="header-subtitle">
-                    {{ instance.name }} &middot; Brand: {{ instance.brand.username }} &middot; Creator: {{ instance.creator.username|default:"Not Assigned" }}
+                    {{ instance.name }} &middot; Business: {{ instance.brand.username }} &middot; Creator: {{ instance.creator.username|default:"Not Assigned" }}
                 </div>
             </td>
             <td style="text-align: right; vertical-align: bottom; color: #94a3b8; font-size: 8.5pt;">
@@ -143,12 +143,12 @@
             </td>
             <td style="width: 50%;">
                 <div class="label">Category</div>
-                <div class="value">{{ instance.category|default:"-" }}</div>
+                <div class="value">{{ instance.category|default:instance.campaign_category|default:"-" }}</div>
             </td>
         </tr>
         <tr>
             <td>
-                <div class="label">Brand Owner</div>
+                <div class="label">Brand Owner / Business</div>
                 <div class="value">{{ instance.brand.username }} ({{ instance.brand.email }})</div>
             </td>
             <td>
@@ -158,12 +158,12 @@
         </tr>
         <tr>
             <td>
-                <div class="label">Budget</div>
+                <div class="label">Campaign Budget</div>
                 <div class="value"><strong>{{ currency_symbol|default:instance.currency_symbol|default:"$" }}{{ instance.budget }}</strong></div>
             </td>
             <td>
-                <div class="label">Start Date</div>
-                <div class="value">{{ instance.start_date|default:"-" }}</div>
+                <div class="label">Campaign Timeline (Start &ndash; End Date)</div>
+                <div class="value"><strong>{{ instance.start_date|default:"-" }}</strong> {% if instance.end_date %}&ndash; <strong>{{ instance.end_date }}</strong>{% endif %}</div>
             </td>
         </tr>
         <tr>
@@ -195,11 +195,11 @@
     </table>
 
     <!-- Milestones & Tasks -->
-    <div class="section-title">Campaign Checklist (Milestones &amp; Tasks)</div>
+    <div class="section-title">{% if is_business %}Business Milestone Installments &amp; Tasks{% else %}Campaign Checklist (Milestones &amp; Tasks){% endif %}</div>
     <table class="grid-table">
         <tr>
             <td style="width: 55%; padding-left: 0;">
-                <div class="label">Milestone Installments (Workspace Payment)</div>
+                <div class="label">{% if is_business %}Business Milestone Installments (Inbound Payments){% else %}Milestone Installments (Workspace Payment){% endif %}</div>
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -299,7 +299,7 @@
     </table>
 
     <!-- Payment Installments -->
-    <div class="section-title">Payment Installments</div>
+    <div class="section-title">{% if is_business %}Business Payment Installments (Inbound Escrow){% else %}Payment Installments{% endif %}</div>
     <table class="data-table">
         <thead>
             <tr>
