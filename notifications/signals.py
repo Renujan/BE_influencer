@@ -68,12 +68,18 @@ def cache_campaign_status(sender, instance, **kwargs):
 @receiver(post_save, sender=Campaign)
 def create_campaign_notification(sender, instance, created, **kwargs):
     if created:
+        try:
+            b_float = float(instance.budget or 0)
+            budget_str = f"${b_float:,.2f}"
+        except Exception:
+            budget_str = f"${instance.budget}"
+
         if instance.brand:
             Notification.objects.create(
                 user=instance.brand,
                 target_role="business",
                 title="New Campaign Workspace",
-                message=f"Campaign '{instance.name}' has been created with a budget of ${instance.budget:,.2f}.",
+                message=f"Campaign '{instance.name}' has been created with a budget of {budget_str}.",
                 category="campaign",
                 icon="fas fa-bullhorn",
                 target_url="/dashboard/campaigns"
@@ -199,13 +205,34 @@ def create_pitch_notification(sender, instance, created, **kwargs):
         old_status = getattr(instance, "_old_status", None)
         if old_status and old_status != instance.status:
             st = str(instance.status).lower()
-            if "accept" in st:
+            if st == "accepted_by_business":
                 if creator_user:
                     Notification.objects.create(
                         user=creator_user,
                         target_role="creator",
-                        title="Pitch Accepted!",
-                        message=f"Your pitch for '{camp_name}' was accepted!",
+                        title="Pitch Accepted – Awaiting Admin Approval",
+                        message=f"The counter offer / proposal for '{camp_name}' was accepted and is awaiting Admin review to convert to a Live Campaign.",
+                        category="campaign",
+                        icon="fas fa-hourglass-half",
+                        target_url="/creator/requests"
+                    )
+                if brand_user:
+                    Notification.objects.create(
+                        user=brand_user,
+                        target_role="business",
+                        title="Pitch Accepted – Awaiting Admin Conversion",
+                        message=f"The pitch proposal for '{camp_name}' was accepted and is awaiting Admin conversion into a Live Campaign.",
+                        category="campaign",
+                        icon="fas fa-hourglass-half",
+                        target_url="/dashboard/requests"
+                    )
+            elif st == "accepted":
+                if creator_user:
+                    Notification.objects.create(
+                        user=creator_user,
+                        target_role="creator",
+                        title="Pitch Converted to Live Campaign!",
+                        message=f"Your pitch for '{camp_name}' was approved by admin and converted to a Live Campaign!",
                         category="campaign",
                         icon="fas fa-check-circle",
                         target_url="/creator/campaigns"
@@ -214,8 +241,8 @@ def create_pitch_notification(sender, instance, created, **kwargs):
                     Notification.objects.create(
                         user=brand_user,
                         target_role="business",
-                        title="Pitch Accepted",
-                        message=f"Pitch for '{camp_name}' has been accepted.",
+                        title="Pitch Converted to Live Campaign!",
+                        message=f"Pitch for '{camp_name}' was approved by admin and converted to a Live Campaign.",
                         category="campaign",
                         icon="fas fa-check-circle",
                         target_url="/dashboard/campaigns"
@@ -229,7 +256,7 @@ def create_pitch_notification(sender, instance, created, **kwargs):
                         message=f"Your pitch for '{camp_name}' was declined.",
                         category="campaign",
                         icon="fas fa-times-circle",
-                        target_url="/creator/pitches"
+                        target_url="/creator/requests"
                     )
                 if brand_user:
                     Notification.objects.create(
@@ -390,12 +417,18 @@ def create_payment_notification(sender, instance, created, **kwargs):
 def create_workspace_payment_negotiation_notification(sender, instance, created, **kwargs):
     if instance.campaign:
         camp = instance.campaign
+        try:
+            fp_float = float(instance.final_price or 0)
+            fp_str = f"${fp_float:,.2f}"
+        except Exception:
+            fp_str = f"${instance.final_price}"
+
         if camp.brand:
             Notification.objects.create(
                 user=camp.brand,
                 target_role="business",
                 title="Payment Negotiation Update",
-                message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: ${instance.final_price:,.2f}.",
+                message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: {fp_str}.",
                 category="payment",
                 icon="fas fa-hand-holding-usd",
                 target_url="/dashboard/payments"
@@ -405,7 +438,7 @@ def create_workspace_payment_negotiation_notification(sender, instance, created,
                 user=camp.creator,
                 target_role="creator",
                 title="Payment Negotiation Update",
-                message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: ${instance.final_price:,.2f}.",
+                message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: {fp_str}.",
                 category="payment",
                 icon="fas fa-hand-holding-usd",
                 target_url="/creator/earnings"
@@ -417,12 +450,18 @@ def create_workspace_installment_notification(sender, instance, created, **kwarg
     if camp:
         status_text = "released" if str(instance.status).lower() in ["released", "paid"] else ("funded in escrow" if str(instance.status).lower() in ["funded", "in_escrow"] else "updated")
         milestone_title = getattr(instance, 'title', None) or getattr(instance, 'milestone_name', 'Installment')
+        try:
+            amt_float = float(instance.amount or 0)
+            amt_str = f"${amt_float:,.2f}"
+        except Exception:
+            amt_str = f"${instance.amount}"
+
         if camp.brand:
             Notification.objects.create(
                 user=camp.brand,
                 target_role="business",
                 title="Installment Payment Action",
-                message=f"Installment '{milestone_title}' (${instance.amount:,.2f}) for '{camp.name}' was {status_text}.",
+                message=f"Installment '{milestone_title}' ({amt_str}) for '{camp.name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-file-invoice-dollar",
                 target_url="/dashboard/payments"
@@ -432,7 +471,7 @@ def create_workspace_installment_notification(sender, instance, created, **kwarg
                 user=camp.creator,
                 target_role="creator",
                 title="Installment Payment Action",
-                message=f"Installment '{milestone_title}' (${instance.amount:,.2f}) for '{camp.name}' was {status_text}.",
+                message=f"Installment '{milestone_title}' ({amt_str}) for '{camp.name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-file-invoice-dollar",
                 target_url="/creator/earnings"

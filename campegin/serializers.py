@@ -367,6 +367,8 @@ class PitchSerializer(serializers.ModelSerializer):
     creator_name = serializers.CharField(source="creator.username", read_only=True)
     deliverables = FlexibleJSONField(required=False, allow_null=True, default=list)
     tags = FlexibleJSONField(required=False, allow_null=True, default=list)
+    delivery_languages = FlexibleJSONField(required=False, allow_null=True, default=list)
+    niches = FlexibleJSONField(required=False, allow_null=True, default=list)
     counter_history = FlexibleJSONField(required=False, allow_null=True, default=list)
     campaign_id = serializers.SerializerMethodField()
 
@@ -374,7 +376,10 @@ class PitchSerializer(serializers.ModelSerializer):
         model = Pitch
         fields = [
             "id", "creator", "creator_name", "brand", "brand_name",
-            "campaign_name", "budget", "sent_date", "start_date", "end_date", "platform", "tags", "status",
+            "campaign_name", "budget", "sent_date", "start_date", "end_date", "platform",
+            "country", "province_state", "district_city", "delivery_languages",
+            "category", "niche", "niches",
+            "tags", "status",
             "description", "deliverables", "counter_offer", "counter_note", "counter_count", "counter_history", "attachment", "decline_reason", "campaign_id"
         ]
         read_only_fields = ["creator"]
@@ -394,27 +399,10 @@ class PitchSerializer(serializers.ModelSerializer):
         if not camp:
             camp = Campaign.objects.filter(name__iexact=obj.campaign_name.strip()).order_by("-id").first()
 
-        # If pitch status is accepted or live but no campaign exists, auto-create it so workspace is immediately available
-        if not camp and str(obj.status or "").lower() in ["accepted", "accepted_by_business", "live"]:
-            from .views import populate_deliverables_from_pitch
-            tags = obj.tags or []
-            if isinstance(tags, str):
-                try:
-                    import json
-                    tags = json.loads(tags)
-                except Exception:
-                    tags = [tags]
-            if not isinstance(tags, list):
-                tags = [str(tags)]
-            known_platforms = {"Instagram", "YouTube", "TikTok", "Facebook", "LinkedIn", "X", "Twitter", "Snapchat", "Pinterest"}
-            niche_val = next((str(t).strip() for t in tags if str(t).strip() and not any(p.lower() == str(t).strip().lower() for p in known_platforms)), "")
-            if not niche_val and obj.creator and hasattr(obj.creator, "creator_profile") and obj.creator.creator_profile.niches:
-                cr_niches = obj.creator.creator_profile.niches
-                if isinstance(cr_niches, list) and cr_niches:
-                    niche_val = str(cr_niches[0]).strip()
-            if not niche_val:
-                niche_val = "Tech"
-            platform_val = next((str(t).strip() for t in tags if any(p.lower() == str(t).strip().lower() for p in known_platforms)), "Instagram")
+        # If pitch status has been approved and converted by admin ('accepted'/'live') but no campaign exists yet, create it as fallback
+        if not camp and str(obj.status or "").lower() in ["accepted", "live"]:
+            from .views import populate_deliverables_from_pitch, extract_pitch_niche_and_platform
+            niche_val, platform_val = extract_pitch_niche_and_platform(obj)
 
             camp = Campaign.objects.create(
                 name=obj.campaign_name,
@@ -424,8 +412,15 @@ class PitchSerializer(serializers.ModelSerializer):
                 counter_price=obj.counter_offer or obj.budget,
                 counter_note=obj.counter_note,
                 counter_history=obj.counter_history,
-                category=niche_val,
-                medium=platform_val,
+                category=obj.category or niche_val,
+                campaign_category=obj.category or niche_val,
+                niche=obj.niche or niche_val,
+                delivery_language=(", ".join(obj.delivery_languages) if isinstance(obj.delivery_languages, list) else (obj.delivery_languages or "")),
+                country=obj.country or "",
+                province=obj.province_state or "",
+                district=obj.district_city or "",
+                platform=obj.platform or platform_val,
+                medium=obj.platform or platform_val,
                 brief=obj.description or f"Campaign proposal based on pitch: {obj.campaign_name}",
                 status="Live",
                 progress=62,
@@ -445,58 +440,71 @@ class PitchSerializer(serializers.ModelSerializer):
         return camp.id if camp else None
 
     def to_internal_value(self, data):
-        ret = super().to_internal_value(data)
-        incoming_tags = ret.get("tags") or []
-        if isinstance(incoming_tags, str):
-            try:
-                import json
-                incoming_tags = json.loads(incoming_tags)
-            except Exception:
-                incoming_tags = [incoming_tags]
-        if not isinstance(incoming_tags, list):
-            incoming_tags = [str(incoming_tags)]
+        mutable_data = data.copy() if hasattr(data, "copy") else dict(data)
 
         def extract_val(field_name):
             if hasattr(data, "getlist"):
                 vals = data.getlist(field_name)
                 if vals and vals[0]:
                     return vals[0]
-            return data.get(field_name)
+            return data.get(field_name) if hasattr(data, "get") else None
 
-        niche = extract_val("niche")
-        if niche and niche not in incoming_tags:
-            incoming_tags.append(niche)
+        # Aliases for location
+        if not extract_val("province_state"):
+            prov = extract_val("province") or extract_val("state")
+            if prov:
+                mutable_data["province_state"] = prov
 
-        niches = extract_val("niches")
-        if niches:
-            if isinstance(niches, str):
+        if not extract_val("district_city"):
+            dist = extract_val("district") or extract_val("city")
+            if dist:
+                mutable_data["district_city"] = dist
+
+        # Delivery languages from legacy single-string delivery_language if delivery_languages not provided
+        if not extract_val("delivery_languages") and extract_val("delivery_language"):
+            dl = extract_val("delivery_language")
+            if isinstance(dl, str):
                 try:
                     import json
-                    niches = json.loads(niches)
+                    parsed = json.loads(dl)
+                    mutable_data["delivery_languages"] = parsed if isinstance(parsed, list) else [str(parsed)]
                 except Exception:
-                    niches = [n.strip() for n in niches.split(",") if n.strip()]
-            if isinstance(niches, list):
-                for n in niches:
-                    if n and n not in incoming_tags:
-                        incoming_tags.append(n)
+                    mutable_data["delivery_languages"] = [s.strip() for s in dl.split(",") if s.strip()]
+            elif isinstance(dl, list):
+                mutable_data["delivery_languages"] = dl
 
-        platform = extract_val("platform")
-        if platform and platform not in incoming_tags:
-            incoming_tags.append(platform)
+        # Category from deliverable_category / campaign_type if category is not explicitly set
+        if not extract_val("category"):
+            dc = extract_val("deliverable_category") or extract_val("campaign_type")
+            if dc:
+                mutable_data["category"] = dc
 
-        category = extract_val("category")
-        if category and category not in incoming_tags:
-            incoming_tags.append(category)
+        # Ensure niche & niches sync cleanly without polluting tags
+        incoming_niche = extract_val("niche")
+        incoming_niches = extract_val("niches")
+        if incoming_niche and not incoming_niches:
+            mutable_data["niches"] = [incoming_niche]
+        elif incoming_niches and not incoming_niche:
+            if isinstance(incoming_niches, list) and len(incoming_niches) > 0:
+                first = incoming_niches[0]
+                mutable_data["niche"] = first.get("name") if isinstance(first, dict) else str(first)
+            elif isinstance(incoming_niches, str):
+                try:
+                    import json
+                    parsed = json.loads(incoming_niches)
+                    if isinstance(parsed, list) and len(parsed) > 0:
+                        first = parsed[0]
+                        mutable_data["niche"] = first.get("name") if isinstance(first, dict) else str(first)
+                except Exception:
+                    mutable_data["niche"] = incoming_niches.split(",")[0].strip()
 
-        delivery_language = extract_val("delivery_language")
-        if delivery_language and delivery_language not in incoming_tags:
-            incoming_tags.append(delivery_language)
-
-        ret["tags"] = incoming_tags
+        ret = super().to_internal_value(mutable_data)
         return ret
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+
+        # Fallback / backward-compatibility extraction from tags if legacy record has empty explicit fields
         tags = instance.tags or []
         if isinstance(tags, str):
             try:
@@ -509,6 +517,7 @@ class PitchSerializer(serializers.ModelSerializer):
 
         known_platforms = {"Instagram", "YouTube", "TikTok", "Facebook", "LinkedIn", "X", "Twitter", "Snapchat", "Pinterest"}
         known_mediums = {"English", "Sinhala", "Tamil", "Hindi", "Malayalam", "Telugu", "Kannada", "Bengali", "Spanish", "French", "German", "Arabic", "Mandarin", "Japanese"}
+
         found_platform = None
         found_delivery_lang = None
         found_niche = None
@@ -529,9 +538,30 @@ class PitchSerializer(serializers.ModelSerializer):
                     found_niche = t_str
                 found_niches.append(t_str)
 
-        data["niche"] = found_niche or ""
-        data["niches"] = found_niches if found_niches else ([found_niche] if found_niche else [])
-        data["category"] = found_niche or (tags[0] if tags else "General")
-        data["platform"] = found_platform or ""
-        data["delivery_language"] = found_delivery_lang or ""
+        # Niches
+        niche_val = instance.niche or found_niche or ""
+        niches_list = instance.niches if (instance.niches and isinstance(instance.niches, list)) else (found_niches if found_niches else ([niche_val] if niche_val else []))
+        data["niche"] = niche_val
+        data["niches"] = niches_list
+
+        # Delivery languages
+        if instance.delivery_languages and isinstance(instance.delivery_languages, list) and len(instance.delivery_languages) > 0:
+            data["delivery_languages"] = instance.delivery_languages
+        elif found_delivery_lang:
+            data["delivery_languages"] = [found_delivery_lang]
+        else:
+            data["delivery_languages"] = []
+
+        # Category (Campaign format e.g. "YouTube Integration")
+        data["category"] = instance.category or found_niche or (tags[0] if tags else "")
+        data["deliverable_category"] = data["category"]
+
+        # Platform
+        data["platform"] = instance.platform or found_platform or ""
+
+        # Location data
+        data["country"] = instance.country or ""
+        data["province_state"] = instance.province_state or ""
+        data["district_city"] = instance.district_city or ""
+
         return data

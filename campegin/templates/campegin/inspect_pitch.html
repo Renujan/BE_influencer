@@ -513,6 +513,44 @@
                 </div>
                 {% endif %}
 
+                {% if instance.category %}
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Campaign Category (Format)</label>
+                    <div class="custom-form-control-readonly">{{ instance.category }}</div>
+                </div>
+                {% endif %}
+
+                {% if instance.niche or instance.niches %}
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Content Niche</label>
+                    <div class="custom-form-control-readonly" style="display: block; min-height: auto;">
+                        {% if instance.niches %}
+                            {% for n in instance.niches %}<span class="tag-item">{{ n }}</span>{% endfor %}
+                        {% else %}
+                            <span class="tag-item">{{ instance.niche }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if instance.delivery_languages %}
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Delivery Languages</label>
+                    <div class="custom-form-control-readonly" style="display: block; min-height: auto;">
+                        {% for lang in instance.delivery_languages %}<span class="tag-item" style="background-color: #dbeafe; color: #1e40af; border-color: #bfdbfe;">{{ lang }}</span>{% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if instance.country or instance.province_state or instance.district_city %}
+                <div class="custom-form-group">
+                    <label class="custom-form-label">Location</label>
+                    <div class="custom-form-control-readonly">
+                        {{ instance.district_city|default:"" }}{% if instance.district_city and instance.province_state %}, {% endif %}{{ instance.province_state|default:"" }}{% if instance.province_state and instance.country %}, {% endif %}{{ instance.country|default:"" }}
+                    </div>
+                </div>
+                {% endif %}
+
                 {% if instance.tags %}
                 <div class="custom-form-group">
                     <label class="custom-form-label">Tags</label>

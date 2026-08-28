@@ -133,11 +133,16 @@
   /* ── Chat timeline ── */
   .chat-timeline {
     display: flex; flex-direction: column; gap: 14px;
-    max-height: 440px; overflow-y: auto;
-    padding: 14px; background: #f9fafb;
+    max-height: 520px; overflow-y: auto;
+    padding: 16px; background: #f9fafb;
     border-radius: 10px; border: 1px solid #f3f4f6;
+    scroll-behavior: smooth;
   }
-  .msg-group { display: flex; align-items: flex-start; gap: 10px; max-width: 78%; }
+  .chat-timeline::-webkit-scrollbar { width: 6px; }
+  .chat-timeline::-webkit-scrollbar-track { background: #f1f5f9; }
+  .chat-timeline::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+  .msg-group { display: flex; align-items: flex-start; gap: 10px; max-width: 82%; }
   .msg-group.brand   { align-self: flex-start; }
   .msg-group.creator { align-self: flex-end; flex-direction: row-reverse; }
 
@@ -149,22 +154,36 @@
   .avatar-sm.brand   { background: linear-gradient(135deg, #6366f1, #4f46e5); }
   .avatar-sm.creator { background: linear-gradient(135deg, #f43f5e, #be185d); }
 
-  .msg-content { display: flex; flex-direction: column; }
+  .msg-content { display: flex; flex-direction: column; max-width: 100%; }
   .msg-group.creator .msg-content { align-items: flex-end; }
   .sender-name { font-size: 0.7rem; font-weight: 600; color: #4b5563; margin-bottom: 2px; }
 
   .bubble {
-    padding: 8px 13px; border-radius: 12px;
-    font-size: 0.82rem; line-height: 1.45;
+    padding: 10px 16px; border-radius: 12px;
+    font-size: 0.83rem; line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
   }
   .msg-group.brand .bubble {
-    background: #fff; color: #1f2937;
-    border: 1px solid #e5e7eb; border-top-left-radius: 2px;
+    background: #2563eb; color: #ffffff;
+    border: 1px solid #1d4ed8; border-top-left-radius: 2px;
   }
   .msg-group.creator .bubble {
-    background: #4f46e5; color: #fff; border-top-right-radius: 2px;
+    background: #ea580c; color: #ffffff;
+    border: 1px solid #c2410c; border-top-right-radius: 2px;
   }
   .msg-timestamp { font-size: 0.62rem; color: #9ca3af; margin-top: 3px; }
+
+  .attachment-link-detail {
+    color: inherit !important;
+    font-weight: 700 !important;
+    text-decoration: underline !important;
+    text-decoration-thickness: 1px !important;
+    text-underline-offset: 3px !important;
+    border: none !important;
+  }
 
   .empty-chat {
     text-align: center; padding: 32px;
@@ -543,8 +562,8 @@
                 <div class="bubble" style="{% if msg.is_pinned %}background:#fef9c3;color:#1e293b;border:1px solid #fde047;{% endif %}">
                   {{ msg.text }}
                   {% if msg.file_attachment %}
-                    <div style="margin-top:6px;padding:4px 8px;background:rgba(0,0,0,0.06);border-radius:6px;font-size:0.78rem;">
-                      📎 <a href="{% if msg.file_attachment|slice:':4' == 'http' or msg.file_attachment|slice:':7' == '/media/' %}{{ msg.file_attachment }}{% else %}/media/{{ msg.file_attachment }}{% endif %}" target="_blank" rel="noopener noreferrer" style="color:inherit;font-weight:600;text-decoration:underline;">{{ msg.file_attachment }}</a>
+                    <div style="margin-top:6px;padding:4px 8px;background:rgba(255,255,255,0.18);border-radius:6px;font-size:0.78rem;">
+                      📎 <a href="{% if msg.file_attachment|slice:':4' == 'http' or msg.file_attachment|slice:':7' == '/media/' %}{{ msg.file_attachment }}{% else %}/media/{{ msg.file_attachment }}{% endif %}" target="_blank" rel="noopener noreferrer" class="attachment-link-detail">{{ msg.file_attachment }}</a>
                     </div>
                   {% endif %}
                 </div>

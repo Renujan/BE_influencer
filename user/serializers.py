@@ -173,7 +173,8 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
     total_spent = serializers.SerializerMethodField()
     settings = serializers.SerializerMethodField()
     active_campaigns = serializers.SerializerMethodField()
-
+    average_rating = serializers.SerializerMethodField()
+    total_ratings_count = serializers.SerializerMethodField()
 
     class Meta:
         model = BusinessProfile
@@ -184,18 +185,19 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             "linkedin_url", "twitter_handle", "otp_verified", "status",
             "verification_documents_submitted", "business_reg_number", "business_document",
              "campaign_count", "creators_hired_count", "total_spent", "settings",
-             "is_featured", "featured_at", "active_campaigns",
+             "is_featured", "featured_at", "active_campaigns", "average_rating", "total_ratings_count",
              "deletion_requested", "deletion_request_date", "deletion_reason", "deletion_decline_reason"
         ]
 
-    def get_settings(self, instance):
-        return {
-            "email_notifications": instance.email_notifications,
-            "sms_notifications": instance.sms_notifications,
-            "marketing_emails": instance.marketing_emails,
-            "two_factor_auth": instance.two_factor_auth,
-            "google_analytics_connected": instance.google_analytics_connected,
-        }
+    def get_average_rating(self, instance):
+        from CreatorRating.models import BusinessRating
+        from django.db.models import Avg
+        avg_score = BusinessRating.objects.filter(brand=instance.user).aggregate(Avg("rating"))["rating__avg"]
+        return round(float(avg_score), 1) if avg_score is not None else 0.0
+
+    def get_total_ratings_count(self, instance):
+        from CreatorRating.models import BusinessRating
+        return BusinessRating.objects.filter(brand=instance.user).count()
 
     def get_campaign_count(self, instance):
         return instance.user.brand_campaigns.count()

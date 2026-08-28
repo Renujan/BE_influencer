@@ -571,24 +571,15 @@ class PitchInspectView(InspectView):
             self.object.save()
             from .models import Campaign
             campaign = Campaign.objects.filter(name=self.object.campaign_name, brand=self.object.brand).first()
-            tags = self.object.tags or []
-            if isinstance(tags, str):
-                try:
-                    import json
-                    tags = json.loads(tags)
-                except Exception:
-                    tags = [tags]
-            if not isinstance(tags, list):
-                tags = [str(tags)]
-            known_platforms = {"Instagram", "YouTube", "TikTok", "Facebook", "LinkedIn", "X", "Twitter", "Snapchat", "Pinterest"}
-            niche_val = next((str(t).strip() for t in tags if str(t).strip() and not any(p.lower() == str(t).strip().lower() for p in known_platforms)), "")
-            if not niche_val and self.object.creator and hasattr(self.object.creator, "creator_profile") and self.object.creator.creator_profile.niches:
-                cr_niches = self.object.creator.creator_profile.niches
-                if isinstance(cr_niches, list) and cr_niches:
-                    niche_val = str(cr_niches[0]).strip()
-            if not niche_val:
-                niche_val = "Tech"
-            platform_val = next((str(t).strip() for t in tags if any(p.lower() == str(t).strip().lower() for p in known_platforms)), "Instagram")
+            from .views import extract_pitch_niche_and_platform
+            niche_val, platform_val = extract_pitch_niche_and_platform(self.object)
+
+            category_val = self.object.category or niche_val
+            niche_val_final = self.object.niche or niche_val
+            deliv_lang_str = ", ".join(self.object.delivery_languages) if isinstance(self.object.delivery_languages, list) else str(self.object.delivery_languages or "")
+            country_val = self.object.country or ""
+            province_val = self.object.province_state or ""
+            district_val = self.object.district_city or ""
 
             if not campaign:
                 campaign = Campaign.objects.create(
@@ -599,8 +590,15 @@ class PitchInspectView(InspectView):
                     counter_price=last_price,
                     counter_note=self.object.counter_note,
                     counter_history=self.object.counter_history,
-                    category=niche_val,
-                    medium=platform_val,
+                    category=category_val,
+                    campaign_category=category_val,
+                    niche=niche_val_final,
+                    delivery_language=deliv_lang_str,
+                    country=country_val,
+                    province=province_val,
+                    district=district_val,
+                    platform=self.object.platform or platform_val,
+                    medium=self.object.platform or platform_val,
                     brief=self.object.description or f"Campaign proposal based on pitch: {self.object.campaign_name}",
                     status="Live",
                     progress=62,
@@ -613,8 +611,20 @@ class PitchInspectView(InspectView):
                 campaign.counter_note = self.object.counter_note
                 campaign.counter_history = self.object.counter_history
                 campaign.created_via = "pitch"
-                if not campaign.category or campaign.category == "General":
-                    campaign.category = niche_val
+                campaign.category = category_val
+                campaign.campaign_category = category_val
+                campaign.niche = niche_val_final
+                if deliv_lang_str:
+                    campaign.delivery_language = deliv_lang_str
+                if country_val:
+                    campaign.country = country_val
+                if province_val:
+                    campaign.province = province_val
+                if district_val:
+                    campaign.district = district_val
+                if not campaign.platform:
+                    campaign.platform = self.object.platform or platform_val
+                    campaign.medium = self.object.platform or platform_val
                 campaign.save()
 
             try:
@@ -967,20 +977,17 @@ class WorkspacePaymentInspectView(InspectView):
             return redirect(request.path)
 
         elif action_type == 'update_creator_fee_status':
-            is_paid = request.POST.get('creator_fee_is_paid') == 'true'
             paid_date = request.POST.get('creator_fee_paid_date')
             receipt_file = request.FILES.get('creator_fee_receipt_image')
-            negotiation.creator_fee_is_paid = is_paid
+            if 'creator_fee_is_paid' in request.POST:
+                negotiation.creator_fee_is_paid = (request.POST.get('creator_fee_is_paid') == 'true')
             if paid_date:
                 negotiation.creator_fee_paid_date = paid_date
-            elif is_paid and not negotiation.creator_fee_paid_date:
-                from django.utils import timezone
-                negotiation.creator_fee_paid_date = timezone.now().date()
             if receipt_file:
                 negotiation.creator_fee_receipt_image = receipt_file
 
             negotiation.save()
-            messages.success(request, "Updated Creator Platform Fee payment status & receipt proof.")
+            messages.success(request, "Updated Creator Platform Fee payment details & receipt proof.")
             return redirect(request.path)
 
         elif action_type == 'reset_creator_fee':
@@ -1188,6 +1195,12 @@ def admin_campaign_analytics_view(request):
     Calculates Funnel Statuses, Platform Revenue Charges, Escrow Vault Analytics,
     and trends.
     """
+    # Auto sync workspace payment negotiations for campaigns
+    try:
+        WorkspacePaymentIndexView().auto_create_negotiations()
+    except Exception:
+        pass
+
     campaigns = list(Campaign.objects.all().select_related("brand", "creator").prefetch_related("deliverables"))
     negotiations = list(WorkspacePaymentNegotiation.objects.all().select_related("campaign").prefetch_related("installments"))
 
@@ -1239,7 +1252,7 @@ def admin_campaign_analytics_view(request):
     country_map = {}
 
     for c in campaigns:
-        cat_name = getattr(c, "category", None)
+        cat_name = getattr(c, "campaign_category", None) or getattr(c, "category", None)
         if hasattr(cat_name, "name"):
             cat_name = cat_name.name
         elif not cat_name:
@@ -1253,7 +1266,8 @@ def admin_campaign_analytics_view(request):
             niche_name = "Lifestyle"
         niche_map[str(niche_name)] = niche_map.get(str(niche_name), 0) + 1
 
-        plat_name = str(c.medium or getattr(c, "platform", None) or "Instagram")
+        p_val = getattr(c, "platform", None) or getattr(c, "medium", None) or "Instagram"
+        plat_name = str(p_val)
         plat_map[plat_name] = plat_map.get(plat_name, 0) + 1
 
         country_name = getattr(c, "country", None)
@@ -1424,14 +1438,15 @@ def admin_campaign_analytics_view(request):
             pass
 
     # JSON Payload for client table & charts
+    known_platforms = ["Instagram", "YouTube", "TikTok", "Facebook", "LinkedIn", "Twitter", "Twitter/X", "X", "Twitch", "Snapchat", "Pinterest"]
     camp_payload = []
     for c in campaigns:
         neg = neg_by_camp.get(c.id)
-        f_price = float(neg.final_price if (neg and neg.final_price) else (c.budget or 0))
+        f_price = float(neg.final_price if (neg and neg.final_price is not None) else (c.counter_price or c.budget or 0))
         b_name = c.brand.name if hasattr(c.brand, "name") else (getattr(c.brand, "company_name", None) or "Brand")
         cr_name = c.creator.name if hasattr(c.creator, "name") else (getattr(c.creator, "user", None) and getattr(c.creator.user, "username", None) or "Creator")
         
-        biz_pct = float(neg.business_platform_charge if (neg and neg.business_platform_charge is not None) else 2.5)
+        biz_pct = float(neg.business_platform_charge if (neg and neg.business_platform_charge is not None) else (neg.platform_charge if (neg and neg.platform_charge is not None) else 2.5))
         creator_pct = float(neg.creator_platform_charge if (neg and neg.creator_platform_charge is not None) else 1.5)
         biz_fee = float(neg.business_platform_charge_amount) if (neg and neg.business_platform_charge_amount is not None) else (f_price * (biz_pct / 100))
         creator_fee = float(neg.creator_platform_charge_amount) if (neg and neg.creator_platform_charge_amount is not None) else (f_price * (creator_pct / 100))
@@ -1471,15 +1486,59 @@ def admin_campaign_analytics_view(request):
                 else:
                     creator_insts.append(i_data)
 
+        raw_country = getattr(c, "country", None)
+        c_country = raw_country.name if hasattr(raw_country, "name") else str(raw_country or "").strip()
+
+        raw_prov = getattr(c, "province", None) or getattr(c, "province_state", None)
+        c_prov = raw_prov.name if hasattr(raw_prov, "name") else str(raw_prov or "").strip()
+
+        raw_dist = getattr(c, "district", None) or getattr(c, "district_city", None)
+        c_dist = raw_dist.name if hasattr(raw_dist, "name") else str(raw_dist or "").strip()
+
+        # Platform (Social media platform)
+        raw_p = getattr(c, "platform", None)
+        raw_m = getattr(c, "medium", None)
+        if raw_p and str(raw_p).strip():
+            c_platform = str(raw_p).strip()
+        elif raw_m and str(raw_m).strip() in known_platforms:
+            c_platform = str(raw_m).strip()
+        else:
+            c_platform = "Instagram"
+
+        # Medium (Language used for campaigns)
+        raw_lang = getattr(c, "delivery_language", None)
+        raw_langs = getattr(c, "delivery_languages", None)
+        if raw_lang and str(raw_lang).strip():
+            c_medium = str(raw_lang).strip()
+        elif raw_langs and isinstance(raw_langs, list) and len(raw_langs) > 0:
+            c_medium = ", ".join([str(l) for l in raw_langs])
+        elif raw_m and str(raw_m).strip() not in known_platforms:
+            c_medium = str(raw_m).strip()
+        else:
+            c_medium = "English"
+
+        raw_cat = getattr(c, "campaign_category", None) or getattr(c, "category", None)
+        c_cat = raw_cat.name if hasattr(raw_cat, "name") else str(raw_cat or "General").strip()
+
+        created_via = str(getattr(c, "created_via", None) or ("direct_request" if c.creator else "request")).lower().strip()
+        is_pitch = bool(created_via == "pitch" or "pitch" in created_via or getattr(c, "is_pitch", False))
+        is_direct = bool((created_via == "direct_request" or created_via == "direct" or "direct" in created_via or getattr(c, "is_direct_request", False)) and not is_pitch)
+        c_type = "Direct Request" if is_direct else ("Pitch" if is_pitch else "Request")
+
         camp_payload.append({
             "id": c.id,
             "name": c.name,
             "brand_name": b_name,
             "creator_name": cr_name,
             "status": c.status or "Draft",
+            "campaign_type": c_type,
+            "country": c_country,
+            "province": c_prov,
+            "district": c_dist,
+            "platform": c_platform,
+            "medium": c_medium,
             "progress": c.progress or (100 if c.status == "Completed" else 50),
-            "platform": c.medium or getattr(c, "platform", None) or "Instagram",
-            "category": c.category.name if hasattr(c.category, "name") else (str(c.category) if getattr(c, "category", None) else "General"),
+            "category": c_cat,
             "budget": float(c.budget or 0),
             "final_price": f_price,
             "biz_fee": biz_fee,
@@ -1494,21 +1553,107 @@ def admin_campaign_analytics_view(request):
             "creator_installments": creator_insts,
         })
 
-    # Actual trends data: a point for every campaign created in chronological order
+    # Trends by Month (Month vs Admin Earned Platform Fee)
+    from django.utils import timezone
+    import datetime
     now = timezone.now()
-    sorted_campaigns = sorted(campaigns, key=lambda x: (x.created_at or now, x.id))
 
-    labels = []
-    campaigns_count = []
-    revenue_amount = []
-    per_campaign_fees = []
-    campaign_names = []
-    campaign_dates = []
+    month_data = {}
+    for i in range(5, -1, -1):
+        m_date = now - datetime.timedelta(days=i * 30)
+        m_key = f"{m_date.year}-{m_date.month:02d}"
+        month_data[m_key] = {
+            "label": m_date.strftime("%b"),
+            "earned": 0.0,
+            "biz_fee": 0.0,
+            "creator_fee": 0.0,
+            "count": 0,
+        }
+
+    for c in campaigns:
+        neg = neg_by_camp.get(c.id)
+        f_price = float(neg.final_price if (neg and neg.final_price is not None) else (c.counter_price or c.budget or 0))
+        biz_pct = float(neg.business_platform_charge if (neg and neg.business_platform_charge is not None) else (neg.platform_charge if (neg and neg.platform_charge is not None) else 2.5))
+        creator_pct = float(neg.creator_platform_charge if (neg and neg.creator_platform_charge is not None) else 1.5)
+        biz_fee = float(neg.business_platform_charge_amount) if (neg and neg.business_platform_charge_amount is not None) else (f_price * (biz_pct / 100))
+        creator_fee = float(neg.creator_platform_charge_amount) if (neg and neg.creator_platform_charge_amount is not None) else (f_price * (creator_pct / 100))
+
+        # Only verified payments count as earned budget
+        insts = list(neg.installments.all()) if neg else []
+        is_completed = bool(c.status in ["Completed", "Approved"])
+        is_live = bool(c.status in ["Live", "Active"])
+
+        verified_biz_fee = 0.0
+        verified_creator_fee = 0.0
+
+        if insts:
+            tot_inst_amt = sum(float(inst.amount or 0) for inst in insts)
+            verified_inst_amt = sum(
+                float(inst.amount or 0)
+                for inst in insts
+                if getattr(inst, "is_paid", False) or str(getattr(inst, "status", "")).lower() in ["paid", "verified", "completed", "released", "approved"]
+            )
+            ratio = (verified_inst_amt / tot_inst_amt) if tot_inst_amt > 0 else (1.0 if is_completed else (0.5 if is_live else 0.0))
+            verified_biz_fee = biz_fee if (neg and neg.business_fee_is_paid) else (biz_fee * ratio)
+            verified_creator_fee = creator_fee if (neg and neg.creator_fee_is_paid) else (creator_fee * ratio)
+        else:
+            if (neg and neg.business_fee_is_paid) or is_completed:
+                verified_biz_fee = biz_fee
+            elif is_live:
+                verified_biz_fee = biz_fee * 0.5
+
+            if (neg and neg.creator_fee_is_paid) or is_completed:
+                verified_creator_fee = creator_fee
+            elif is_live:
+                verified_creator_fee = creator_fee * 0.5
+
+        tot_verified_fee = verified_biz_fee + verified_creator_fee
+        if tot_verified_fee <= 0 and not is_completed and not is_live:
+            continue
+
+        c_dt = c.created_at or now
+        k = f"{c_dt.year}-{c_dt.month:02d}"
+        if k not in month_data:
+            month_data[k] = {
+                "label": c_dt.strftime("%b"),
+                "earned": 0.0,
+                "biz_fee": 0.0,
+                "creator_fee": 0.0,
+                "count": 0,
+            }
+        month_data[k]["earned"] += tot_verified_fee
+        month_data[k]["biz_fee"] += verified_biz_fee
+        month_data[k]["creator_fee"] += verified_creator_fee
+        month_data[k]["count"] += 1
+
+    sorted_keys = sorted(month_data.keys())
+    month_labels = []
+    earned_by_month = []
+    biz_fees_by_month = []
+    creator_fees_by_month = []
+    campaign_count_by_month = []
+
+    for k in sorted_keys[-6:]:
+        v = month_data[k]
+        month_labels.append(v["label"])
+        earned_by_month.append(round(v["earned"], 2))
+        biz_fees_by_month.append(round(v["biz_fee"], 2))
+        creator_fees_by_month.append(round(v["creator_fee"], 2))
+        campaign_count_by_month.append(v["count"])
+
+    # Cumulative trends (original graph data: Campaigns Created vs Platform Revenue)
+    sorted_campaigns = sorted(campaigns, key=lambda x: (x.created_at or now, x.id))
+    cum_labels = []
+    cum_campaigns_count = []
+    cum_revenue_amount = []
+    cum_per_campaign_fees = []
+    cum_campaign_names = []
+    cum_campaign_dates = []
 
     cum_rev = 0.0
     for idx, c in enumerate(sorted_campaigns, 1):
         neg = neg_by_camp.get(c.id)
-        f_price = float(neg.final_price if (neg and neg.final_price is not None) else (c.budget or 0))
+        f_price = float(neg.final_price if (neg and neg.final_price is not None) else (c.counter_price or c.budget or 0))
         biz_pct = float(neg.business_platform_charge if (neg and neg.business_platform_charge is not None) else (neg.platform_charge if (neg and neg.platform_charge is not None) else 2.5))
         creator_pct = float(neg.creator_platform_charge if (neg and neg.creator_platform_charge is not None) else 1.5)
         biz_fee = float(neg.business_platform_charge_amount) if (neg and neg.business_platform_charge_amount is not None) else (f_price * (biz_pct / 100))
@@ -1516,40 +1661,48 @@ def admin_campaign_analytics_view(request):
         tot_fee = biz_fee + creator_fee
 
         cum_rev += tot_fee
-
         c_date = c.created_at.strftime("%b %d") if c.created_at else (c.start_date or "N/A")
         label = c.name if len(c.name) <= 15 else (c.name[:13] + "..")
-        labels.append(label)
-        campaign_names.append(c.name)
-        campaign_dates.append(c_date)
-        campaigns_count.append(idx)
-        revenue_amount.append(round(cum_rev, 2))
-        per_campaign_fees.append(round(tot_fee, 2))
+        cum_labels.append(label)
+        cum_campaign_names.append(c.name)
+        cum_campaign_dates.append(c_date)
+        cum_campaigns_count.append(idx)
+        cum_revenue_amount.append(round(cum_rev, 2))
+        cum_per_campaign_fees.append(round(tot_fee, 2))
 
-    if not sorted_campaigns:
-        trends_payload = {
-            "labels": ["No Campaigns"],
-            "campaign_names": ["No Campaigns"],
-            "campaign_dates": ["N/A"],
-            "campaigns_count": [0],
-            "revenue_amount": [0.0],
-            "per_campaign_fees": [0.0],
-        }
-    else:
-        trends_payload = {
-            "labels": labels,
-            "campaign_names": campaign_names,
-            "campaign_dates": campaign_dates,
-            "campaigns_count": campaigns_count,
-            "revenue_amount": revenue_amount,
-            "per_campaign_fees": per_campaign_fees,
-        }
+    trends_payload = {
+        "monthly": {
+            "labels": month_labels or ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+            "earned_amount": earned_by_month or [0.0] * 6,
+            "biz_fees": biz_fees_by_month or [0.0] * 6,
+            "creator_fees": creator_fees_by_month or [0.0] * 6,
+            "campaigns_count": campaign_count_by_month or [0] * 6,
+        },
+        "cumulative": {
+            "labels": cum_labels or ["No Campaigns"],
+            "campaign_names": cum_campaign_names or ["No Campaigns"],
+            "campaign_dates": cum_campaign_dates or ["N/A"],
+            "campaigns_count": cum_campaigns_count or [0],
+            "revenue_amount": cum_revenue_amount or [0.0],
+            "per_campaign_fees": cum_per_campaign_fees or [0.0],
+        },
+        # Backwards compatibility
+        "labels": month_labels or ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+        "earned_amount": earned_by_month or [0.0] * 6,
+        "biz_fees": biz_fees_by_month or [0.0] * 6,
+        "creator_fees": creator_fees_by_month or [0.0] * 6,
+        "campaigns_count": campaign_count_by_month or [0] * 6,
+        "campaign_names": cum_campaign_names,
+        "campaign_dates": cum_campaign_dates,
+        "revenue_amount": cum_revenue_amount,
+        "per_campaign_fees": cum_per_campaign_fees,
+    }
 
     budget_vs_spend_payload = []
     for c in campaigns[:6]:
         neg = neg_by_camp.get(c.id)
         t_b = float(c.max_budget or c.budget or 2000)
-        f_p = float(neg.final_price if (neg and neg.final_price) else (c.budget or 1500))
+        f_p = float(neg.final_price if (neg and neg.final_price) else (c.counter_price or c.budget or 1500))
         a_s = f_p if c.status == "Completed" else (f_p * 0.5)
         budget_vs_spend_payload.append({
             "campaign": c.name,

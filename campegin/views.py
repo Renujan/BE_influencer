@@ -706,7 +706,38 @@ class CampaignViewSet(viewsets.ModelViewSet):
             return Response({"error": "message_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            message = WorkspaceMessage.objects.get(id=message_id, campaign=campaign, sender=request.user)
+            if request.user.is_staff or request.user.is_superuser:
+                message = WorkspaceMessage.objects.get(id=message_id, campaign=campaign)
+            else:
+                message = WorkspaceMessage.objects.get(id=message_id, campaign=campaign, sender=request.user)
+
+            file_att = (message.file_attachment or "").strip()
+            if not file_att and message.text and message.text.startswith("Shared attachment: "):
+                file_att = message.text.replace("Shared attachment: ", "").strip()
+
+            if file_att:
+                import os
+                base_name = os.path.basename(file_att)
+                # Delete associated WorkspaceFile entries from database
+                WorkspaceFile.objects.filter(
+                    campaign=campaign
+                ).filter(
+                    models.Q(name=file_att) |
+                    models.Q(name=base_name) |
+                    models.Q(name__icontains=base_name)
+                ).delete()
+
+                # Also delete physical file from media storage if present
+                from django.core.files.storage import FileSystemStorage
+                from django.conf import settings
+                try:
+                    fs = FileSystemStorage(location=settings.MEDIA_ROOT)
+                    for candidate in [file_att, base_name]:
+                        if candidate and fs.exists(candidate):
+                            fs.delete(candidate)
+                except Exception as storage_err:
+                    print("Storage delete warning:", storage_err)
+
             message.delete()
             return Response({"status": "deleted"}, status=status.HTTP_200_OK)
         except WorkspaceMessage.DoesNotExist:
@@ -775,11 +806,6 @@ class CampaignViewSet(viewsets.ModelViewSet):
         reach = request.data.get("reach")
         er = request.data.get("er")
 
-        if not del_id:
-            return Response({"error": "deliverable_id is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        deliverable = get_object_or_404(Deliverable, campaign=campaign, id=del_id)
-        
         # Save any binary files uploaded in request.FILES
         for file_key in ["assetFileName", "screenshot_name", "file"]:
             f_obj = request.FILES.get(file_key)
@@ -797,26 +823,49 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 elif file_key == "screenshot_name" or file_key == "file":
                     screenshot_name = saved_name
 
-        if link:
-            deliverable.link = link
-        if screenshot_name:
-            deliverable.screenshot_name = str(screenshot_name)
-        if assetDriveLink:
-            deliverable.assetDriveLink = assetDriveLink
-        if assetFileName:
-            deliverable.assetFileName = str(assetFileName)
+        if del_id:
+            deliverable = get_object_or_404(Deliverable, campaign=campaign, id=del_id)
+        else:
+            deliverable = campaign.deliverables.first()
+            if not deliverable:
+                deliverable = Deliverable.objects.create(
+                    campaign=campaign,
+                    name=campaign.campaign_category or campaign.category or "Campaign Deliverable",
+                    type="video",
+                    status="PUBLISHED"
+                )
 
-        if deliverable.status not in ["PUBLISHED", "Approved", "Published", "PENDING_ADMIN_APPROVAL", "Pending Final Admin Approval"]:
-            deliverable.status = "PENDING_BUSINESS_REVIEW"
+        # Update deliverable(s)
+        targets = [deliverable]
+        if not del_id or link or screenshot_name:
+            all_dels = list(campaign.deliverables.all())
+            if all_dels:
+                targets = all_dels
 
-        if views is not None:
-            deliverable.views = views
-        if reach is not None:
-            deliverable.reach = reach
-        if er is not None:
-            deliverable.er = er
-            
-        deliverable.save()
+        for d in targets:
+            if link:
+                d.link = link
+            if screenshot_name:
+                d.screenshot_name = str(screenshot_name)
+            if assetDriveLink and (d.id == deliverable.id or not del_id):
+                d.assetDriveLink = assetDriveLink
+            if assetFileName and (d.id == deliverable.id or not del_id):
+                d.assetFileName = str(assetFileName)
+
+            if d.status not in ["PUBLISHED", "Approved", "Published", "PENDING_ADMIN_APPROVAL", "Pending Final Admin Approval"]:
+                d.status = "PENDING_BUSINESS_REVIEW"
+
+            if views is not None:
+                d.views = str(views)
+            if reach is not None:
+                d.reach = str(reach)
+            if er is not None:
+                try:
+                    d.er = float(er)
+                except (ValueError, TypeError):
+                    pass
+            d.save()
+
         return Response(DeliverableSerializer(deliverable).data)
 
     @action(detail=True, methods=["post"], permission_classes=[permissions.AllowAny])
@@ -1502,8 +1551,8 @@ class CampaignStatsView(APIView):
         if has_creator and hasattr(user, "creator_profile"):
             avg_rating = user.creator_profile.average_rating
         elif has_business:
-            from CreatorRating.models import CreatorRating
-            avg_res = CreatorRating.objects.filter(brand=user).aggregate(avg=Avg("rating"))["avg"]
+            from CreatorRating.models import BusinessRating
+            avg_res = BusinessRating.objects.filter(brand=user).aggregate(avg=Avg("rating"))["avg"]
             avg_rating = round(float(avg_res), 1) if avg_res is not None else 0.0
 
         return Response({
@@ -1512,6 +1561,7 @@ class CampaignStatsView(APIView):
             "total_budget": total_budget,
             "avg_engagement": avg_engagement,
             "avg_rating": avg_rating,
+            "avg_creator_rating": avg_rating,
             "average_rating": avg_rating,
             "total_reach": total_reach,
             "total_impressions": total_impressions,
@@ -1782,6 +1832,146 @@ def populate_deliverables_from_pitch(campaign, pitch):
                     brief=item_brief
                 )
 
+def extract_pitch_niche_and_platform(pitch):
+    niche_val = (getattr(pitch, "niche", "") or "").strip()
+    if not niche_val and getattr(pitch, "niches", None):
+        if isinstance(pitch.niches, list) and len(pitch.niches) > 0:
+            first_n = pitch.niches[0]
+            niche_val = str(first_n.get("name") if isinstance(first_n, dict) else first_n).strip()
+
+    tags = pitch.tags or []
+    if isinstance(tags, str):
+        try:
+            import json
+            tags = json.loads(tags)
+        except Exception:
+            tags = [tags]
+    if not isinstance(tags, list):
+        tags = [str(tags)]
+
+    known_platforms = {"instagram", "youtube", "tiktok", "facebook", "linkedin", "x", "twitter", "snapchat", "pinterest", "threads"}
+    known_languages = {"english", "sinhala", "tamil", "all languages", "arabic", "french", "spanish", "german", "mandarin", "hindi"}
+    known_countries = {"sri lanka", "india", "united states", "usa", "uk", "united kingdom", "canada", "australia", "singapore", "malaysia", "uae", "dubai"}
+    known_general = {"general", "all", "deliverable", "post", "reel", "story", "video"}
+
+    if not niche_val:
+        for t in tags:
+            if isinstance(t, dict):
+                s = str(t.get("name") or t.get("type") or t.get("niche") or "").strip()
+            else:
+                s = str(t).strip()
+            s_low = s.lower()
+            if s and s_low not in known_platforms and s_low not in known_languages and s_low not in known_countries and s_low not in known_general and "sri lanka" not in s_low:
+                niche_val = s
+                break
+
+    if not niche_val and pitch.creator and hasattr(pitch.creator, "creator_profile") and pitch.creator.creator_profile and pitch.creator.creator_profile.niches:
+        cr_niches = pitch.creator.creator_profile.niches
+        if isinstance(cr_niches, list) and cr_niches:
+            first_n = cr_niches[0]
+            if isinstance(first_n, dict):
+                niche_val = str(first_n.get("name") or first_n.get("type") or "").strip()
+            else:
+                niche_val = str(first_n).strip()
+
+    if not niche_val:
+        niche_val = "Fashion"
+
+    platform_val = pitch.platform or ""
+    if not platform_val:
+        for t in tags:
+            s = str(t).strip()
+            if s.lower() in known_platforms:
+                platform_val = s.capitalize()
+                break
+    if not platform_val:
+        platform_val = "Instagram"
+
+    return niche_val, platform_val
+
+def _execute_pitch_conversion(pitch, request_data=None):
+    """Automatically convert an accepted pitch or accepted pitch counter into an active Live Campaign."""
+    if request_data is None:
+        request_data = {}
+    last_price = (pitch.counter_history[-1].get("price") if pitch.counter_history else None) or pitch.counter_offer or pitch.budget
+    final_budget = last_price
+    pitch.budget = final_budget
+    pitch.counter_offer = final_budget
+    pitch.status = "accepted"
+    pitch.save()
+
+    niche_val, platform_val = extract_pitch_niche_and_platform(pitch)
+    category_val = pitch.category or niche_val
+    niche_val_final = pitch.niche or niche_val
+    deliv_lang_str = ", ".join(pitch.delivery_languages) if isinstance(pitch.delivery_languages, list) else str(pitch.delivery_languages or "")
+    country_val = pitch.country or ""
+    province_val = pitch.province_state or ""
+    district_val = pitch.district_city or ""
+
+    # Check if Campaign already exists for this pitch
+    campaign = Campaign.objects.filter(
+        brand=pitch.brand,
+        creator=pitch.creator,
+        name=pitch.campaign_name,
+        created_via="pitch"
+    ).first()
+
+    if not campaign:
+        campaign = Campaign.objects.create(
+            name=request_data.get("name") or pitch.campaign_name,
+            brand=pitch.brand,
+            creator=pitch.creator,
+            budget=final_budget,
+            counter_price=final_budget,
+            counter_history=pitch.counter_history,
+            category=category_val,
+            campaign_category=category_val,
+            niche=niche_val_final,
+            delivery_language=deliv_lang_str,
+            country=country_val,
+            province=province_val,
+            district=district_val,
+            platform=pitch.platform or platform_val,
+            medium=pitch.platform or platform_val,
+            brief=request_data.get("brief") or pitch.description or f"Campaign proposal based on pitch: {pitch.campaign_name}",
+            status="Live",
+            start_date=pitch.start_date or request_data.get("start_date") or pitch.sent_date or "2026-08-01",
+            end_date=pitch.end_date or request_data.get("end_date") or "",
+            created_via="pitch",
+        )
+    else:
+        campaign.budget = final_budget
+        campaign.counter_price = final_budget
+        campaign.counter_history = pitch.counter_history
+        campaign.status = "Live"
+        campaign.category = category_val
+        campaign.campaign_category = category_val
+        campaign.niche = niche_val_final
+        if deliv_lang_str:
+            campaign.delivery_language = deliv_lang_str
+        if country_val:
+            campaign.country = country_val
+        if province_val:
+            campaign.province = province_val
+        if district_val:
+            campaign.district = district_val
+        if not campaign.platform:
+            campaign.platform = pitch.platform or platform_val
+            campaign.medium = pitch.platform or platform_val
+        campaign.save()
+
+    try:
+        from WorkspacePayment.models import WorkspacePaymentNegotiation
+        neg, _ = WorkspacePaymentNegotiation.objects.get_or_create(campaign=campaign)
+        neg.final_price = final_budget
+        neg.status = 'creator_accepted'
+        neg.save()
+    except Exception as e:
+        print("Error creating WorkspacePaymentNegotiation:", e)
+
+    populate_deliverables_from_pitch(campaign, pitch)
+    return campaign
+
 class PitchViewSet(viewsets.ModelViewSet):
     queryset = Pitch.objects.all()
     serializer_class = PitchSerializer
@@ -1841,13 +2031,23 @@ class PitchViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         attachment = self.request.FILES.get("attachment")
-        start_date = self.request.data.get("start_date") or serializer.validated_data.get("start_date") or ""
-        end_date = self.request.data.get("end_date") or serializer.validated_data.get("end_date") or ""
-        platform = self.request.data.get("platform") or serializer.validated_data.get("platform") or ""
         if attachment:
-            serializer.save(creator=self.request.user, attachment=attachment, status="pending_admin", start_date=start_date, end_date=end_date, platform=platform)
+            serializer.save(creator=self.request.user, attachment=attachment, status="pending_admin")
         else:
-            serializer.save(creator=self.request.user, status="pending_admin", start_date=start_date, end_date=end_date, platform=platform)
+            serializer.save(creator=self.request.user, status="pending_admin")
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if instance.status == "accepted_by_business":
+            last_p = (instance.counter_history[-1].get("price") if (instance.counter_history and isinstance(instance.counter_history, list) and len(instance.counter_history) > 0) else None) or instance.counter_offer or instance.budget
+            if last_p:
+                instance.budget = last_p
+                instance.counter_offer = last_p
+                if instance.counter_history and isinstance(instance.counter_history, list) and len(instance.counter_history) > 0:
+                    history = list(instance.counter_history)
+                    history[-1]["status"] = "accepted_by_business"
+                    instance.counter_history = history
+                instance.save()
 
     def perform_destroy(self, instance):
         if instance.brand and instance.creator:
@@ -1873,13 +2073,17 @@ class PitchViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):
-        """Business accepts pitch → status becomes accepted_by_business (pending admin conversion)"""
+        """Business accepts pitch → status becomes accepted_by_business (awaiting admin conversion)"""
         pitch = self.get_object()
-        last_p = (pitch.counter_history[-1].get("price") if pitch.counter_history else None) or pitch.counter_offer or pitch.budget
+        last_p = (pitch.counter_history[-1].get("price") if (pitch.counter_history and isinstance(pitch.counter_history, list) and len(pitch.counter_history) > 0) else None) or pitch.counter_offer or pitch.budget
         if last_p:
             pitch.budget = last_p
             pitch.counter_offer = last_p
         pitch.status = "accepted_by_business"
+        if pitch.counter_history and isinstance(pitch.counter_history, list) and len(pitch.counter_history) > 0:
+            history = list(pitch.counter_history)
+            history[-1]["status"] = "accepted_by_business"
+            pitch.counter_history = history
         pitch.save()
         return Response(PitchSerializer(pitch).data)
 
@@ -1946,77 +2150,28 @@ class PitchViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def convert_to_campaign(self, request, pk=None):
-        """Business accepts pitch → create Live campaign with created_via=pitch"""
+        """Admin converts pitch to Live campaign"""
         pitch = self.get_object()
-        last_price = (pitch.counter_history[-1].get("price") if pitch.counter_history else None) or pitch.counter_offer or pitch.budget
-        final_budget = last_price
-        pitch.budget = final_budget
-        pitch.counter_offer = final_budget
-        pitch.status = "accepted"
-        pitch.save()
-
-        # Create Campaign created via pitch
-        tags = pitch.tags or []
-        if isinstance(tags, str):
-            try:
-                import json
-                tags = json.loads(tags)
-            except Exception:
-                tags = [tags]
-        if not isinstance(tags, list):
-            tags = [str(tags)]
-        known_platforms = {"Instagram", "YouTube", "TikTok", "Facebook", "LinkedIn", "X", "Twitter", "Snapchat", "Pinterest"}
-        niche_val = next((str(t).strip() for t in tags if str(t).strip() and not any(p.lower() == str(t).strip().lower() for p in known_platforms)), "")
-        if not niche_val and pitch.creator and hasattr(pitch.creator, "creator_profile") and pitch.creator.creator_profile.niches:
-            cr_niches = pitch.creator.creator_profile.niches
-            if isinstance(cr_niches, list) and cr_niches:
-                niche_val = str(cr_niches[0]).strip()
-        if not niche_val:
-            niche_val = "Tech"
-        platform_val = next((str(t).strip() for t in tags if any(p.lower() == str(t).strip().lower() for p in known_platforms)), "Instagram")
-
-        campaign = Campaign.objects.create(
-            name=request.data.get("name") or pitch.campaign_name,
-            brand=pitch.brand,
-            creator=pitch.creator,
-            budget=final_budget,
-            counter_price=final_budget,
-            counter_history=pitch.counter_history,
-            category=niche_val,
-            platform=pitch.platform or platform_val,
-            medium=pitch.platform or platform_val,
-            brief=request.data.get("brief") or pitch.description or f"Campaign proposal based on pitch: {pitch.campaign_name}",
-            status="Live",
-            start_date=pitch.start_date or request.data.get("start_date") or pitch.sent_date or "2026-08-01",
-            end_date=pitch.end_date or request.data.get("end_date") or "",
-            created_via="pitch",
-        )
-
-        try:
-            from WorkspacePayment.models import WorkspacePaymentNegotiation
-            neg, _ = WorkspacePaymentNegotiation.objects.get_or_create(campaign=campaign)
-            neg.final_price = final_budget
-            neg.status = 'creator_accepted'
-            neg.save()
-        except Exception as e:
-            print("Error creating WorkspacePaymentNegotiation:", e)
-
-        populate_deliverables_from_pitch(campaign, pitch)
-
+        campaign = _execute_pitch_conversion(pitch, request.data)
         return Response({
-            "message": "Pitch accepted and campaign created.",
+            "message": "Pitch accepted and campaign created by admin.",
             "pitch": PitchSerializer(pitch).data,
             "campaign_id": campaign.id
         })
 
     @action(detail=True, methods=["post"])
     def accept_counter(self, request, pk=None):
+        """Creator or Business accepts counter offer → status becomes accepted_by_business (awaiting admin conversion)"""
         pitch = self.get_object()
-        last_p = (pitch.counter_history[-1].get("price") if pitch.counter_history else None) or pitch.counter_offer or pitch.budget
+        last_p = (pitch.counter_history[-1].get("price") if (pitch.counter_history and isinstance(pitch.counter_history, list) and len(pitch.counter_history) > 0) else None) or pitch.counter_offer or pitch.budget
         if last_p:
             pitch.budget = last_p
             pitch.counter_offer = last_p
         pitch.status = "accepted_by_business"
+        if pitch.counter_history and isinstance(pitch.counter_history, list) and len(pitch.counter_history) > 0:
+            history = list(pitch.counter_history)
+            history[-1]["status"] = "accepted_by_business"
+            pitch.counter_history = history
         pitch.save()
         return Response(PitchSerializer(pitch).data)
 
@@ -2066,11 +2221,22 @@ class CampaignStatsView(APIView):
         total_impressions = int(total_budget * 2500)
         total_roi = 4.1 if total_budget > 0 else 0.0
 
+        avg_creator_rating = 0.0
+        if has_creator and hasattr(user, "creator_profile"):
+            avg_creator_rating = user.creator_profile.average_rating
+        elif has_business:
+            from CreatorRating.models import BusinessRating
+            avg_res = BusinessRating.objects.filter(brand=user).aggregate(avg=Avg("rating"))["avg"]
+            avg_creator_rating = round(float(avg_res), 1) if avg_res is not None else 0.0
+
         return Response({
             "total_campaigns": total_campaigns,
             "live_now": live_now,
             "total_budget": total_budget,
             "avg_engagement": avg_engagement,
+            "avg_rating": avg_creator_rating,
+            "avg_creator_rating": avg_creator_rating,
+            "average_rating": avg_creator_rating,
             "total_reach": total_reach,
             "total_impressions": total_impressions,
             "total_roi": total_roi,

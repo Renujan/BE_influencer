@@ -358,13 +358,14 @@
         <i class="fa-solid fa-chart-simple text-blue-600"></i> 4. Performance Trends & Spend Distribution
       </h2>
 
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <!-- Line Chart -->
-        <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+      <!-- Top Row: Campaigns Created vs Platform Revenue & Target Budget vs Agreed Price vs Spend -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- 1. Campaigns Created vs Platform Revenue (Original Progression Graph) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
           <div class="flex justify-between items-center mb-3">
             <div>
               <h3 class="text-sm font-bold text-slate-900">Campaigns Created vs Platform Revenue</h3>
-              <div class="text-[11px] text-slate-400">Progression across created campaigns</div>
+              <div class="text-[11px] text-slate-400">Cumulative progression across campaigns</div>
             </div>
           </div>
           <div class="h-64">
@@ -372,8 +373,8 @@
           </div>
         </div>
 
-        <!-- Grouped Bar Chart -->
-        <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+        <!-- 2. Target Budget vs Agreed Price vs Spend (Grouped Bar Chart) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
           <div class="flex justify-between items-center mb-3">
             <div>
               <h3 class="text-sm font-bold text-slate-900">Target Budget vs Agreed Price vs Spend</h3>
@@ -385,42 +386,208 @@
           </div>
         </div>
       </div>
+
+      <!-- Bottom Row (Below the two graphs): Month vs Admin Earned Line/Area Chart -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+        <div class="flex justify-between items-center mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span>Month vs. Admin Earned</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Platform Fee</span>
+            </h3>
+            <div class="text-[11px] text-slate-400">Monthly earnings generated from business (2.5%) & creator (1.5%) platform fee commissions</div>
+          </div>
+        </div>
+        <div class="h-72">
+          <canvas id="monthlyEarnedCanvas"></canvas>
+        </div>
+      </div>
     </div>
 
     <!-- 5. CAMPAIGN-LEVEL DETAIL TABLE -->
     <div class="space-y-4 pt-2">
-      <div class="flex justify-between items-center">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
             <i class="fa-solid fa-list-check text-blue-600"></i> 5. Campaign Workspace Details & Fee Audits
           </h2>
           <p class="text-xs text-slate-500 mt-0.5">Granular records with fee breakdowns and milestone timeline statuses.</p>
         </div>
-        <div class="text-xs text-slate-500" id="tableCountDisplay">Showing all campaigns</div>
+        
+        <!-- Controls: Page Size Selector -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="flex items-center gap-1.5 text-xs text-slate-500">
+            <span class="font-medium">Per page:</span>
+            <select
+              id="pageSizeSelect"
+              onchange="handlePageSizeChange(this.value)"
+              class="select-custom rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer shadow-xs"
+            >
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs border-collapse" id="campaignsTable">
-            <thead>
-              <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                <th class="px-4 py-3">Campaign</th>
-                <th class="px-4 py-3">Platform / Category</th>
-                <th class="px-4 py-3">Agreed Price</th>
-                <th class="px-4 py-3">Platform Fee</th>
-                <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3">Flow Progress</th>
-                <th class="px-4 py-3 text-right">Actions</th>
+      <!-- FILTER TOOLBAR (REORGANIZED INTO EXACTLY 2 STRAIGHT ROWS) -->
+      <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
+        <!-- Top Row: Type Pills, Status Pills, and Search Box -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <!-- Type Filter Pills -->
+          <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-slate-200 overflow-x-auto shrink-0" id="typeFilterGroup">
+            <button onclick="setTypeFilter('All')" class="type-pill active px-3.5 py-1 text-xs font-bold rounded-full transition-all bg-white text-slate-900 shadow-sm cursor-pointer" data-type="All">All</button>
+            <button onclick="setTypeFilter('Direct Request')" class="type-pill px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-500 hover:text-slate-900 cursor-pointer" data-type="Direct Request">Direct Request</button>
+            <button onclick="setTypeFilter('Request')" class="type-pill px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-500 hover:text-slate-900 cursor-pointer" data-type="Request">Request</button>
+            <button onclick="setTypeFilter('Pitch')" class="type-pill px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-500 hover:text-slate-900 cursor-pointer" data-type="Pitch">Pitch</button>
+          </div>
+
+          <!-- Status Filter Pills -->
+          <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-slate-200 overflow-x-auto shrink-0" id="statusFilterGroup">
+            <button onclick="setStatusFilter('All')" class="status-pill active px-3.5 py-1 text-xs font-bold rounded-full transition-all bg-white text-slate-900 shadow-sm cursor-pointer" data-status="All">All</button>
+            <button onclick="setStatusFilter('Live')" class="status-pill px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-500 hover:text-slate-900 cursor-pointer" data-status="Live">Live</button>
+            <button onclick="setStatusFilter('Pending')" class="status-pill px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-500 hover:text-slate-900 cursor-pointer" data-status="Pending">Pending</button>
+            <button onclick="setStatusFilter('Under Review')" class="status-pill px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-500 hover:text-slate-900 cursor-pointer" data-status="Under Review">Under Review</button>
+            <button onclick="setStatusFilter('Completed')" class="status-pill px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-500 hover:text-slate-900 cursor-pointer" data-status="Completed">Completed</button>
+            <button onclick="setStatusFilter('Declined')" class="status-pill px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-500 hover:text-slate-900 cursor-pointer" data-status="Declined">Declined</button>
+          </div>
+
+          <!-- Search Input (on exact same top line) -->
+          <div class="relative flex-1 min-w-[200px] max-w-full lg:max-w-xs xl:max-w-sm flex items-center gap-2">
+            <div class="relative w-full flex items-center">
+              <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                id="searchCampaignInput"
+                oninput="handleSearch(this.value)"
+                placeholder="Search campaigns..."
+                style="padding-left: 2.35rem !important; padding-right: 2rem !important;"
+                class="search-input-custom w-full rounded-full border border-slate-200 bg-slate-50 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+              />
+              <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs cursor-pointer p-0.5 z-10">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <button id="resetFiltersBtn" onclick="resetAllFilters()" title="Reset all filters" class="hidden text-slate-400 hover:text-blue-600 font-semibold items-center gap-1 cursor-pointer transition text-xs shrink-0">
+              <i class="fa-solid fa-rotate-left"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bottom Row: 5 Dropdown Menus + Sort Menu at Far Right -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 items-center pt-2 border-t border-slate-100">
+          <!-- 1. Country -->
+          <div>
+            <select id="countrySelect" onchange="handleCountryChange(this.value)" class="select-custom w-full rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer">
+              <option value="">All Countries</option>
+            </select>
+          </div>
+
+          <!-- 2. Province -->
+          <div>
+            <select id="provinceSelect" onchange="handleProvinceChange(this.value)" class="select-custom w-full rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer">
+              <option value="">All Provinces</option>
+            </select>
+          </div>
+
+          <!-- 3. District -->
+          <div>
+            <select id="districtSelect" onchange="handleDistrictChange(this.value)" class="select-custom w-full rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer">
+              <option value="">All Districts</option>
+            </select>
+          </div>
+
+          <!-- 4. Platform Filter -->
+          <div>
+            <select id="platformSelect" onchange="handlePlatformChange(this.value)" class="select-custom w-full rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer">
+              <option value="">All Platforms</option>
+            </select>
+          </div>
+
+          <!-- 5. Medium Filter (Language) -->
+          <div>
+            <select id="mediumSelect" onchange="handleMediumChange(this.value)" class="select-custom w-full rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer">
+              <option value="">All Mediums</option>
+            </select>
+          </div>
+
+          <!-- 6. Sort Menu at the Far Right -->
+          <div class="flex items-center gap-1.5 w-full">
+            <span class="text-slate-400 font-medium text-[11px] shrink-0">Sort:</span>
+            <select id="sortSelect" onchange="handleSortChange(this.value)" class="select-custom w-full rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer">
+              <option value="newest">Created (Newest)</option>
+              <option value="oldest">Created (Oldest)</option>
+              <option value="budget_high">Budget (Highest)</option>
+              <option value="budget_low">Budget (Lowest)</option>
+              <option value="fee_high">Fee (Highest)</option>
+              <option value="name_asc">Name (A-Z)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE WRAPPER & CONTAINER (WITH FULL HORIZONTAL SCROLLING SUPPORT) -->
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm" id="tableCardWrapper">
+        <div class="overflow-x-auto w-full scrollbar-thin" id="tableScrollContainer">
+          <table class="w-full text-left text-xs border-collapse min-w-[1050px] whitespace-nowrap table-auto" id="campaignsTable">
+            <thead class="bg-slate-50 border-b border-slate-200 shadow-xs">
+              <tr class="text-slate-500 font-semibold">
+                <th class="px-4 py-3 bg-slate-50 min-w-[200px] whitespace-nowrap">Campaign</th>
+                <th class="px-4 py-3 bg-slate-50 min-w-[240px] whitespace-nowrap">Platform / Category / Medium</th>
+                <th class="px-4 py-3 bg-slate-50 min-w-[120px] whitespace-nowrap">Agreed Price</th>
+                <th class="px-4 py-3 bg-slate-50 min-w-[130px] whitespace-nowrap">Platform Fee</th>
+                <th class="px-4 py-3 bg-slate-50 min-w-[110px] whitespace-nowrap">Status</th>
+                <th class="px-4 py-3 bg-slate-50 min-w-[140px] whitespace-nowrap">Flow Progress</th>
+                <th class="px-4 py-3 bg-slate-50 min-w-[120px] text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100" id="campaignsTableBody">
-              <!-- Rendered via JavaScript for dynamic filtering -->
+              <!-- Rendered via JavaScript for dynamic filtering & pagination -->
             </tbody>
           </table>
+        </div>
+
+        <!-- PAGINATION BAR -->
+        <div id="paginationBar" class="p-3.5 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div class="text-slate-500 font-medium" id="paginationSummary">
+            Showing 0 to 0 of 0 campaigns
+          </div>
+          <div class="flex items-center gap-1 flex-wrap" id="paginationButtons">
+            <!-- Injected dynamically -->
+          </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- CSS Helpers -->
+  <style>
+    .search-input-custom {
+      padding-left: 2.5rem !important;
+      padding-right: 2.2rem !important;
+    }
+    .select-custom {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.65rem center;
+      background-size: 0.85rem;
+      padding-right: 2rem !important;
+    }
+    .scrollable-view-active {
+      max-height: 480px !important;
+      overflow-y: auto !important;
+    }
+  </style>
 
   <!-- DRILL-DOWN MODAL -->
   <div id="drilldownModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4" onclick="handleBackdropClick(event)">
@@ -461,59 +628,411 @@
     const budgetVsSpendData = JSON.parse(document.getElementById('budget-vs-spend-data').textContent || '[]');
     const defaultCurrencySymbol = "{{ currency_symbol|default:'Rs' }}";
 
+    // Filtering & Pagination states
+    let currentType = "All";
+    let currentStatus = "All";
+    let searchQuery = "";
+    let selectedCountry = "";
+    let selectedProvince = "";
+    let selectedDistrict = "";
+    let selectedPlatform = "";
+    let selectedMedium = "";
+    let selectedSort = "newest";
+
+    let currentPage = 1;
+    let pageSize = 10;
+    let isScrollView = false;
+    let currentFilteredList = [];
+
+    function toggleScrollView() {
+      isScrollView = !isScrollView;
+      const scrollContainer = document.getElementById('tableScrollContainer');
+      const toggleText = document.getElementById('scrollToggleText');
+      const toggleBtn = document.getElementById('scrollToggleBtn');
+      const toggleIcon = document.getElementById('scrollToggleIcon');
+
+      if (scrollContainer) {
+        if (isScrollView) {
+          scrollContainer.classList.add('scrollable-view-active');
+          if (toggleText) toggleText.textContent = "Scrollable: On";
+          if (toggleBtn) {
+            toggleBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-full border border-blue-500 bg-blue-50 text-blue-700 flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors";
+          }
+          if (toggleIcon) toggleIcon.className = "fa-solid fa-arrows-up-down text-blue-600";
+        } else {
+          scrollContainer.classList.remove('scrollable-view-active');
+          if (toggleText) toggleText.textContent = "Scrollable: Off";
+          if (toggleBtn) {
+            toggleBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors";
+          }
+          if (toggleIcon) toggleIcon.className = "fa-solid fa-arrows-up-down text-slate-400";
+        }
+      }
+    }
+
+    function handlePageSizeChange(val) {
+      if (val === 'all') {
+        pageSize = 'all';
+      } else {
+        pageSize = parseInt(val, 10) || 10;
+      }
+      currentPage = 1;
+      renderTable(currentFilteredList);
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      renderTable(currentFilteredList);
+    }
+
+    function populateFilterDropdowns() {
+      let filteredForGeo = allCampaigns;
+      if (selectedCountry) {
+        filteredForGeo = filteredForGeo.filter(c => c.country === selectedCountry);
+      }
+
+      const countries = Array.from(new Set(allCampaigns.map(c => c.country).filter(Boolean))).sort();
+      const provinces = Array.from(new Set(filteredForGeo.map(c => c.province).filter(Boolean))).sort();
+      
+      let filteredForDist = filteredForGeo;
+      if (selectedProvince) {
+        filteredForDist = filteredForDist.filter(c => c.province === selectedProvince);
+      }
+      const districts = Array.from(new Set(filteredForDist.map(c => c.district).filter(Boolean))).sort();
+      
+      const platforms = Array.from(new Set(allCampaigns.map(c => c.platform).filter(Boolean))).sort();
+      const mediums = Array.from(new Set(allCampaigns.map(c => c.medium).filter(Boolean))).sort();
+
+      const cSel = document.getElementById('countrySelect');
+      if (cSel) {
+        const cur = cSel.value;
+        cSel.innerHTML = '<option value="">All Countries</option>' + countries.map(c => `<option value="${c}" ${c === cur ? 'selected' : ''}>${c}</option>`).join('');
+      }
+
+      const pSel = document.getElementById('provinceSelect');
+      if (pSel) {
+        pSel.innerHTML = '<option value="">All Provinces</option>' + provinces.map(p => `<option value="${p}" ${p === selectedProvince ? 'selected' : ''}>${p}</option>`).join('');
+      }
+
+      const dSel = document.getElementById('districtSelect');
+      if (dSel) {
+        dSel.innerHTML = '<option value="">All Districts</option>' + districts.map(d => `<option value="${d}" ${d === selectedDistrict ? 'selected' : ''}>${d}</option>`).join('');
+      }
+
+      const platSel = document.getElementById('platformSelect');
+      if (platSel) {
+        const curP = platSel.value;
+        platSel.innerHTML = '<option value="">All Platforms</option>' + platforms.map(p => `<option value="${p}" ${p === curP ? 'selected' : ''}>${p}</option>`).join('');
+      }
+
+      const mSel = document.getElementById('mediumSelect');
+      if (mSel) {
+        const curM = mSel.value;
+        mSel.innerHTML = '<option value="">All Mediums</option>' + mediums.map(m => `<option value="${m}" ${m === curM ? 'selected' : ''}>${m}</option>`).join('');
+      }
+    }
+
+    function setTypeFilter(t) {
+      currentType = t;
+      currentPage = 1;
+      document.querySelectorAll('#typeFilterGroup .type-pill').forEach(btn => {
+        if (btn.getAttribute('data-type') === t) {
+          btn.className = 'type-pill active px-3.5 py-1 text-xs font-bold rounded-full transition-all bg-white text-slate-900 shadow-sm cursor-pointer';
+        } else {
+          btn.className = 'type-pill px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-500 hover:text-slate-900 cursor-pointer';
+        }
+      });
+      filterAndRenderCampaigns();
+    }
+
+    function setStatusFilter(s) {
+      currentStatus = s;
+      currentPage = 1;
+      document.querySelectorAll('#statusFilterGroup .status-pill').forEach(btn => {
+        if (btn.getAttribute('data-status') === s) {
+          btn.className = 'status-pill active px-3.5 py-1 text-xs font-bold rounded-full transition-all bg-white text-slate-900 shadow-sm cursor-pointer';
+        } else {
+          btn.className = 'status-pill px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-500 hover:text-slate-900 cursor-pointer';
+        }
+      });
+      filterAndRenderCampaigns();
+    }
+
+    function handleSearch(val) {
+      searchQuery = val.trim().toLowerCase();
+      currentPage = 1;
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (clearBtn) {
+        if (searchQuery) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+      }
+      filterAndRenderCampaigns();
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('searchCampaignInput');
+      if (input) input.value = '';
+      searchQuery = '';
+      currentPage = 1;
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (clearBtn) clearBtn.classList.add('hidden');
+      filterAndRenderCampaigns();
+    }
+
+    function handleCountryChange(val) {
+      selectedCountry = val;
+      selectedProvince = "";
+      selectedDistrict = "";
+      currentPage = 1;
+      populateFilterDropdowns();
+      filterAndRenderCampaigns();
+    }
+
+    function handleProvinceChange(val) {
+      selectedProvince = val;
+      selectedDistrict = "";
+      currentPage = 1;
+      populateFilterDropdowns();
+      filterAndRenderCampaigns();
+    }
+
+    function handleDistrictChange(val) {
+      selectedDistrict = val;
+      currentPage = 1;
+      filterAndRenderCampaigns();
+    }
+
+    function handlePlatformChange(val) {
+      selectedPlatform = val;
+      currentPage = 1;
+      filterAndRenderCampaigns();
+    }
+
+    function handleMediumChange(val) {
+      selectedMedium = val;
+      currentPage = 1;
+      filterAndRenderCampaigns();
+    }
+
+    function handleSortChange(val) {
+      selectedSort = val;
+      currentPage = 1;
+      filterAndRenderCampaigns();
+    }
+
+    function resetAllFilters() {
+      currentType = "All";
+      currentStatus = "All";
+      searchQuery = "";
+      selectedCountry = "";
+      selectedProvince = "";
+      selectedDistrict = "";
+      selectedPlatform = "";
+      selectedMedium = "";
+      selectedSort = "newest";
+      currentPage = 1;
+
+      const searchInput = document.getElementById('searchCampaignInput');
+      if (searchInput) searchInput.value = '';
+
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (clearBtn) clearBtn.classList.add('hidden');
+
+      const cSel = document.getElementById('countrySelect');
+      if (cSel) cSel.value = '';
+
+      const pSel = document.getElementById('provinceSelect');
+      if (pSel) pSel.value = '';
+
+      const dSel = document.getElementById('districtSelect');
+      if (dSel) dSel.value = '';
+
+      const platSel = document.getElementById('platformSelect');
+      if (platSel) platSel.value = '';
+
+      const mSel = document.getElementById('mediumSelect');
+      if (mSel) mSel.value = '';
+
+      const sortSel = document.getElementById('sortSelect');
+      if (sortSel) sortSel.value = 'newest';
+
+      setTypeFilter('All');
+      setStatusFilter('All');
+    }
+
+    function filterAndRenderCampaigns() {
+      let filtered = [...allCampaigns];
+
+      // 1. Type filter
+      if (currentType !== "All") {
+        filtered = filtered.filter(c => c.campaign_type === currentType);
+      }
+
+      // 2. Status filter
+      if (currentStatus !== "All") {
+        filtered = filtered.filter(c => {
+          const s = (c.status || "").toLowerCase().replace(/[\s\-_]/g, "");
+          const target = currentStatus.toLowerCase().replace(/[\s\-_]/g, "");
+          if (target === "live") return s === "live" || s === "active";
+          if (target === "pending") return s === "pending" || s === "draft";
+          if (target === "underreview") return s === "underreview" || s === "acceptedpendingadmin";
+          if (target === "completed") return s === "completed" || s === "approved";
+          if (target === "declined") return s === "declined" || s === "rejected" || s === "cancelled";
+          return s === target;
+        });
+      }
+
+      // 3. Search query
+      if (searchQuery) {
+        filtered = filtered.filter(c => {
+          const name = (c.name || '').toLowerCase();
+          const id = String(c.id);
+          const brand = (c.brand_name || '').toLowerCase();
+          const creator = (c.creator_name || '').toLowerCase();
+          const cat = (c.category || '').toLowerCase();
+          const plat = (c.platform || '').toLowerCase();
+          const med = (c.medium || '').toLowerCase();
+          return name.includes(searchQuery) || id.includes(searchQuery) || brand.includes(searchQuery) || creator.includes(searchQuery) || cat.includes(searchQuery) || plat.includes(searchQuery) || med.includes(searchQuery);
+        });
+      }
+
+      // 4. Location, Platform & Medium filters
+      if (selectedCountry) filtered = filtered.filter(c => c.country === selectedCountry);
+      if (selectedProvince) filtered = filtered.filter(c => c.province === selectedProvince);
+      if (selectedDistrict) filtered = filtered.filter(c => c.district === selectedDistrict);
+      if (selectedPlatform) filtered = filtered.filter(c => c.platform === selectedPlatform);
+      if (selectedMedium) filtered = filtered.filter(c => c.medium === selectedMedium);
+
+      // 5. Sorting
+      filtered.sort((a, b) => {
+        const priceA = parseFloat(a.final_price || a.budget || 0);
+        const priceB = parseFloat(b.final_price || b.budget || 0);
+        const feeA = parseFloat(a.total_fee || (priceA * 0.04));
+        const feeB = parseFloat(b.total_fee || (priceB * 0.04));
+
+        if (selectedSort === 'newest') return (b.id || 0) - (a.id || 0);
+        if (selectedSort === 'oldest') return (a.id || 0) - (b.id || 0);
+        if (selectedSort === 'budget_high') return priceB - priceA;
+        if (selectedSort === 'budget_low') return priceA - priceB;
+        if (selectedSort === 'fee_high') return feeB - feeA;
+        if (selectedSort === 'name_asc') return (a.name || '').localeCompare(b.name || '');
+        return (b.id || 0) - (a.id || 0);
+      });
+
+      // Show/hide reset button
+      const resetBtn = document.getElementById('resetFiltersBtn');
+      if (resetBtn) {
+        const hasFilters = currentType !== "All" || currentStatus !== "All" || searchQuery !== "" || selectedCountry !== "" || selectedProvince !== "" || selectedDistrict !== "" || selectedPlatform !== "" || selectedMedium !== "" || selectedSort !== "newest";
+        if (hasFilters) resetBtn.classList.remove('hidden');
+        else resetBtn.classList.add('hidden');
+      }
+
+      currentFilteredList = filtered;
+      renderTable(filtered);
+    }
+
     function renderTable(list) {
       const tbody = document.getElementById('campaignsTableBody');
       const countDisplay = document.getElementById('tableCountDisplay');
+      const paginationBar = document.getElementById('paginationBar');
+      const paginationSummary = document.getElementById('paginationSummary');
+      const paginationButtons = document.getElementById('paginationButtons');
+
+      const totalItems = list.length;
+      let effectivePageSize = (pageSize === 'all') ? (totalItems || 1) : pageSize;
+      const totalPages = Math.max(1, Math.ceil(totalItems / effectivePageSize));
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (pageSize === 'all') ? 0 : (currentPage - 1) * effectivePageSize;
+      const endIndex = (pageSize === 'all') ? totalItems : Math.min(startIndex + effectivePageSize, totalItems);
+      const pageItems = list.slice(startIndex, endIndex);
+
       if (countDisplay) {
-        countDisplay.textContent = `Showing ${list.length} of ${allCampaigns.length} campaigns`;
+        countDisplay.textContent = `Showing ${totalItems} of ${allCampaigns.length} campaigns`;
       }
 
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-xs">No campaigns available</td></tr>`;
+      if (paginationSummary) {
+        if (totalItems === 0) {
+          paginationSummary.textContent = "Showing 0 of 0 campaigns";
+        } else {
+          paginationSummary.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} campaigns`;
+        }
+      }
+
+      // Render Pagination Buttons
+      if (paginationButtons) {
+        if (totalPages <= 1 || pageSize === 'all') {
+          paginationButtons.innerHTML = '';
+        } else {
+          let btnHtml = '';
+          btnHtml += `<button onclick="goToPage(${Math.max(1, currentPage - 1)})" ${currentPage === 1 ? 'disabled' : ''} class="px-2.5 py-1 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer">Prev</button>`;
+
+          for (let p = 1; p <= totalPages; p++) {
+            if (p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1)) {
+              const isActive = p === currentPage;
+              btnHtml += `<button onclick="goToPage(${p})" class="w-7 h-7 rounded text-xs font-bold transition ${isActive ? 'bg-blue-600 text-white shadow-sm' : 'border border-slate-200 text-slate-700 hover:bg-slate-100'} cursor-pointer">${p}</button>`;
+            } else if (p === currentPage - 2 || p === currentPage + 2) {
+              btnHtml += `<span class="px-1 text-slate-400">...</span>`;
+            }
+          }
+
+          btnHtml += `<button onclick="goToPage(${Math.min(totalPages, currentPage + 1)})" ${currentPage === totalPages ? 'disabled' : ''} class="px-2.5 py-1 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer">Next</button>`;
+          paginationButtons.innerHTML = btnHtml;
+        }
+      }
+
+      if (pageItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-slate-400 text-xs">No campaign records match your active filters.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = list.map(c => {
+      tbody.innerHTML = pageItems.map(c => {
         const fPrice = parseFloat(c.final_price || c.budget || 0);
         const fee = parseFloat(c.total_fee || (fPrice * 0.04));
         const progress = c.progress || (c.status === 'Completed' ? 100 : 50);
         const sym = c.currency_symbol || defaultCurrencySymbol;
 
         return `
-          <tr class="hover:bg-slate-50/80 transition-colors">
-            <td class="px-4 py-3 font-bold text-slate-900">
-              <div>${c.name}</div>
+          <tr class="hover:bg-slate-50/80 transition-colors whitespace-nowrap">
+            <td class="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">
+              <div class="truncate max-w-[220px]">${c.name}</div>
               <div class="text-[10px] text-slate-400 font-normal">#${c.id}</div>
             </td>
-            <td class="px-4 py-3">
-              <div class="font-medium text-slate-800">${c.platform || 'General'}</div>
-              <div class="text-[10px] text-slate-400">${c.category || 'General'}</div>
+            <td class="px-4 py-3 whitespace-nowrap">
+              <div class="flex items-center gap-1.5 flex-nowrap">
+                <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-blue-50 text-blue-700 border border-blue-200 shrink-0">${c.platform || 'Instagram'}</span>
+                <span class="text-slate-400 text-[10px]">•</span>
+                <span class="font-medium text-slate-800">${c.category || 'General'}</span>
+                <span class="text-slate-400 text-[10px]">•</span>
+                <span class="text-slate-500 font-medium text-[11px]">${c.medium || 'English'}</span>
+              </div>
             </td>
-            <td class="px-4 py-3 font-mono font-bold text-slate-900">${sym}${fPrice.toFixed(2)}</td>
-            <td class="px-4 py-3 font-mono">
+            <td class="px-4 py-3 font-mono font-bold text-slate-900 whitespace-nowrap">${sym}${fPrice.toFixed(2)}</td>
+            <td class="px-4 py-3 font-mono whitespace-nowrap">
               <span class="text-emerald-600 font-bold">${sym}${fee.toFixed(2)}</span>
-              <div class="text-[10px] text-slate-400">(2.5% + 1.5%)</div>
+              <span class="text-[10px] text-slate-400 ml-1">(2.5% + 1.5%)</span>
             </td>
-            <td class="px-4 py-3">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            <td class="px-4 py-3 whitespace-nowrap">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block ${
                 c.status === 'Live' || c.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                 c.status === 'Completed' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
                 c.status === 'Under Review' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
                 'bg-slate-100 text-slate-600'
               }">${c.status || 'Pending'}</span>
             </td>
-            <td class="px-4 py-3 min-w-[100px]">
-              <div class="flex justify-between text-[10px] text-slate-400 mb-1">
-                <span>Progress</span>
-                <span>${progress}%</span>
-              </div>
-              <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div class="h-full bg-blue-600 rounded-full" style="width: ${progress}%"></div>
+            <td class="px-4 py-3 min-w-[130px] whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <div class="h-1.5 w-20 bg-slate-100 rounded-full overflow-hidden shrink-0">
+                  <div class="h-full bg-blue-600 rounded-full" style="width: ${progress}%"></div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 font-semibold">${progress}%</span>
               </div>
             </td>
-            <td class="px-4 py-3 text-right">
-              <button onclick="openModal(${c.id})" class="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-100 font-bold text-slate-700 text-xs cursor-pointer">
-                <i class="fa-solid fa-eye text-blue-600 mr-1"></i> Drill-down
+            <td class="px-4 py-3 text-right whitespace-nowrap">
+              <button onclick="openModal(${c.id})" class="px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 font-bold text-slate-700 text-xs cursor-pointer inline-flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-eye text-blue-600"></i> Drill-down
               </button>
             </td>
           </tr>
@@ -544,24 +1063,10 @@
       };
 
       const bizPaid = bizInsts.filter(isPaidInst);
-      const bizPending = bizInsts.filter(i => !isPaidInst(i));
-
       const creatorPaid = creatorInsts.filter(isPaidInst);
-      const creatorPending = creatorInsts.filter(i => !isPaidInst(i));
 
       const allPaid = [...bizPaid, ...creatorPaid];
-      const allDividedPending = [...bizPending, ...creatorPending];
-
-      const bizAllocated = bizInsts.reduce((acc, inst) => acc + (parseFloat(inst.amount) || 0), 0);
-      const creatorAllocated = creatorInsts.reduce((acc, inst) => acc + (parseFloat(inst.amount) || 0), 0);
-
-      const bizRemaining = Math.max(0, fPrice - bizAllocated);
-      const creatorRemaining = Math.max(0, creatorNet - creatorAllocated);
-
       const paidSum = allPaid.reduce((acc, inst) => acc + (parseFloat(inst.amount) || 0), 0);
-      const dividedPendingSum = allDividedPending.reduce((acc, inst) => acc + (parseFloat(inst.amount) || 0), 0);
-      const totalPendingSum = dividedPendingSum + (bizInsts.length === 0 ? fPrice : bizRemaining) + (creatorInsts.length === 0 ? creatorNet : creatorRemaining);
-      const totalPendingCount = allDividedPending.length + (bizInsts.length === 0 && fPrice > 0 ? 1 : 0) + (creatorInsts.length === 0 && creatorNet > 0 ? 1 : 0);
 
       document.getElementById('modalBody').innerHTML = `
         <!-- Fee Settlement Breakdown -->
@@ -596,143 +1101,116 @@
               <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
                 Paid: ${sym}${paidSum.toFixed(2)} (${allPaid.length})
               </span>
-              <span class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                Pending: ${sym}${totalPendingSum.toFixed(2)} (${totalPendingCount})
-              </span>
             </div>
           </div>
 
-          <div class="space-y-4">
-            <!-- 1. BUSINESS INBOUND INSTALLMENTS SECTION -->
-            <div class="rounded-xl border border-blue-200 bg-blue-50/50 p-3.5 space-y-2.5">
-              <div class="text-xs font-bold text-blue-700 flex items-center justify-between flex-wrap gap-2">
-                <span class="flex items-center gap-1.5">
-                  <i class="fa-solid fa-building"></i> 🏢 Business Milestone Installments (Inbound: Brand → Admin)
-                </span>
-                <span class="text-[11px] font-mono font-bold text-blue-800">
-                  Total: ${sym}${fPrice.toFixed(2)}
-                </span>
-              </div>
-
-              ${bizInsts.length === 0 ? `
-                <div class="p-3 rounded-lg border border-slate-200 bg-white text-xs flex items-center justify-between">
-                  <div>
-                    <div class="font-semibold text-slate-800">Inbound Campaign Payment (Undivided)</div>
-                    <div class="text-[10px] text-slate-400">No inbound installments divided yet in Workspace Payment</div>
-                  </div>
-                  <div class="text-right">
-                    <div class="font-mono font-bold text-slate-900">${sym}${fPrice.toFixed(2)}</div>
-                    <span class="text-[10px] font-bold text-amber-600">In Escrow (Pending)</span>
-                  </div>
-                </div>
-              ` : `
-                <div class="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white overflow-hidden">
-                  ${bizInsts.map((inst, idx) => {
-                    const isPaid = isPaidInst(inst);
-                    return `
-                      <div class="p-2.5 flex items-center justify-between gap-2 text-xs hover:bg-slate-50 transition">
-                        <div class="min-w-0 flex-1">
-                          <div class="font-semibold text-slate-900 flex items-center gap-2">
-                            <span class="truncate">${inst.title || `Business Milestone #${idx + 1}`}</span>
-                            <span class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">
-                              🏢 Brand
-                            </span>
-                          </div>
-                          <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-2">
-                            <span>${inst.paid_date ? `Paid Date: ${inst.paid_date}` : "Date: Pending"}</span>
-                            ${inst.receipt_image_url ? `
-                              <a href="${inst.receipt_image_url}" target="_blank" class="text-blue-600 hover:underline font-semibold flex items-center gap-1">
-                                <i class="fa-solid fa-file-invoice text-[10px]"></i> View Proof
-                              </a>
-                            ` : ''}
-                          </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                          <div class="font-mono font-bold text-slate-900">${sym}${parseFloat(inst.amount || 0).toFixed(2)}</div>
-                          <span class="inline-block text-[10px] font-bold ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">
-                            ${isPaid ? 'Approved (Paid)' : 'In Escrow (Pending)'}
-                          </span>
-                        </div>
-                      </div>
-                    `;
-                  }).join('')}
-                  ${bizRemaining > 1 ? `
-                    <div class="p-2.5 flex items-center justify-between gap-2 text-xs bg-slate-50">
-                      <span class="text-[11px] font-semibold text-slate-500">Remaining Unallocated Inbound</span>
-                      <div class="text-right font-mono font-bold text-amber-600">
-                        ${sym}${bizRemaining.toFixed(2)}
-                      </div>
-                    </div>
-                  ` : ''}
-                </div>
-              `}
+          <!-- 1. BUSINESS INBOUND INSTALLMENTS SECTION -->
+          <div class="rounded-xl border border-blue-200 bg-blue-50/50 p-3.5 space-y-2.5">
+            <div class="text-xs font-bold text-blue-700 flex items-center justify-between flex-wrap gap-2">
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-building"></i> 🏢 Brand Milestone Installments (Inbound: Brand → Escrow)
+              </span>
+              <span class="text-[11px] font-mono font-bold text-blue-800">
+                Target: ${sym}${fPrice.toFixed(2)}
+              </span>
             </div>
 
-            <!-- 2. CREATOR OUTBOUND INSTALLMENTS SECTION -->
-            <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 space-y-2.5">
-              <div class="text-xs font-bold text-emerald-700 flex items-center justify-between flex-wrap gap-2">
-                <span class="flex items-center gap-1.5">
-                  <i class="fa-solid fa-paint-brush"></i> 🎨 Creator Milestone Installments (Outbound: Admin → Creator)
-                </span>
-                <span class="text-[11px] font-mono font-bold text-emerald-800">
-                  Net Payout: ${sym}${creatorNet.toFixed(2)}
-                </span>
-              </div>
-
-              ${creatorInsts.length === 0 ? `
-                <div class="p-3 rounded-lg border border-slate-200 bg-white text-xs flex items-center justify-between">
-                  <div>
-                    <div class="font-semibold text-slate-800">Outbound Creator Payout (Undivided)</div>
-                    <div class="text-[10px] text-slate-400">No outbound installments divided yet in Workspace Payment</div>
-                  </div>
-                  <div class="text-right">
-                    <div class="font-mono font-bold text-slate-900">${sym}${creatorNet.toFixed(2)}</div>
-                    <span class="text-[10px] font-bold text-amber-600">In Escrow (Pending)</span>
-                  </div>
+            ${bizInsts.length === 0 ? `
+              <div class="p-3 rounded-lg border border-slate-200 bg-white text-xs flex items-center justify-between">
+                <div>
+                  <div class="font-semibold text-slate-800">Inbound Brand Deposit (Undivided)</div>
+                  <div class="text-[10px] text-slate-400">No inbound installments divided yet in Workspace Payment</div>
                 </div>
-              ` : `
-                <div class="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white overflow-hidden">
-                  ${creatorInsts.map((inst, idx) => {
-                    const isPaid = isPaidInst(inst);
-                    const isSubmitted = inst.status === "payment_submitted" || inst.receipt_image_url;
-                    return `
-                      <div class="p-2.5 flex items-center justify-between gap-2 text-xs hover:bg-slate-50 transition">
-                        <div class="min-w-0 flex-1">
-                          <div class="font-semibold text-slate-900 flex items-center gap-2">
-                            <span class="truncate">${inst.title || `Creator Milestone #${idx + 1}`}</span>
-                            <span class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-purple-50 text-purple-700 border border-purple-200">
-                              🎨 Creator
-                            </span>
-                          </div>
-                          <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-2">
-                            <span>${inst.paid_date ? `Paid Date: ${inst.paid_date}` : "Date: Pending"}</span>
-                            ${inst.receipt_image_url ? `
-                              <a href="${inst.receipt_image_url}" target="_blank" class="text-blue-600 hover:underline font-semibold flex items-center gap-1">
-                                <i class="fa-solid fa-file-invoice text-[10px]"></i> View Receipt
-                              </a>
-                            ` : ''}
-                          </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                          <div class="font-mono font-bold text-slate-900">${sym}${parseFloat(inst.amount || 0).toFixed(2)}</div>
-                          <span class="inline-block text-[10px] font-bold ${isPaid ? 'text-emerald-600' : (isSubmitted ? 'text-blue-600' : 'text-amber-600')}">
-                            ${isPaid ? 'Released & Verified (Paid)' : (isSubmitted ? 'Awaiting Verification' : 'In Escrow (Pending)')}
+                <div class="text-right">
+                  <div class="font-mono font-bold text-slate-900">${sym}${fPrice.toFixed(2)}</div>
+                  <span class="text-[10px] font-bold text-amber-600">In Escrow (Pending)</span>
+                </div>
+              </div>
+            ` : `
+              <div class="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white overflow-hidden">
+                ${bizInsts.map((inst, idx) => {
+                  const isPaid = isPaidInst(inst);
+                  return `
+                    <div class="p-2.5 flex items-center justify-between gap-2 text-xs hover:bg-slate-50 transition">
+                      <div class="min-w-0 flex-1">
+                        <div class="font-semibold text-slate-900 flex items-center gap-2">
+                          <span class="truncate">${inst.title || `Brand Milestone #${idx + 1}`}</span>
+                          <span class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">
+                            🏢 Brand
                           </span>
                         </div>
+                        <div class="text-[10px] text-slate-400 mt-0.5">
+                          ${inst.paid_date ? `Paid Date: ${inst.paid_date}` : "Date: Pending"}
+                        </div>
                       </div>
-                    `;
-                  }).join('')}
-                  ${creatorRemaining > 1 ? `
-                    <div class="p-2.5 flex items-center justify-between gap-2 text-xs bg-slate-50">
-                      <span class="text-[11px] font-semibold text-slate-500">Remaining Unallocated Outbound</span>
-                      <div class="text-right font-mono font-bold text-amber-600">
-                        ${sym}${creatorRemaining.toFixed(2)}
+                      <div class="text-right shrink-0">
+                        <div class="font-mono font-bold text-slate-900">${sym}${parseFloat(inst.amount || 0).toFixed(2)}</div>
+                        <span class="inline-block text-[10px] font-bold ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">
+                          ${isPaid ? 'Approved (Paid)' : 'In Escrow (Pending)'}
+                        </span>
                       </div>
                     </div>
-                  ` : ''}
-                </div>
-              `}
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+
+          <!-- 2. CREATOR OUTBOUND INSTALLMENTS SECTION -->
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 space-y-2.5">
+            <div class="text-xs font-bold text-emerald-700 flex items-center justify-between flex-wrap gap-2">
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-paint-brush"></i> 🎨 Creator Milestone Installments (Outbound: Admin → Creator)
+              </span>
+              <span class="text-[11px] font-mono font-bold text-emerald-800">
+                Net Payout: ${sym}${creatorNet.toFixed(2)}
+              </span>
             </div>
+
+            ${creatorInsts.length === 0 ? `
+              <div class="p-3 rounded-lg border border-slate-200 bg-white text-xs flex items-center justify-between">
+                <div>
+                  <div class="font-semibold text-slate-800">Outbound Creator Payout (Undivided)</div>
+                  <div class="text-[10px] text-slate-400">No outbound installments divided yet in Workspace Payment</div>
+                </div>
+                <div class="text-right">
+                  <div class="font-mono font-bold text-slate-900">${sym}${creatorNet.toFixed(2)}</div>
+                  <span class="text-[10px] font-bold text-amber-600">In Escrow (Pending)</span>
+                </div>
+              </div>
+            ` : `
+              <div class="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white overflow-hidden">
+                ${creatorInsts.map((inst, idx) => {
+                  const isPaid = isPaidInst(inst);
+                  return `
+                    <div class="p-2.5 flex items-center justify-between gap-2 text-xs hover:bg-slate-50 transition">
+                      <div class="min-w-0 flex-1">
+                        <div class="font-semibold text-slate-900 flex items-center gap-2">
+                          <span class="truncate">${inst.title || `Creator Milestone #${idx + 1}`}</span>
+                          <span class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-purple-50 text-purple-700 border border-purple-200">
+                            🎨 Creator
+                          </span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-2">
+                          <span>${inst.paid_date ? `Paid Date: ${inst.paid_date}` : "Date: Pending"}</span>
+                          ${inst.receipt_image_url ? `
+                            <a href="${inst.receipt_image_url}" target="_blank" class="text-blue-600 hover:underline font-semibold flex items-center gap-1">
+                              <i class="fa-solid fa-file-invoice text-[10px]"></i> View Receipt
+                            </a>
+                          ` : ''}
+                        </div>
+                      </div>
+                      <div class="text-right shrink-0">
+                        <div class="font-mono font-bold text-slate-900">${sym}${parseFloat(inst.amount || 0).toFixed(2)}</div>
+                        <span class="inline-block text-[10px] font-bold ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">
+                          ${isPaid ? 'Released & Verified (Paid)' : 'In Escrow (Pending)'}
+                        </span>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
           </div>
         </div>
       `;
@@ -762,8 +1240,10 @@
       }
     });
 
+    // Export CSV
     function exportCSV() {
-      const headers = ["ID", "Name", "Brand", "Creator", "Status", "Platform", "Category", "Agreed Price", "Platform Fee"];
+      if (allCampaigns.length === 0) return;
+      const headers = ["ID", "Campaign Name", "Brand", "Creator", "Status", "Platform", "Medium", "Category", "Budget", "Agreed Price", "Platform Fee"];
       const rows = allCampaigns.map(c => [
         c.id,
         `"${(c.name || '').replace(/"/g, '""')}"`,
@@ -771,9 +1251,11 @@
         `"${(c.creator_name || '').replace(/"/g, '""')}"`,
         c.status || 'Draft',
         c.platform || 'Instagram',
+        c.medium || 'English',
         c.category || 'General',
-        c.final_price || c.budget || 0,
-        c.total_fee || 0
+        c.budget || 0,
+        c.final_price || 0,
+        (c.total_fee || 0).toFixed(2)
       ]);
 
       const csv = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -787,19 +1269,110 @@
 
     // Initialize Charts & Table
     document.addEventListener('DOMContentLoaded', () => {
-      renderTable(allCampaigns);
+      populateFilterDropdowns();
+      filterAndRenderCampaigns();
 
-      // Line Chart
+      const monthlyData = trendsData.monthly || trendsData;
+      const cumulativeData = trendsData.cumulative || trendsData;
+
+      // 1. Line Chart: Month vs Admin Earned Platform Fee
+      const monthlyCtx = document.getElementById('monthlyEarnedCanvas');
+      if (monthlyCtx && monthlyData.labels) {
+        new Chart(monthlyCtx, {
+          type: 'line',
+          data: {
+            labels: monthlyData.labels,
+            datasets: [
+              {
+                label: `Total Admin Earned (${defaultCurrencySymbol})`,
+                data: monthlyData.earned_amount || [],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointBackgroundColor: '#10b981',
+                yAxisID: 'y'
+              },
+              {
+                label: `Business Fee 2.5% (${defaultCurrencySymbol})`,
+                data: monthlyData.biz_fees || [],
+                borderColor: '#2f54eb',
+                backgroundColor: 'transparent',
+                borderDash: [4, 4],
+                tension: 0.35,
+                borderWidth: 1.5,
+                pointRadius: 0,
+                yAxisID: 'y'
+              },
+              {
+                label: `Creator Fee 1.5% (${defaultCurrencySymbol})`,
+                data: monthlyData.creator_fees || [],
+                borderColor: '#6366f1',
+                backgroundColor: 'transparent',
+                borderDash: [4, 4],
+                tension: 0.35,
+                borderWidth: 1.5,
+                pointRadius: 0,
+                yAxisID: 'y'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                  boxWidth: 10,
+                  font: { size: 10, weight: 'bold' }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return ` ${context.dataset.label}: ${defaultCurrencySymbol}${Number(context.raw || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                type: 'linear',
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: {
+                  callback: function(value) {
+                    return defaultCurrencySymbol + Number(value).toLocaleString();
+                  }
+                }
+              },
+              x: {
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      // 2. Line Chart: Campaigns Created vs Platform Revenue (Original cumulative graph)
       const lineCtx = document.getElementById('lineChartCanvas');
-      if (lineCtx && trendsData.labels) {
+      if (lineCtx && cumulativeData.labels) {
         new Chart(lineCtx, {
           type: 'line',
           data: {
-            labels: trendsData.labels,
+            labels: cumulativeData.labels,
             datasets: [
               {
                 label: 'Campaigns Created',
-                data: trendsData.campaigns_count,
+                data: cumulativeData.campaigns_count || [],
                 borderColor: '#2f54eb',
                 backgroundColor: 'rgba(47, 84, 235, 0.1)',
                 fill: true,
@@ -808,7 +1381,7 @@
               },
               {
                 label: `Platform Revenue (${defaultCurrencySymbol})`,
-                data: trendsData.revenue_amount,
+                data: cumulativeData.revenue_amount || [],
                 borderColor: '#10b981',
                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
                 fill: true,
@@ -829,8 +1402,8 @@
                 callbacks: {
                   title: function(tooltipItems) {
                     const idx = tooltipItems[0].dataIndex;
-                    const fullName = (trendsData.campaign_names && trendsData.campaign_names[idx]) || tooltipItems[0].label;
-                    const date = (trendsData.campaign_dates && trendsData.campaign_dates[idx]) ? ` • ${trendsData.campaign_dates[idx]}` : '';
+                    const fullName = (cumulativeData.campaign_names && cumulativeData.campaign_names[idx]) || tooltipItems[0].label;
+                    const date = (cumulativeData.campaign_dates && cumulativeData.campaign_dates[idx]) ? ` • ${cumulativeData.campaign_dates[idx]}` : '';
                     return `${fullName}${date}`;
                   },
                   label: function(context) {
@@ -838,8 +1411,8 @@
                     if (context.datasetIndex === 0) {
                       return ` Total Campaigns Created: ${context.raw}`;
                     } else {
-                      const fee = (trendsData.per_campaign_fees && trendsData.per_campaign_fees[idx] !== undefined)
-                        ? ` (Fee: ${defaultCurrencySymbol}${Number(trendsData.per_campaign_fees[idx]).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})`
+                      const fee = (cumulativeData.per_campaign_fees && cumulativeData.per_campaign_fees[idx] !== undefined)
+                        ? ` (Fee: ${defaultCurrencySymbol}${Number(cumulativeData.per_campaign_fees[idx]).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})`
                         : '';
                       return ` Platform Revenue: ${defaultCurrencySymbol}${Number(context.raw).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}${fee}`;
                     }
@@ -871,7 +1444,7 @@
         });
       }
 
-      // Bar Chart
+      // 3. Bar Chart: Budget vs Agreed vs Spend
       const barCtx = document.getElementById('barChartCanvas');
       if (barCtx && budgetVsSpendData.length > 0) {
         new Chart(barCtx, {
