@@ -408,6 +408,7 @@ def create_installments(request):
     created_objs = []
     for idx, item in enumerate(installments_data, start=1):
         title = item.get('title') or f"Installment {idx}"
+        description = item.get('description') or None
         amount_val = float(str(item.get('amount', 0)).replace(',', '').replace('$', '').replace('Rs', '').strip())
         is_paid_val = bool(item.get('is_paid', False))
         paid_date_val = item.get('paid_date') or None
@@ -421,6 +422,7 @@ def create_installments(request):
             negotiation=negotiation,
             installment_type=installment_type,
             title=title,
+            description=description,
             amount=amount_val,
             status='released' if is_paid_val else (item.get('status') or 'pending'),
             is_paid=is_paid_val,
@@ -432,11 +434,37 @@ def create_installments(request):
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+def sync_platform_fee_from_installment(installment):
+    if not installment:
+        return
+    negotiation = installment.negotiation
+    if not negotiation and installment.campaign:
+        negotiation = WorkspacePaymentNegotiation.objects.filter(campaign=installment.campaign).first()
+    if not negotiation:
+        return
+
+    first_inst = WorkspaceInstallment.objects.filter(campaign=installment.campaign, installment_type=installment.installment_type).order_by('id').first()
+    if first_inst and first_inst.id == installment.id:
+        if installment.installment_type == 'business':
+            negotiation.business_fee_is_paid = installment.is_paid
+            negotiation.business_fee_paid_date = installment.paid_date
+            if installment.receipt_image:
+                negotiation.business_fee_receipt_image = installment.receipt_image
+            negotiation.save()
+        elif installment.installment_type == 'creator':
+            negotiation.creator_fee_is_paid = installment.is_paid
+            negotiation.creator_fee_paid_date = installment.paid_date
+            if installment.receipt_image:
+                negotiation.creator_fee_receipt_image = installment.receipt_image
+            negotiation.save()
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def update_installment(request):
     installment_id = request.data.get('installment_id')
     title = request.data.get('title')
+    description = request.data.get('description')
     amount = request.data.get('amount')
     paid_date = request.data.get('paid_date')
     is_paid = request.data.get('is_paid')
@@ -451,6 +479,8 @@ def update_installment(request):
 
     if title is not None:
         installment.title = str(title).strip()
+    if description is not None:
+        installment.description = str(description).strip() if str(description).strip() else None
     if amount is not None:
         try:
             installment.amount = float(str(amount).replace(',', '').replace('$', '').replace('Rs', '').strip())
@@ -459,7 +489,8 @@ def update_installment(request):
     if is_paid is not None:
         installment.is_paid = bool(is_paid)
         if installment.is_paid:
-            installment.status = 'released'
+            if installment.status != 'released':
+                installment.status = 'approved' if installment.installment_type == 'business' else 'released'
             if paid_date:
                 installment.paid_date = paid_date
             elif not installment.paid_date:
@@ -474,6 +505,7 @@ def update_installment(request):
         installment.paid_date = paid_date or None
 
     installment.save()
+    sync_platform_fee_from_installment(installment)
 
     serializer = WorkspaceInstallmentSerializer(installment, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -501,6 +533,7 @@ def upload_installment_receipt(request):
 
     installment.status = 'in_escrow'
     installment.save()
+    sync_platform_fee_from_installment(installment)
 
     serializer = WorkspaceInstallmentSerializer(installment, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -532,6 +565,7 @@ def verify_installment(request):
         installment.paid_date = None
 
     installment.save()
+    sync_platform_fee_from_installment(installment)
 
     serializer = WorkspaceInstallmentSerializer(installment, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)

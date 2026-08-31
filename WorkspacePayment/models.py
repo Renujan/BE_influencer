@@ -11,7 +11,9 @@ from wagtail.admin.panels import FieldPanel, InlinePanel, MultiFieldPanel
 
 class WorkspacePaymentNegotiation(ClusterableModel):
     STATUS_CHOICES = (
+        ('pending_proposal', 'Pending Proposal'),
         ('pending_creator_approval', 'Pending Creator Approval'),
+        ('pending_business_approval', 'Pending Business Approval'),
         ('creator_accepted', 'Creator Accepted'),
         ('revision_requested', 'Revision Requested'),
         ('admin_approved', 'Admin Approved'),
@@ -140,6 +142,7 @@ class WorkspaceInstallment(models.Model):
         ('pending', 'Pending'),
         ('in_escrow', 'In Escrow'),
         ('payment_submitted', 'Payment Submitted'),
+        ('approved', 'Approved'),
         ('released', 'Released'),
     )
 
@@ -147,6 +150,7 @@ class WorkspaceInstallment(models.Model):
     negotiation = ParentalKey(WorkspacePaymentNegotiation, on_delete=models.CASCADE, related_name='installments', null=True, blank=True)
     installment_type = models.CharField(max_length=20, choices=INSTALLMENT_TYPE_CHOICES, default='creator')
     title = models.CharField(max_length=255, default='Installment')
+    description = models.CharField(max_length=255, blank=True, null=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     is_paid = models.BooleanField(default=False)
@@ -159,6 +163,7 @@ class WorkspaceInstallment(models.Model):
     panels = [
         FieldPanel('installment_type'),
         FieldPanel('title'),
+        FieldPanel('description'),
         FieldPanel('amount'),
         FieldPanel('paid_date'),
         FieldPanel('is_paid'),

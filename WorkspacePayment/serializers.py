@@ -12,6 +12,7 @@ class WorkspaceInstallmentSerializer(serializers.ModelSerializer):
             'negotiation',
             'installment_type',
             'title',
+            'description',
             'amount',
             'status',
             'is_paid',
@@ -39,9 +40,15 @@ class WorkspaceInstallmentSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         has_receipt = bool(data.get('receipt_image_url') or data.get('receipt_url') or data.get('receipt_image'))
-        if data.get('is_paid') or data.get('status') == 'released':
+        db_status = str(getattr(instance, 'status', '') or '').lower().strip()
+        is_paid = bool(data.get('is_paid'))
+        inst_type = str(getattr(instance, 'installment_type', 'creator') or 'creator').lower().strip()
+
+        if db_status == 'released' or (is_paid and inst_type == 'creator'):
             data['status'] = 'released'
-        elif has_receipt:
+        elif db_status == 'approved' or (is_paid and inst_type == 'business'):
+            data['status'] = 'approved'
+        elif db_status in ['in_escrow', 'payment_submitted'] or has_receipt:
             data['status'] = 'in_escrow'
         else:
             data['status'] = 'pending'

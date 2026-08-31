@@ -71,7 +71,15 @@ class CampaignInspectView(InspectView):
         if workspace_installments:
             for inst in workspace_installments:
                 inst_type_label = "Business (Inbound)" if inst.installment_type == "business" else "Creator (Outbound)"
-                status_label = "Released" if (inst.is_paid or inst.status == "released") else ("In Escrow" if inst.status == "in_escrow" else inst.status.replace("_", " ").title())
+                st = str(getattr(inst, "status", "") or "").lower().strip()
+                if st == "released" or (inst.is_paid and inst.installment_type == "creator"):
+                    status_label = "Released"
+                elif st == "approved" or (inst.is_paid and inst.installment_type == "business"):
+                    status_label = "Approved"
+                elif st in ["in_escrow", "payment_submitted"] or inst.receipt_image or getattr(inst, "receipt_url", None):
+                    status_label = "In Escrow"
+                else:
+                    status_label = "Pending"
                 milestones_list.append({
                     "title": inst.title,
                     "amount": inst.amount,
@@ -119,6 +127,15 @@ class CampaignInspectView(InspectView):
         payments_list = []
         if workspace_installments:
             for p in workspace_installments:
+                st = str(getattr(p, "status", "") or "").lower().strip()
+                if st == "released" or (p.is_paid and p.installment_type == "creator"):
+                    p_status = "Released"
+                elif st == "approved" or (p.is_paid and p.installment_type == "business"):
+                    p_status = "Approved"
+                elif st in ["in_escrow", "payment_submitted"] or p.receipt_image or getattr(p, "receipt_url", None):
+                    p_status = "In Escrow"
+                else:
+                    p_status = "Pending"
                 payments_list.append({
                     "title": p.title,
                     "milestone_name": p.title,
@@ -128,7 +145,7 @@ class CampaignInspectView(InspectView):
                     "payment_date": p.paid_date,
                     "receipt_image": p.receipt_image,
                     "receipt_url": p.receipt_url,
-                    "status": "Released" if (p.is_paid or p.status == "released") else ("In Escrow" if p.status == "in_escrow" else p.status.replace("_", " ").title()),
+                    "status": p_status,
                     "is_paid": p.is_paid,
                 })
 
@@ -887,7 +904,7 @@ class WorkspacePaymentInspectView(InspectView):
         # Business Installments (Inbound Payments from Business to Admin)
         business_installments = negotiation.installments.filter(installment_type='business').order_by('id')
         total_allocated_business = sum(float(inst.amount or 0) for inst in business_installments)
-        target_business_pool = final_val  # 55000 rupees base accepted final price
+        target_business_pool = business_total if business_total > 0 else final_val
         remaining_business = max(0.0, target_business_pool - total_allocated_business)
         is_fully_allocated_business = (target_business_pool > 0 and (total_allocated_business >= target_business_pool or abs(total_allocated_business - target_business_pool) < 0.01))
 
@@ -1013,43 +1030,77 @@ class WorkspacePaymentInspectView(InspectView):
             preset = request.POST.get('preset')
             installment_type = request.POST.get('installment_type', 'creator')
 
-            if installment_type == 'business':
-                target_pool = float(negotiation.final_price or 0)
-            else:
-                target_pool = float(negotiation.creator_net_received or negotiation.final_price or 0)
+            final_val = float(negotiation.final_price or 0)
+            biz_fee = float(negotiation.business_platform_charge_amount or 0)
+            creator_fee = float(negotiation.creator_platform_charge_amount or 0)
+
+            symbol = "Rs"
+            if campaign and campaign.country:
+                country_currency_map = {
+                    "Sri Lanka": "LKR (Rs)",
+                    "United States": "USD ($)",
+                    "United Kingdom": "GBP (£)",
+                    "India": "INR (₹)",
+                    "United Arab Emirates": "AED (AED)",
+                    "European Union": "EUR (€)",
+                    "Canada": "CAD ($)",
+                    "Australia": "AUD ($)",
+                    "Singapore": "SGD ($)",
+                }
+                c_name = str(campaign.country.name) if hasattr(campaign.country, "name") else str(campaign.country)
+                curr_str = country_currency_map.get(c_name, "LKR (Rs)")
+                match = re.search(r'\(([^)]+)\)', curr_str)
+                if match:
+                    symbol = match.group(1)
 
             from WorkspacePayment.models import WorkspaceInstallment
 
             WorkspaceInstallment.objects.filter(campaign=campaign, installment_type=installment_type).delete()
 
-            if preset == '3_milestones':
-                items = [
-                    ('Kickoff payment', target_pool * 0.3),
-                    ('Drafts approved', target_pool * 0.4),
-                    ('Final delivery', target_pool * 0.3),
-                ]
+            if installment_type == 'business':
+                target_pool = float(negotiation.business_total_payment or (final_val + biz_fee))
+                if preset == '3_milestones':
+                    items = [
+                        ('Milestone 1 (30%)', round((final_val * 0.3) + biz_fee, 2), f"Includes full platform charge fee (+{symbol}{biz_fee:,.2f})"),
+                        ('Milestone 2 (40%)', round(final_val * 0.4, 2), None),
+                        ('Milestone 3 (30%)', round(final_val * 0.3, 2), None),
+                    ]
+                else:
+                    items = [
+                        ('Installment 1 (50%)', round((final_val * 0.5) + biz_fee, 2), f"Includes full platform charge fee (+{symbol}{biz_fee:,.2f})"),
+                        ('Installment 2 (50%)', round(final_val * 0.5, 2), None),
+                    ]
             else:
-                items = [
-                    ('Installment 1 (50%)', target_pool * 0.5),
-                    ('Installment 2 (50%)', target_pool * 0.5),
-                ]
+                target_pool = float(negotiation.creator_net_received or (final_val - creator_fee))
+                if preset == '3_milestones':
+                    items = [
+                        ('Kickoff payment (30%)', round((final_val * 0.3) - creator_fee, 2), f"Includes full platform charge fee deduction (-{symbol}{creator_fee:,.2f})"),
+                        ('Drafts approved (40%)', round(final_val * 0.4, 2), None),
+                        ('Final delivery (30%)', round(final_val * 0.3, 2), None),
+                    ]
+                else:
+                    items = [
+                        ('Installment 1 (50%)', round((final_val * 0.5) - creator_fee, 2), f"Includes full platform charge fee deduction (-{symbol}{creator_fee:,.2f})"),
+                        ('Installment 2 (50%)', round(final_val * 0.5, 2), None),
+                    ]
 
-            for title, amt in items:
+            for title, amt, desc in items:
                 WorkspaceInstallment.objects.create(
                     campaign=campaign,
                     negotiation=negotiation,
                     installment_type=installment_type,
                     title=title,
+                    description=desc,
                     amount=amt,
-                    status='in_escrow'
+                    status='pending'
                 )
             party_label = "Business" if installment_type == 'business' else "Creator"
-            messages.success(request, f"Divided {party_label} pool ({target_pool:,.2f}) into milestone installments.")
+            messages.success(request, f"Divided {party_label} pool ({target_pool:,.2f}) into milestone installments (Platform fee included in 1st installment).")
 
         elif action_type == 'add_installment_manual':
             installment_type = request.POST.get('installment_type', 'creator')
             if installment_type == 'business':
-                target_pool = float(negotiation.final_price or 0)
+                target_pool = float(negotiation.business_total_payment or negotiation.final_price or 0)
                 current_total = sum(float(inst.amount or 0) for inst in negotiation.installments.filter(installment_type='business'))
             else:
                 target_pool = float(negotiation.creator_net_received or negotiation.final_price or 0)
@@ -1070,7 +1121,12 @@ class WorkspacePaymentInspectView(InspectView):
             except (ValueError, TypeError):
                 amount = 0.0
 
-            status = 'released' if is_paid else 'in_escrow'
+            if is_paid:
+                status = 'approved' if installment_type == 'business' else 'released'
+            elif receipt_file:
+                status = 'in_escrow'
+            else:
+                status = 'pending'
 
             from WorkspacePayment.models import WorkspaceInstallment
             inst = WorkspaceInstallment(
@@ -1128,18 +1184,36 @@ class WorkspacePaymentInspectView(InspectView):
                     inst.receipt_image = receipt_file
 
                 if is_paid:
-                    inst.status = 'released'
+                    inst.status = 'approved' if inst.installment_type == 'business' else 'released'
                     if paid_date:
                         inst.paid_date = paid_date
                     elif not inst.paid_date:
                         from django.utils import timezone
                         inst.paid_date = timezone.now().date()
                 else:
-                    inst.status = 'in_escrow'
+                    has_receipt = bool(inst.receipt_image or getattr(inst, 'receipt_url', None))
+                    inst.status = 'in_escrow' if has_receipt else 'pending'
                     if paid_date:
                         inst.paid_date = paid_date
 
                 inst.save()
+
+                # Synchronize platform fee status if this is the 1st installment
+                first_inst = WorkspaceInstallment.objects.filter(campaign=campaign, installment_type=inst.installment_type).order_by('id').first()
+                if first_inst and first_inst.id == inst.id:
+                    if inst.installment_type == 'business':
+                        negotiation.business_fee_is_paid = inst.is_paid
+                        negotiation.business_fee_paid_date = inst.paid_date
+                        if inst.receipt_image:
+                            negotiation.business_fee_receipt_image = inst.receipt_image
+                        negotiation.save()
+                    elif inst.installment_type == 'creator':
+                        negotiation.creator_fee_is_paid = inst.is_paid
+                        negotiation.creator_fee_paid_date = inst.paid_date
+                        if inst.receipt_image:
+                            negotiation.creator_fee_receipt_image = inst.receipt_image
+                        negotiation.save()
+
                 messages.success(request, f"Updated installment '{inst.title}'.")
             except WorkspaceInstallment.DoesNotExist:
                 pass
