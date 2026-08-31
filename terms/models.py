@@ -7,6 +7,7 @@ class TermsAndCondition(models.Model):
         ("business", "Business"),
         ("creator", "Creator"),
         ("both", "Both"),
+        ("public", "Public"),
     )
 
     terms_id = models.CharField(
@@ -21,7 +22,7 @@ class TermsAndCondition(models.Model):
         max_length=20,
         choices=TARGET_CHOICES,
         default="both",
-        help_text="Determine whether these terms show for businesses, creators, or both.",
+        help_text="Determine whether these terms show for businesses, creators, both, or public.",
     )
     is_active = models.BooleanField(
         default=True,
@@ -54,7 +55,8 @@ class TermsAndCondition(models.Model):
         suffix_map = {
             "business": "-BU",
             "creator": "-CR",
-            "both": "-BO"
+            "both": "-BO",
+            "public": "-PU",
         }
         suffix = suffix_map.get(self.target_audience, "-BO")
         return f"TERM{next_num:03d}{suffix}"
@@ -71,7 +73,8 @@ class TermsAndCondition(models.Model):
                 suffix_map = {
                     "business": "-BU",
                     "creator": "-CR",
-                    "both": "-BO"
+                    "both": "-BO",
+                    "public": "-PU",
                 }
                 suffix = suffix_map.get(self.target_audience, "-BO")
                 self.terms_id = f"{base_part}{suffix}"

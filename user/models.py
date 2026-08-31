@@ -332,3 +332,21 @@ class CreatorSocialAccount(models.Model):
 
 User.profile = property(lambda self: getattr(self, "business_profile", None) or getattr(self, "creator_profile", None))
 
+class OTPVerification(models.Model):
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    otp_code = models.CharField(max_length=6)
+    otp_method = models.CharField(max_length=10, choices=[("email", "Email"), ("mobile", "Mobile")], default="email")
+    role = models.CharField(max_length=20, choices=[("business", "Business"), ("influencer", "Creator")], default="influencer")
+    purpose = models.CharField(max_length=20, choices=[("signin", "Sign In"), ("signup", "Sign Up")], default="signup")
+    is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "OTP Verification"
+        verbose_name_plural = "OTP Verifications"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.purpose} OTP for {self.email or self.phone} ({self.otp_code})"
+

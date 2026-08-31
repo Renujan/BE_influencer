@@ -541,6 +541,7 @@
               <tr class="text-slate-500 font-semibold">
                 <th class="px-4 py-3 bg-slate-50 min-w-[200px] whitespace-nowrap">Campaign</th>
                 <th class="px-4 py-3 bg-slate-50 min-w-[240px] whitespace-nowrap">Platform / Category / Medium</th>
+                <th class="px-4 py-3 bg-slate-50 min-w-[130px] whitespace-nowrap">Created Date</th>
                 <th class="px-4 py-3 bg-slate-50 min-w-[120px] whitespace-nowrap">Agreed Price</th>
                 <th class="px-4 py-3 bg-slate-50 min-w-[130px] whitespace-nowrap">Platform Fee</th>
                 <th class="px-4 py-3 bg-slate-50 min-w-[110px] whitespace-nowrap">Status</th>
@@ -984,7 +985,7 @@
       }
 
       if (pageItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-slate-400 text-xs">No campaign records match your active filters.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-slate-400 text-xs">No campaign records match your active filters.</td></tr>`;
         return;
       }
 
@@ -993,6 +994,7 @@
         const fee = parseFloat(c.total_fee || (fPrice * 0.04));
         const progress = c.progress || (c.status === 'Completed' ? 100 : 50);
         const sym = c.currency_symbol || defaultCurrencySymbol;
+        const createdDate = c.created_at ? new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 
         return `
           <tr class="hover:bg-slate-50/80 transition-colors whitespace-nowrap">
@@ -1007,6 +1009,12 @@
                 <span class="font-medium text-slate-800">${c.category || 'General'}</span>
                 <span class="text-slate-400 text-[10px]">•</span>
                 <span class="text-slate-500 font-medium text-[11px]">${c.medium || 'English'}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-slate-600 font-medium">
+              <div class="flex items-center gap-1.5">
+                <i class="fa-regular fa-calendar text-slate-400"></i>
+                <span>${createdDate}</span>
               </div>
             </td>
             <td class="px-4 py-3 font-mono font-bold text-slate-900 whitespace-nowrap">${sym}${fPrice.toFixed(2)}</td>
@@ -1044,8 +1052,9 @@
       const c = allCampaigns.find(item => item.id === id);
       if (!c) return;
 
+      const createdDate = c.created_at ? new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
       document.getElementById('modalTitle').textContent = c.name;
-      document.getElementById('modalSubtitle').textContent = `#${c.id} • ${c.platform || 'Instagram'} • Brand: ${c.brand_name || '—'} ➔ Creator: ${c.creator_name || '—'}`;
+      document.getElementById('modalSubtitle').textContent = `#${c.id} • Created: ${createdDate} • ${c.platform || 'Instagram'} • Brand: ${c.brand_name || '—'} ➔ Creator: ${c.creator_name || '—'}`;
 
       const fPrice = parseFloat(c.final_price || c.budget || 0);
       const bizFee = parseFloat(c.biz_fee !== undefined ? c.biz_fee : (fPrice * 0.025));

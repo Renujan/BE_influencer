@@ -280,6 +280,12 @@ class Campaign(models.Model):
         FieldPanel('created_time'),
     ]
 
+    def clean(self):
+        super().clean()
+        if self.brief and len(self.brief) > 500:
+            from django.core.exceptions import ValidationError
+            raise ValidationError({'brief': 'Campaign brief cannot exceed 500 characters.'})
+
     def calculate_flow_progress(self):
         """
         Calculate progress percentage according to the campaign flow progress:

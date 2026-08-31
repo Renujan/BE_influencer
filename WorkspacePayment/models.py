@@ -1,5 +1,8 @@
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from campegin.models import Campaign
 from django.utils import timezone
 from modelcluster.fields import ParentalKey
@@ -16,8 +19,20 @@ class WorkspacePaymentNegotiation(ClusterableModel):
 
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='payment_negotiations')
     final_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    platform_charge = models.DecimalField(max_digits=5, decimal_places=2, default=2.50) # Business Platform Charge %
-    creator_platform_charge = models.DecimalField(max_digits=5, decimal_places=2, default=1.50) # Creator Platform Charge %
+    platform_charge = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=2.50,
+        validators=[MinValueValidator(Decimal('2.50')), MaxValueValidator(Decimal('10.00'))],
+        help_text="Business Platform Charge % (Must be between 2.50% and 10.00%)"
+    ) # Business Platform Charge %
+    creator_platform_charge = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=1.50,
+        validators=[MinValueValidator(Decimal('1.50')), MaxValueValidator(Decimal('10.00'))],
+        help_text="Creator Platform Charge % (Must be between 1.50% and 10.00%)"
+    ) # Creator Platform Charge %
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending_creator_approval')
     revision_reason = models.TextField(blank=True, null=True)
 
@@ -34,11 +49,22 @@ class WorkspacePaymentNegotiation(ClusterableModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def clean(self):
+        super().clean()
+        if self.platform_charge is not None:
+            val = Decimal(str(self.platform_charge))
+            if val < Decimal('2.50') or val > Decimal('10.00'):
+                raise ValidationError({'platform_charge': 'Business platform charge must be between 2.5% and 10.0%.'})
+        if self.creator_platform_charge is not None:
+            val = Decimal(str(self.creator_platform_charge))
+            if val < Decimal('1.50') or val > Decimal('10.00'):
+                raise ValidationError({'creator_platform_charge': 'Creator platform charge must be between 1.5% and 10.0%.'})
+
     panels = [
         FieldPanel('campaign'),
         FieldPanel('final_price'),
-        FieldPanel('platform_charge', heading="Business Platform Charge %"),
-        FieldPanel('creator_platform_charge', heading="Creator Platform Charge %"),
+        FieldPanel('platform_charge', heading="Business Platform Charge % (2.5% - 10.0%)"),
+        FieldPanel('creator_platform_charge', heading="Creator Platform Charge % (1.5% - 10.0%)"),
         FieldPanel('status'),
         FieldPanel('revision_reason'),
         FieldPanel('proposed_by'),

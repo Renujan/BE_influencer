@@ -12,7 +12,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from .models import (
-    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount, Country, Medium, Province, District
+    Niche, BusinessType, BusinessProfile, CreatorProfile, CreatorRate, CreatorSocialAccount, Country, Medium, Province, District, OTPVerification
 )
 from .serializers import (
     NicheSerializer, BusinessTypeSerializer, BusinessProfileSerializer, CreatorProfileSerializer, CountrySerializer, MediumSerializer
@@ -56,138 +56,235 @@ class SendOTPView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        email = request.data.get("email")
-        phone = request.data.get("phone")
+        email = (request.data.get("email") or "").strip()
+        phone = (request.data.get("phone") or "").strip()
         otp_method = request.data.get("otp_method", "email") # "email" or "mobile"
         role = request.data.get("role", "influencer") # Default to creator/influencer
+        purpose = request.data.get("purpose", "signin") # "signin" or "signup"
         
-        # If mobile OTP login (no email provided)
-        if otp_method == "mobile" and phone and not email:
-            profile = None
-            if role == "business":
-                profile = BusinessProfile.objects.filter(phone=phone).first()
-            else:
-                profile = CreatorProfile.objects.filter(phone=phone).first()
-                
-            if not profile:
-                return Response({"error": "No account found with this mobile number. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
-            
-            user = profile.user
-        else:
-            # Email-based check or lookup
-            if not email:
-                return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
-            
-            user = User.objects.filter(email=email).first()
-            if user:
-                profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
-                if profile and profile.status == "restricted":
-                    return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+        # ── Sign Up OTP Flow ──────────────────────────────────────────────────
+        if purpose == "signup":
+            if otp_method == "email":
+                if not email:
+                    return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+                # Check if email is already registered
+                existing_user = User.objects.filter(email__iexact=email).first()
+                if existing_user:
+                    p = getattr(existing_user, "business_profile", None) or getattr(existing_user, "creator_profile", None)
+                    if p and p.status == "restricted":
+                        return Response({"error": "This email is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+                    return Response({"error": "This email is already registered. Please sign in instead."}, status=status.HTTP_400_BAD_REQUEST)
+            elif otp_method == "mobile":
+                if not phone:
+                    return Response({"error": "Mobile number is required"}, status=status.HTTP_400_BAD_REQUEST)
+                if BusinessProfile.objects.filter(phone=phone, status="restricted").exists() or CreatorProfile.objects.filter(phone=phone, status="restricted").exists():
+                    return Response({"error": "This phone number is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+                if BusinessProfile.objects.filter(phone=phone).exists() or CreatorProfile.objects.filter(phone=phone).exists():
+                    return Response({"error": "This phone number is already registered. Please sign in instead."}, status=status.HTTP_400_BAD_REQUEST)
 
-            if not user:
-                # Frictionless onboarding placeholder user
-                username = email.split("@")[0]
-                original_username = username
-                idx = 1
-                while User.objects.filter(username=username).exists():
-                    username = f"{original_username}{idx}"
-                    idx += 1
-                user = User.objects.create_user(username=username, email=email, password=get_random_string(32))
-                
-                # Create corresponding profile
+            otp = str(random.randint(100000, 999999))
+            
+            # Save or update in OTPVerification
+            OTPVerification.objects.filter(
+                Q(email__iexact=email) if email else Q(phone=phone),
+                purpose="signup"
+            ).delete()
+            
+            OTPVerification.objects.create(
+                email=email if email else None,
+                phone=phone if phone else None,
+                otp_code=otp,
+                otp_method=otp_method,
+                role=role,
+                purpose="signup",
+                is_verified=False
+            )
+
+            # Dispatch OTP based on the chosen method
+            if otp_method == "mobile":
+                print(f"\n[MOBILE OTP - SIGNUP] =======================================")
+                print(f"[MOBILE OTP - SIGNUP] Sent to: {phone}")
+                print(f"[MOBILE OTP - SIGNUP] OTP Code: {otp}")
+                print(f"[MOBILE OTP - SIGNUP] =======================================\n")
+                return Response({"message": f"OTP successfully sent to mobile {phone}", "otp_method": "mobile"})
+            else:
+                try:
+                    send_mail(
+                        subject="Your Ampli Verification Code",
+                        message=(
+                            f"Your Ampli one-time verification code is:\n\n"
+                            f"  {otp}\n\n"
+                            f"This code expires in 10 minutes. Do not share it with anyone."
+                        ),
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],
+                        fail_silently=False,
+                        html_message=(
+                            f"""
+                            <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9fb;border-radius:12px;">
+                              <h2 style="color:#2F54EB;margin-bottom:8px;">Ampli Verification</h2>
+                              <p style="color:#555;font-size:15px;">Use the code below to verify your identity:</p>
+                              <div style="background:#fff;border:2px solid #2F54EB;border-radius:10px;padding:24px;text-align:center;margin:24px 0;">
+                                <span style="font-size:40px;font-weight:700;letter-spacing:10px;color:#2F54EB;">{otp}</span>
+                              </div>
+                              <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Never share it with anyone.</p>
+                              <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+                              <p style="color:#bbb;font-size:12px;">Sent by Ampli Platform &middot; atom.lift.1@gmail.com</p>
+                            </div>
+                            """
+                        ),
+                    )
+                    print(f"\n[EMAIL OTP - SIGNUP] Sent to: {email} | Code: {otp}\n")
+                except Exception as e:
+                    print(f"\n[EMAIL OTP - SIGNUP] SMTP error: {e}")
+                    print(f"[EMAIL OTP - SIGNUP] Fallback code for {email}: {otp}\n")
+                    return Response({"message": f"OTP generated (email delivery failed): {e}", "otp_code": otp, "otp_method": "email"}, status=status.HTTP_200_OK)
+
+                return Response({"message": f"OTP successfully sent to email {email}", "otp_method": "email"})
+
+        # ── Sign In OTP Flow ──────────────────────────────────────────────────
+        else:
+            # If mobile OTP login
+            if otp_method == "mobile" and phone and not email:
+                profile = None
                 if role == "business":
-                    profile = BusinessProfile.objects.create(user=user, phone=phone if phone else "")
+                    profile = BusinessProfile.objects.filter(phone=phone).first()
                 else:
-                    profile = CreatorProfile.objects.create(user=user, phone=phone if phone else "")
-            else:
-                profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
-                if profile:
-                    actual_role = "business" if hasattr(user, "business_profile") else "influencer"
-                    if role != actual_role:
-                        role_label = "Business" if role == "business" else "Creator"
-                        return Response(
-                            {"error": f"This email is already registered as a {'Creator' if actual_role == 'influencer' else 'Business'}. Please use a different email or log in with the correct role."},
-                            status=status.HTTP_403_FORBIDDEN
-                        )
+                    profile = CreatorProfile.objects.filter(phone=phone).first()
+                    
                 if not profile:
-                    if role == "business":
-                        profile = BusinessProfile.objects.create(user=user)
-                    else:
-                        profile = CreatorProfile.objects.create(user=user)
+                    role_label = "Business" if role == "business" else "Creator"
+                    return Response({"error": f"No {role_label} account found with this mobile number. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
                 
-                if phone:
-                    profile.phone = phone
-                    profile.save()
-        
-        otp = str(random.randint(100000, 999999))
-        profile.otp_code = otp
-        profile.otp_method = otp_method
-        profile.otp_verified = False
-        profile.save()
+                user = profile.user
+            else:
+                # Email OTP sign-in
+                if not email:
+                    return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+                
+                user = User.objects.filter(email__iexact=email).first()
+                if not user:
+                    return Response({"error": "No account found with this email. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
+                
+                profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+                if not profile:
+                    return Response({"error": "No account found with this email. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
+                
+                actual_role = "business" if hasattr(user, "business_profile") else "influencer"
+                if role != actual_role:
+                    role_label = "Business" if actual_role == "business" else "Creator"
+                    chosen_label = "Business" if role == "business" else "Creator"
+                    return Response(
+                        {"error": f"This email is registered as a {role_label}, not a {chosen_label}. Please select {role_label} to log in."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            
+            if profile.status == "restricted":
+                return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+            
+            otp = str(random.randint(100000, 999999))
+            profile.otp_code = otp
+            profile.otp_method = otp_method
+            profile.otp_verified = False
+            profile.save()
 
-        # Dispatch OTP based on the chosen method
-        if otp_method == "mobile":
-            # Mobile OTP: log to console (connect SMS provider when ready)
-            print(f"\n[MOBILE OTP] =======================================")
-            print(f"[MOBILE OTP] Sent to: {phone or profile.phone}")
-            print(f"[MOBILE OTP] OTP Code: {otp}")
-            print(f"[MOBILE OTP] =======================================\n")
-            return Response({"message": f"OTP successfully sent to mobile {phone or profile.phone}", "otp_method": "mobile"})
-        else:
-            # Email OTP: send via SMTP
-            recipient_email = email or user.email
-            try:
-                send_mail(
-                    subject="Your Ampli Verification Code",
-                    message=(
-                        f"Your Ampli one-time verification code is:\n\n"
-                        f"  {otp}\n\n"
-                        f"This code expires in 10 minutes. Do not share it with anyone."
-                    ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[recipient_email],
-                    fail_silently=False,
-                    html_message=(
-                        f"""
-                        <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9fb;border-radius:12px;">
-                          <h2 style="color:#2F54EB;margin-bottom:8px;">Ampli Verification</h2>
-                          <p style="color:#555;font-size:15px;">Use the code below to verify your identity:</p>
-                          <div style="background:#fff;border:2px solid #2F54EB;border-radius:10px;padding:24px;text-align:center;margin:24px 0;">
-                            <span style="font-size:40px;font-weight:700;letter-spacing:10px;color:#2F54EB;">{otp}</span>
-                          </div>
-                          <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Never share it with anyone.</p>
-                          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
-                          <p style="color:#bbb;font-size:12px;">Sent by Ampli Platform &middot; atom.lift.1@gmail.com</p>
-                        </div>
-                        """
-                    ),
-                )
-                print(f"\n[EMAIL OTP] Sent to: {recipient_email} | Code: {otp}\n")
-            except Exception as e:
-                print(f"\n[EMAIL OTP] SMTP error: {e}")
-                print(f"[EMAIL OTP] Fallback code for {recipient_email}: {otp}\n")
-                # Return the code in dev mode so flow doesn't break
-                return Response({"message": f"OTP generated (email delivery failed): {e}", "otp_code": otp, "otp_method": "email"}, status=status.HTTP_200_OK)
+            # Dispatch OTP based on the chosen method
+            if otp_method == "mobile":
+                print(f"\n[MOBILE OTP - SIGNIN] =======================================")
+                print(f"[MOBILE OTP - SIGNIN] Sent to: {phone or profile.phone}")
+                print(f"[MOBILE OTP - SIGNIN] OTP Code: {otp}")
+                print(f"[MOBILE OTP - SIGNIN] =======================================\n")
+                return Response({"message": f"OTP successfully sent to mobile {phone or profile.phone}", "otp_method": "mobile"})
+            else:
+                recipient_email = email or user.email
+                try:
+                    send_mail(
+                        subject="Your Ampli Verification Code",
+                        message=(
+                            f"Your Ampli one-time verification code is:\n\n"
+                            f"  {otp}\n\n"
+                            f"This code expires in 10 minutes. Do not share it with anyone."
+                        ),
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[recipient_email],
+                        fail_silently=False,
+                        html_message=(
+                            f"""
+                            <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9fb;border-radius:12px;">
+                              <h2 style="color:#2F54EB;margin-bottom:8px;">Ampli Verification</h2>
+                              <p style="color:#555;font-size:15px;">Use the code below to verify your identity:</p>
+                              <div style="background:#fff;border:2px solid #2F54EB;border-radius:10px;padding:24px;text-align:center;margin:24px 0;">
+                                <span style="font-size:40px;font-weight:700;letter-spacing:10px;color:#2F54EB;">{otp}</span>
+                              </div>
+                              <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Never share it with anyone.</p>
+                              <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+                              <p style="color:#bbb;font-size:12px;">Sent by Ampli Platform &middot; atom.lift.1@gmail.com</p>
+                            </div>
+                            """
+                        ),
+                    )
+                    print(f"\n[EMAIL OTP - SIGNIN] Sent to: {recipient_email} | Code: {otp}\n")
+                except Exception as e:
+                    print(f"\n[EMAIL OTP - SIGNIN] SMTP error: {e}")
+                    print(f"[EMAIL OTP - SIGNIN] Fallback code for {recipient_email}: {otp}\n")
+                    return Response({"message": f"OTP generated (email delivery failed): {e}", "otp_code": otp, "otp_method": "email"}, status=status.HTTP_200_OK)
 
-            return Response({"message": f"OTP successfully sent to email {recipient_email}", "otp_method": "email"})
+                return Response({"message": f"OTP successfully sent to email {recipient_email}", "otp_method": "email"})
 
 class VerifyOTPView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        email = request.data.get("email")
-        phone = request.data.get("phone")
-        otp_code = request.data.get("otp_code")
+        email = (request.data.get("email") or "").strip()
+        phone = (request.data.get("phone") or "").strip()
+        otp_code = (request.data.get("otp_code") or "").strip()
         otp_method = request.data.get("otp_method", "email") # "email" or "mobile"
+        requested_role = request.data.get("role", "influencer")
+        purpose = request.data.get("purpose", "signin")
         
         if not otp_code:
             return Response({"error": "otp_code is required"}, status=status.HTTP_400_BAD_REQUEST)
         
-        user = None
-        requested_role = request.data.get("role", "influencer")
+        # ── Sign Up OTP Verification ──────────────────────────────────────────
+        if purpose == "signup":
+            otp_record = None
+            if otp_method == "email" and email:
+                otp_record = OTPVerification.objects.filter(
+                    email__iexact=email,
+                    otp_code=otp_code,
+                    purpose="signup"
+                ).order_by("-created_at").first()
+            elif otp_method == "mobile" and phone:
+                otp_record = OTPVerification.objects.filter(
+                    phone=phone,
+                    otp_code=otp_code,
+                    purpose="signup"
+                ).order_by("-created_at").first()
+            elif email:
+                otp_record = OTPVerification.objects.filter(
+                    email__iexact=email,
+                    otp_code=otp_code,
+                    purpose="signup"
+                ).order_by("-created_at").first()
 
+            if not otp_record:
+                return Response({"error": "Invalid OTP code"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            from django.utils import timezone
+            import datetime
+            if timezone.now() - otp_record.created_at > datetime.timedelta(minutes=10):
+                return Response({"error": "OTP code has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            otp_record.is_verified = True
+            otp_record.save()
+            return Response({
+                "message": "OTP verified successfully",
+                "otp_verified": True
+            })
+
+        # ── Sign In OTP Verification ──────────────────────────────────────────
+        user = None
         if otp_method == "mobile" and phone and not email:
-            # Look up by phone using the role-specific profile table
             profile = None
             if requested_role == "business":
                 profile = BusinessProfile.objects.filter(phone=phone).first()
@@ -196,27 +293,28 @@ class VerifyOTPView(APIView):
                 
             if not profile:
                 role_label = "Business" if requested_role == "business" else "Creator"
-                return Response({"error": f"No {role_label} account found with this mobile number."}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"error": f"No {role_label} account found with this mobile number. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
             user = profile.user
         else:
             if not email:
                 return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
-            user = User.objects.filter(email=email).first()
+            user = User.objects.filter(email__iexact=email).first()
             if not user:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"error": "No account found with this email. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
 
-            # Validate role against the actual account type
+            profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+            if not profile:
+                return Response({"error": "No account found with this email. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
+
             actual_role = "business" if hasattr(user, "business_profile") else "influencer"
             if requested_role != actual_role:
+                role_label = "Business" if actual_role == "business" else "Creator"
+                chosen_label = "Business" if requested_role == "business" else "Creator"
                 return Response(
-                    {"error": f"This email is already registered as a {'Creator' if actual_role == 'influencer' else 'Business'}. Please use a different email or log in with the correct role."},
+                    {"error": f"This email is registered as a {role_label}, not a {chosen_label}. Please select {role_label} to log in."},
                     status=status.HTTP_403_FORBIDDEN
                 )
-            profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
 
-        if not profile:
-            return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
-        
         if profile.status == "restricted":
             return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
         
@@ -245,21 +343,21 @@ class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        username = request.data.get("username")
-        email = request.data.get("email")
+        username = (request.data.get("username") or "").strip()
+        email = (request.data.get("email") or "").strip()
         password = request.data.get("password")
         role = request.data.get("role") # business or influencer
 
         if not username or not email or not password or not role:
             return Response({"error": "Username, email, password, and role are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        phone = request.data.get("phone")
+        phone = (request.data.get("phone") or "").strip()
         if phone:
             if BusinessProfile.objects.filter(phone=phone, status="restricted").exists() or CreatorProfile.objects.filter(phone=phone, status="restricted").exists():
                 return Response({"error": "This phone number is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
 
         # Check if user already exists
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(email__iexact=email).first()
         profile = None
 
         if user:
@@ -267,43 +365,23 @@ class RegisterView(APIView):
             p = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
             if p and p.status == "restricted":
                 return Response({"error": "This email is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
-            
-            # Check if user has verified OTP and is completing registration
-            if p and p.otp_verified:
-                profile = p
-                # Check username conflicts with other users
-                if User.objects.filter(username=username).exclude(id=user.id).exists():
-                    conflicting_user = User.objects.get(username=username)
-                    cp = getattr(conflicting_user, "business_profile", None) or getattr(conflicting_user, "creator_profile", None)
-                    if cp and cp.status == "restricted":
-                        return Response({"error": "This username is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
-                    return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Update user fields
-                user.username = username
-                user.set_password(password)
-                user.first_name = request.data.get("first_name", "")
-                user.last_name = request.data.get("last_name", "")
-                user.save()
-            else:
-                return Response({"error": "Email already registered"}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            # No user exists with this email, check if username is taken
-            if User.objects.filter(username=username).exists():
-                conflicting_user = User.objects.get(username=username)
-                cp = getattr(conflicting_user, "business_profile", None) or getattr(conflicting_user, "creator_profile", None)
-                if cp and cp.status == "restricted":
-                    return Response({"error": "This username is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
-                return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "This email is already registered. Please sign in instead."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create new user
-            user = User.objects.create_user(
-                username=username, 
-                email=email, 
-                password=password,
-                first_name=request.data.get("first_name", ""),
-                last_name=request.data.get("last_name", "")
-            )
+        # No user exists with this email, check if username is taken
+        if User.objects.filter(username__iexact=username).exists():
+            return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create new user
+        user = User.objects.create_user(
+            username=username, 
+            email=email, 
+            password=password,
+            first_name=request.data.get("first_name", ""),
+            last_name=request.data.get("last_name", "")
+        )
+
+        # Clean up any signup OTP verification records
+        OTPVerification.objects.filter(email__iexact=email, purpose="signup").delete()
 
         # Check if the role matches the existing profile type
         if profile:
@@ -388,6 +466,7 @@ class RegisterView(APIView):
                 if medium_obj:
                     profile.mediums.add(medium_obj)
 
+            profile.otp_verified = True
             profile.save()
             profile_data = BusinessProfileSerializer(profile).data
         else:
@@ -454,6 +533,7 @@ class RegisterView(APIView):
                 if medium_obj:
                     profile.mediums.add(medium_obj)
                     
+            profile.otp_verified = True
             profile.save()
             profile_data = CreatorProfileSerializer(profile).data
 

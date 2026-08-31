@@ -265,6 +265,11 @@ class CampaignSerializer(serializers.ModelSerializer):
         data.pop("medium", None)
         return data
 
+    def validate_brief(self, value):
+        if value and len(value) > 500:
+            raise serializers.ValidationError("Campaign brief cannot exceed 500 characters.")
+        return value
+
     class Meta:
         model = Campaign
         fields = [

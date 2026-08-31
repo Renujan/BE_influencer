@@ -341,12 +341,16 @@ def update_platform_charge(request):
 
     try:
         biz_val = business_platform_charge if business_platform_charge is not None else platform_charge
-        if biz_val is not None:
+        if biz_val is not None and str(biz_val).strip() != '':
             charge_val = float(str(biz_val).replace('%', '').strip())
+            if charge_val < 2.5 or charge_val > 10.0:
+                return Response({'error': 'Business platform charge must be between 2.5% and 10.0%.'}, status=status.HTTP_400_BAD_REQUEST)
             negotiation.platform_charge = charge_val
 
-        if creator_platform_charge is not None:
+        if creator_platform_charge is not None and str(creator_platform_charge).strip() != '':
             creator_val = float(str(creator_platform_charge).replace('%', '').strip())
+            if creator_val < 1.5 or creator_val > 10.0:
+                return Response({'error': 'Creator platform charge must be between 1.5% and 10.0%.'}, status=status.HTTP_400_BAD_REQUEST)
             negotiation.creator_platform_charge = creator_val
 
         if request.data.get('business_fee_is_paid') is not None:

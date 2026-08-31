@@ -557,6 +557,11 @@ class Command(BaseCommand):
                 "title": "Platform Code of Conduct",
                 "content": "All communications, file sharing, and contract adjustments must occur within the platform workspace chat to ensure protection under our escrow and safety guidelines.",
                 "target": "both"
+            },
+            {
+                "title": "Public Platform Usage & Visitor Terms",
+                "content": "All visitors, unregistered guests, and public participants agree to adhere to standard community rules, non-infringement policies, and transparent interaction guidelines across Ampli.",
+                "target": "public"
             }
         ]
         for term in terms_data:

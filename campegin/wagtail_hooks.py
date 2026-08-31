@@ -936,19 +936,25 @@ class WorkspacePaymentInspectView(InspectView):
             creator_charge_val = request.POST.get('creator_platform_charge')
 
             updated_fields = []
-            if biz_charge_val is not None:
+            if biz_charge_val is not None and str(biz_charge_val).strip() != '':
                 try:
                     c_val = float(str(biz_charge_val).replace('%', '').strip())
-                    negotiation.platform_charge = c_val
-                    updated_fields.append('platform_charge')
+                    if c_val < 2.5 or c_val > 10.0:
+                        messages.error(request, "Business platform charge must be between 2.5% and 10.0%.")
+                    else:
+                        negotiation.platform_charge = c_val
+                        updated_fields.append('platform_charge')
                 except ValueError:
                     messages.error(request, "Invalid Business platform charge percentage.")
 
-            if creator_charge_val is not None:
+            if creator_charge_val is not None and str(creator_charge_val).strip() != '':
                 try:
                     cr_val = float(str(creator_charge_val).replace('%', '').strip())
-                    negotiation.creator_platform_charge = cr_val
-                    updated_fields.append('creator_platform_charge')
+                    if cr_val < 1.5 or cr_val > 10.0:
+                        messages.error(request, "Creator platform charge must be between 1.5% and 10.0%.")
+                    else:
+                        negotiation.creator_platform_charge = cr_val
+                        updated_fields.append('creator_platform_charge')
                 except ValueError:
                     messages.error(request, "Invalid Creator platform charge percentage.")
 
