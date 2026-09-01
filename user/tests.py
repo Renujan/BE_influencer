@@ -300,5 +300,58 @@ class UserFilterAdminTests(APITestCase):
         self.assertNotIn(self.creator_user, qs)
 
 
+class AuthRegistrationAndOTPEdgeCasesTest(APITestCase):
+    def setUp(self):
+        # Completed business user
+        self.completed_business = User.objects.create_user(
+            username="registered_brand",
+            email="registered_brand@test.com",
+            password="password123"
+        )
+        BusinessProfile.objects.create(user=self.completed_business)
+
+        # Incomplete user (e.g. Google auth / uncompleted signup) with NO profile
+        self.incomplete_user = User.objects.create_user(
+            username="incomplete_user",
+            email="incomplete@test.com",
+            password="password123"
+        )
+
+    def test_send_otp_signup_blocked_for_completed_profile(self):
+        url = reverse("send_otp")
+        response = self.client.post(url, {
+            "email": "registered_brand@test.com",
+            "purpose": "signup",
+            "otp_method": "email",
+            "role": "business"
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("already registered", response.data.get("error", ""))
+
+    def test_send_otp_signup_allowed_for_incomplete_user_without_profile(self):
+        url = reverse("send_otp")
+        response = self.client.post(url, {
+            "email": "incomplete@test.com",
+            "purpose": "signup",
+            "otp_method": "email",
+            "role": "influencer"
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_register_allowed_for_incomplete_user_creates_profile(self):
+        url = reverse("register")
+        response = self.client.post(url, {
+            "username": "incomplete_user",
+            "email": "incomplete@test.com",
+            "password": "newpassword123",
+            "role": "influencer",
+            "phone": "+1234567890"
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.incomplete_user.refresh_from_db()
+        self.assertTrue(hasattr(self.incomplete_user, "creator_profile"))
+
+
+
 
 

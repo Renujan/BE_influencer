@@ -9,7 +9,7 @@ import json
 @csrf_exempt
 def get_notifications(request):
     if request.method == "GET":
-        req_user = request.user
+        req_user = getattr(request, "user", None)
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Token "):
             try:
@@ -21,8 +21,8 @@ def get_notifications(request):
 
         is_authenticated = hasattr(req_user, "is_authenticated") and req_user.is_authenticated
         is_admin = is_authenticated and (req_user.is_staff or req_user.is_superuser)
-        is_business = is_authenticated and (hasattr(req_user, "business_profile") or (hasattr(req_user, "profile") and req_user.profile.role == "business"))
-        is_creator = is_authenticated and not is_business and not is_admin
+        is_business = is_authenticated and hasattr(req_user, "business_profile")
+        is_creator = is_authenticated and hasattr(req_user, "creator_profile")
 
         if is_admin:
             qs = Notification.objects.all().order_by('-created_at')[:50]

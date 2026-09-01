@@ -67,13 +67,14 @@ class SendOTPView(APIView):
             if otp_method == "email":
                 if not email:
                     return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
-                # Check if email is already registered
+                # Check if email is already registered with a profile
                 existing_user = User.objects.filter(email__iexact=email).first()
                 if existing_user:
                     p = getattr(existing_user, "business_profile", None) or getattr(existing_user, "creator_profile", None)
                     if p and p.status == "restricted":
                         return Response({"error": "This email is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
-                    return Response({"error": "This email is already registered. Please sign in instead."}, status=status.HTTP_400_BAD_REQUEST)
+                    if p:
+                        return Response({"error": "This email is already registered. Please sign in instead."}, status=status.HTTP_400_BAD_REQUEST)
             elif otp_method == "mobile":
                 if not phone:
                     return Response({"error": "Mobile number is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -365,20 +366,34 @@ class RegisterView(APIView):
             p = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
             if p and p.status == "restricted":
                 return Response({"error": "This email is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
-            return Response({"error": "This email is already registered. Please sign in instead."}, status=status.HTTP_400_BAD_REQUEST)
+            if p:
+                return Response({"error": "This email is already registered. Please sign in instead."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # User exists but has no profile (incomplete signup or Google OAuth): reuse and update credentials
+            if username and username.lower() != user.username.lower():
+                if User.objects.filter(username__iexact=username).exclude(id=user.id).exists():
+                    return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
+                user.username = username
+            if password:
+                user.set_password(password)
+            if request.data.get("first_name"):
+                user.first_name = request.data.get("first_name", "")
+            if request.data.get("last_name"):
+                user.last_name = request.data.get("last_name", "")
+            user.save()
+        else:
+            # No user exists with this email, check if username is taken
+            if User.objects.filter(username__iexact=username).exists():
+                return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # No user exists with this email, check if username is taken
-        if User.objects.filter(username__iexact=username).exists():
-            return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Create new user
-        user = User.objects.create_user(
-            username=username, 
-            email=email, 
-            password=password,
-            first_name=request.data.get("first_name", ""),
-            last_name=request.data.get("last_name", "")
-        )
+            # Create new user
+            user = User.objects.create_user(
+                username=username, 
+                email=email, 
+                password=password,
+                first_name=request.data.get("first_name", ""),
+                last_name=request.data.get("last_name", "")
+            )
 
         # Clean up any signup OTP verification records
         OTPVerification.objects.filter(email__iexact=email, purpose="signup").delete()
@@ -640,7 +655,7 @@ class GoogleLoginView(APIView):
         picture = google_user.get("picture", "")
 
         # 2. Check if user already exists
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(email__iexact=email).first()
         is_new_user = False
 
         if user:
@@ -655,9 +670,11 @@ class GoogleLoginView(APIView):
                 
                 # Check if registration details are provided or if we need to collect them
                 is_registering = False
-                if requested_role == "business" and request.data.get("company_name"):
+                if request.data.get("is_registering") or str(request.data.get("is_registering", "")).lower() == "true":
                     is_registering = True
-                elif requested_role == "influencer" and (request.data.get("niches") or request.data.get("phone")):
+                elif requested_role == "business" and (request.data.get("company_name") or request.data.get("country") or request.data.get("business_types") or request.data.get("website")):
+                    is_registering = True
+                elif requested_role == "influencer" and (request.data.get("niches") or request.data.get("phone") or request.data.get("country") or request.data.get("location")):
                     is_registering = True
 
                 if not is_registering:
@@ -834,9 +851,11 @@ class GoogleLoginView(APIView):
 
             # Check if registration details are provided or if we need to collect them
             is_registering = False
-            if requested_role == "business" and request.data.get("company_name"):
+            if request.data.get("is_registering") or str(request.data.get("is_registering", "")).lower() == "true":
                 is_registering = True
-            elif requested_role == "influencer" and (request.data.get("niches") or request.data.get("phone")):
+            elif requested_role == "business" and (request.data.get("company_name") or request.data.get("country") or request.data.get("business_types") or request.data.get("website")):
+                is_registering = True
+            elif requested_role == "influencer" and (request.data.get("niches") or request.data.get("phone") or request.data.get("country") or request.data.get("location")):
                 is_registering = True
 
             if not is_registering:
