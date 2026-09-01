@@ -143,43 +143,40 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
         instance.save()
         
         # Update niches
-        if "niches" in validated_data:
-            niche_names = validated_data["niches"]
+        niches_data = validated_data.get("niches") if "niches" in validated_data else self.initial_data.get("niches")
+        if niches_data is not None:
+            if isinstance(niches_data, str):
+                niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
             niche_objects = []
-            for name in niche_names:
-                niche_obj, _ = Niche.objects.get_or_create(name=name)
-                niche_objects.append(niche_obj)
+            for name in niches_data:
+                clean_name = str(name).strip()
+                niche_obj = Niche.objects.filter(name__iexact=clean_name).first()
+                if not niche_obj and clean_name:
+                    niche_obj = Niche.objects.create(name=clean_name)
+                if niche_obj and niche_obj not in niche_objects:
+                    niche_objects.append(niche_obj)
             instance.niches.set(niche_objects)
             
         # Update mediums
-        if "mediums" in validated_data:
+        mediums_data = validated_data.get("mediums") if "mediums" in validated_data else self.initial_data.get("mediums")
+        if mediums_data is not None:
             from user.models import Medium
-            medium_names = validated_data["mediums"]
+            if isinstance(mediums_data, str):
+                mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
             medium_objects = []
-            for name in medium_names:
-                # First try to find medium by name and country if creator has a country
+            for name in mediums_data:
+                clean_name = str(name).strip()
                 if instance.country:
-                    medium_obj = Medium.objects.filter(name__iexact=name, country=instance.country).first()
+                    medium_obj = Medium.objects.filter(name__iexact=clean_name, country=instance.country).first()
                 else:
-                    medium_obj = Medium.objects.filter(name__iexact=name).first()
-                
-                # If not found, we shouldn't create it blindly because it requires a country
-                # We will just append it if found
-                if medium_obj:
-                    medium_objects.append(medium_obj)
-            instance.mediums.set(medium_objects)
-            
-        # Update mediums
-        if "mediums" in validated_data:
-            from user.models import Medium
-            medium_names = validated_data["mediums"]
-            medium_objects = []
-            for name in medium_names:
-                if instance.country:
-                    medium_obj = Medium.objects.filter(name__iexact=name, country=instance.country).first()
-                else:
-                    medium_obj = Medium.objects.filter(name__iexact=name).first()
-                if medium_obj:
+                    medium_obj = Medium.objects.filter(name__iexact=clean_name).first()
+                if not medium_obj:
+                    medium_obj = Medium.objects.filter(name__iexact=clean_name).first()
+                if not medium_obj and clean_name.isdigit():
+                    medium_obj = Medium.objects.filter(id=int(clean_name)).first()
+                if not medium_obj and clean_name:
+                    medium_obj, _ = Medium.objects.get_or_create(name=clean_name)
+                if medium_obj and medium_obj not in medium_objects:
                     medium_objects.append(medium_obj)
             instance.mediums.set(medium_objects)
             
@@ -214,8 +211,8 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
                 )
                 
         # Update payout methods
-        if "payout_methods" in validated_data:
-            payouts_data = validated_data["payout_methods"]
+        payouts_data = self.initial_data.get("payout_methods") or validated_data.get("payout_methods")
+        if payouts_data is not None:
             # Clear old payout methods
             instance.payout_methods.all().delete()
             # Create new payout methods
@@ -223,9 +220,9 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
                 CreatorPayoutMethod.objects.create(
                     creator=instance,
                     full_name=payout_item.get("full_name"),
-                    bank_name=payout_item.get("bank_name"),
-                    account_number=payout_item.get("account_number"),
-                    bank_book_photo_url=payout_item.get("bank_book_photo_url"),
+                    bank_name=payout_item.get("bank_name") or payout_item.get("method_type") or "",
+                    account_number=payout_item.get("account_number") or payout_item.get("details") or "",
+                    bank_book_photo_url=payout_item.get("bank_book_photo_url") or "",
                     is_primary=payout_item.get("is_primary", False)
                 )
 

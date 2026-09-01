@@ -94,7 +94,7 @@ class SettingAPITests(APITestCase):
         
         payouts = CreatorPayoutMethod.objects.filter(creator=self.creator_profile)
         self.assertEqual(payouts.count(), 1)
-        self.assertEqual(payouts.first().details, "creator@paypal.com")
+        self.assertEqual(payouts.first().account_number, "creator@paypal.com")
 
     def test_business_settings_get(self):
         self.client.force_authenticate(user=self.business_user)

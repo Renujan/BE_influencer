@@ -475,9 +475,11 @@ class RegisterView(APIView):
                 mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
             profile.mediums.clear()
             for medium_name in mediums_data:
-                medium_obj = Medium.objects.filter(name__iexact=medium_name).first()
-                if not medium_obj and str(medium_name).isdigit():
-                    medium_obj = Medium.objects.filter(id=medium_name).first()
+                medium_obj = Medium.objects.filter(name__iexact=str(medium_name).strip()).first()
+                if not medium_obj and str(medium_name).strip().isdigit():
+                    medium_obj = Medium.objects.filter(id=int(str(medium_name).strip())).first()
+                if not medium_obj and str(medium_name).strip():
+                    medium_obj, _ = Medium.objects.get_or_create(name=str(medium_name).strip())
                 if medium_obj:
                     profile.mediums.add(medium_obj)
 
@@ -533,8 +535,12 @@ class RegisterView(APIView):
                 
             profile.niches.clear()
             for niche_name in niches_data:
-                niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
-                profile.niches.add(niche_obj)
+                clean_name = str(niche_name).strip()
+                niche_obj = Niche.objects.filter(name__iexact=clean_name).first()
+                if not niche_obj and clean_name:
+                    niche_obj = Niche.objects.create(name=clean_name)
+                if niche_obj:
+                    profile.niches.add(niche_obj)
                 
             # Add mediums
             mediums_data = request.data.get("mediums", [])
@@ -542,9 +548,11 @@ class RegisterView(APIView):
                 mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
             profile.mediums.clear()
             for medium_name in mediums_data:
-                medium_obj = Medium.objects.filter(name__iexact=medium_name).first()
-                if not medium_obj and medium_name.isdigit():
-                    medium_obj = Medium.objects.filter(id=medium_name).first()
+                medium_obj = Medium.objects.filter(name__iexact=str(medium_name).strip()).first()
+                if not medium_obj and str(medium_name).strip().isdigit():
+                    medium_obj = Medium.objects.filter(id=int(str(medium_name).strip())).first()
+                if not medium_obj and str(medium_name).strip():
+                    medium_obj, _ = Medium.objects.get_or_create(name=str(medium_name).strip())
                 if medium_obj:
                     profile.mediums.add(medium_obj)
                     
@@ -748,8 +756,25 @@ class GoogleLoginView(APIView):
                     if isinstance(niches_data, str):
                         niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
                     for niche_name in niches_data:
-                        niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
-                        profile.niches.add(niche_obj)
+                        clean_name = str(niche_name).strip()
+                        niche_obj = Niche.objects.filter(name__iexact=clean_name).first()
+                        if not niche_obj and clean_name:
+                            niche_obj = Niche.objects.create(name=clean_name)
+                        if niche_obj:
+                            profile.niches.add(niche_obj)
+
+                    mediums_data = request.data.get("mediums", [])
+                    if isinstance(mediums_data, str):
+                        mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
+                    for medium_name in mediums_data:
+                        medium_obj = Medium.objects.filter(name__iexact=str(medium_name).strip()).first()
+                        if not medium_obj and str(medium_name).strip().isdigit():
+                            medium_obj = Medium.objects.filter(id=int(str(medium_name).strip())).first()
+                        if not medium_obj and str(medium_name).strip():
+                            medium_obj, _ = Medium.objects.get_or_create(name=str(medium_name).strip())
+                        if medium_obj:
+                            profile.mediums.add(medium_obj)
+
                     profile.save()
                 
                 password = request.data.get("password")
@@ -835,8 +860,25 @@ class GoogleLoginView(APIView):
                         if isinstance(niches_data, str):
                             niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
                         for niche_name in niches_data:
-                            niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
-                            profile.niches.add(niche_obj)
+                            clean_name = str(niche_name).strip()
+                            niche_obj = Niche.objects.filter(name__iexact=clean_name).first()
+                            if not niche_obj and clean_name:
+                                niche_obj = Niche.objects.create(name=clean_name)
+                            if niche_obj:
+                                profile.niches.add(niche_obj)
+
+                        mediums_data = request.data.get("mediums", [])
+                        if isinstance(mediums_data, str):
+                            mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
+                        for medium_name in mediums_data:
+                            medium_obj = Medium.objects.filter(name__iexact=str(medium_name).strip()).first()
+                            if not medium_obj and str(medium_name).strip().isdigit():
+                                medium_obj = Medium.objects.filter(id=int(str(medium_name).strip())).first()
+                            if not medium_obj and str(medium_name).strip():
+                                medium_obj, _ = Medium.objects.get_or_create(name=str(medium_name).strip())
+                            if medium_obj:
+                                profile.mediums.add(medium_obj)
+
                         profile.save()
                     
                     password = request.data.get("password")
@@ -953,8 +995,25 @@ class GoogleLoginView(APIView):
                 if isinstance(niches_data, str):
                     niches_data = [x.strip() for x in niches_data.split(",") if x.strip()]
                 for niche_name in niches_data:
-                    niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
-                    profile.niches.add(niche_obj)
+                    clean_name = str(niche_name).strip()
+                    niche_obj = Niche.objects.filter(name__iexact=clean_name).first()
+                    if not niche_obj and clean_name:
+                        niche_obj = Niche.objects.create(name=clean_name)
+                    if niche_obj:
+                        profile.niches.add(niche_obj)
+
+                mediums_data = request.data.get("mediums", [])
+                if isinstance(mediums_data, str):
+                    mediums_data = [x.strip() for x in mediums_data.split(",") if x.strip()]
+                for medium_name in mediums_data:
+                    medium_obj = Medium.objects.filter(name__iexact=str(medium_name).strip()).first()
+                    if not medium_obj and str(medium_name).strip().isdigit():
+                        medium_obj = Medium.objects.filter(id=int(str(medium_name).strip())).first()
+                    if not medium_obj and str(medium_name).strip():
+                        medium_obj, _ = Medium.objects.get_or_create(name=str(medium_name).strip())
+                    if medium_obj:
+                        profile.mediums.add(medium_obj)
+
                 profile.save()
 
         # 3. Retrieve or create Auth Token
@@ -1081,8 +1140,12 @@ class MeView(APIView):
                 
                 profile.niches.clear()
                 for niche_name in niches_data:
-                    niche_obj, _ = Niche.objects.get_or_create(name=niche_name)
-                    profile.niches.add(niche_obj)
+                    clean_name = str(niche_name).strip()
+                    niche_obj = Niche.objects.filter(name__iexact=clean_name).first()
+                    if not niche_obj and clean_name:
+                        niche_obj = Niche.objects.create(name=clean_name)
+                    if niche_obj:
+                        profile.niches.add(niche_obj)
                     
             profile.save()
             return Response(CreatorProfileSerializer(profile).data)
