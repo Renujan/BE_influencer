@@ -446,6 +446,16 @@
                 </div>
 
                 <div class="custom-form-group">
+                    <label class="custom-form-label">Province / State</label>
+                    <div class="custom-form-control-readonly">{{ instance.province.name|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-form-label">District / City</label>
+                    <div class="custom-form-control-readonly">{{ instance.district.name|default:"-" }}</div>
+                </div>
+
+                <div class="custom-form-group">
                     <label class="custom-form-label">Profile Status</label>
                     <div class="custom-form-control-readonly">
                         <span class="badge-status {{ instance.status }}">{{ instance.get_status_display }}</span>

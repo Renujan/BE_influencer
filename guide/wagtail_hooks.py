@@ -4,20 +4,20 @@ from wagtail.admin.views.generic.models import IndexView, InspectView
 from wagtail.admin.ui.tables import TitleColumn
 from django.utils.translation import gettext_lazy
 from django.urls import reverse
-from .models import TermsAndCondition
+from .models import Guide
 
-class TermsAndConditionInspectView(InspectView):
+class GuideInspectView(InspectView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["instance"] = self.object
         return context
 
-class TermsAndConditionIndexView(IndexView):
+class GuideIndexView(IndexView):
     def _get_title_column(self, field_name, column_class=TitleColumn, **kwargs):
         column_class = self._get_title_column_class(column_class)
 
         def get_url(instance):
-            # Prefer inspect_url over edit_url so clicking the terms_id directly opens the View (inspect) page
+            # Prefer inspect_url over edit_url so clicking the guide_id directly opens the View (inspect) page
             if inspect_url := self.get_inspect_url(instance):
                 return inspect_url
             return self.get_edit_url(instance)
@@ -41,25 +41,25 @@ class TermsAndConditionIndexView(IndexView):
                 item.icon_name = "view"
         return buttons
 
-class TermsAndConditionViewSet(ModelViewSet):
-    model = TermsAndCondition
-    menu_label = "Terms & Conditions"
-    icon = "doc-full"
-    menu_icon = "doc-full"
-    menu_item_name = "terms_and_conditions"
+class GuideViewSet(ModelViewSet):
+    model = Guide
+    menu_label = "Guide"
+    icon = "clipboard-list"
+    menu_icon = "clipboard-list"
+    menu_item_name = "guide"
     add_to_admin_menu = True
-    exclude_form_fields = ["terms_id"]
+    exclude_form_fields = ["guide_id"]
     inspect_view_enabled = True
-    inspect_view_class = TermsAndConditionInspectView
-    inspect_template_name = "terms/inspect_terms.html"
-    index_view_class = TermsAndConditionIndexView
-    list_display = ("terms_id", "title", "target_audience", "is_active", "created_at")
-    list_export = ("terms_id", "title", "content", "target_audience", "is_active", "created_at", "updated_at")
-    list_filter = ("target_audience", "is_active")
-    search_fields = ("terms_id", "title", "content")
+    inspect_view_class = GuideInspectView
+    inspect_template_name = "guide/inspect_guide.html"
+    index_view_class = GuideIndexView
+    list_display = ("guide_id", "title", "category", "target_audience", "is_active", "created_at")
+    list_export = ("guide_id", "title", "category", "content", "document", "target_audience", "is_active", "created_at", "updated_at")
+    list_filter = ("category", "target_audience", "is_active")
+    search_fields = ("guide_id", "title", "content")
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
 
 @hooks.register("register_admin_viewset")
-def register_terms_and_conditions_viewset():
-    return TermsAndConditionViewSet()
+def register_guide_viewset():
+    return GuideViewSet()

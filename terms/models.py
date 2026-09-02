@@ -8,6 +8,8 @@ class TermsAndCondition(models.Model):
         ("creator", "Creator"),
         ("both", "Both"),
         ("public", "Public"),
+        ("business_support", "Business Support"),
+        ("creator_support", "Creator Support"),
     )
 
     terms_id = models.CharField(
@@ -19,10 +21,10 @@ class TermsAndCondition(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
     target_audience = models.CharField(
-        max_length=20,
+        max_length=50,
         choices=TARGET_CHOICES,
         default="both",
-        help_text="Determine whether these terms show for businesses, creators, both, or public.",
+        help_text="Determine whether these terms show for businesses, creators, both, public, business support, or creator support.",
     )
     is_active = models.BooleanField(
         default=True,
@@ -57,6 +59,8 @@ class TermsAndCondition(models.Model):
             "creator": "-CR",
             "both": "-BO",
             "public": "-PU",
+            "business_support": "-BS",
+            "creator_support": "-CS",
         }
         suffix = suffix_map.get(self.target_audience, "-BO")
         return f"TERM{next_num:03d}{suffix}"
@@ -75,6 +79,8 @@ class TermsAndCondition(models.Model):
                     "creator": "-CR",
                     "both": "-BO",
                     "public": "-PU",
+                    "business_support": "-BS",
+                    "creator_support": "-CS",
                 }
                 suffix = suffix_map.get(self.target_audience, "-BO")
                 self.terms_id = f"{base_part}{suffix}"

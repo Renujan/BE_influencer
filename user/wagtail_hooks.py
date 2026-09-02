@@ -1,7 +1,33 @@
 from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet
 from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
-from wagtail.admin.views.generic.models import InspectView, IndexView, MenuItem as GenericMenuItem
+from wagtail.admin.views.generic.models import InspectView, IndexView, EditView, MenuItem as GenericMenuItem
+import json
+
+def get_countries_hierarchy_json():
+    countries_data = []
+    for country in Country.objects.prefetch_related('provinces', 'districts').all():
+        countries_data.append({
+            'id': country.id,
+            'name': country.name,
+            'currency': country.currency or '',
+            'country_code': country.country_code or '',
+            'provinces': [{'id': p.id, 'name': p.name} for p in country.provinces.all()],
+            'districts': [{'id': d.id, 'name': d.name, 'province': d.province_id} for d in country.districts.all()],
+        })
+    return json.dumps(countries_data)
+
+class BusinessProfileEditView(EditView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["countries_json"] = get_countries_hierarchy_json()
+        return context
+
+class CreatorProfileEditView(EditView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["countries_json"] = get_countries_hierarchy_json()
+        return context
 from django.utils.translation import gettext as _
 from django.urls import reverse, path
 from .models import BusinessProfile, CreatorProfile, Niche, BusinessType, Country, Medium, CreatorSocialAccount
@@ -131,10 +157,11 @@ class BusinessProfileViewSet(ModelViewSet):
     exclude_form_fields = ["featured_at"]
     create_view_enabled = False
     
-    # Custom Index and Inspect Views
+    # Custom Index, Inspect, and Edit Views
     index_view_class = ProfileIndexView
     inspect_view_enabled = True
     inspect_view_class = BusinessProfileInspectView
+    edit_view_class = BusinessProfileEditView
     inspect_template_name = "user/inspect_business_profile.html"
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
@@ -167,10 +194,11 @@ class CreatorProfileViewSet(ModelViewSet):
     exclude_form_fields = ["featured_at"]
     create_view_enabled = False
     
-    # Custom Index and Inspect Views
+    # Custom Index, Inspect, and Edit Views
     index_view_class = ProfileIndexView
     inspect_view_enabled = True
     inspect_view_class = CreatorProfileInspectView
+    edit_view_class = CreatorProfileEditView
     inspect_template_name = "user/inspect_creator_profile.html"
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"

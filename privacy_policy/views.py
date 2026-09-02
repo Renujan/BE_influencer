@@ -1,31 +1,30 @@
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.authtoken.models import Token
 from django.db import models
-from .models import TermsAndCondition
+from .models import PrivacyPolicy
 
 @csrf_exempt
-def api_list_terms(request):
+def api_list_privacy_policies(request):
     """
-    GET view to return active terms and conditions:
-    - Default (landing page / no role, or role=public): returns ONLY 'public' terms.
-    - role=business: returns 'business' and 'both' terms.
-    - role=creator or role=influencer: returns 'creator' and 'both' terms.
-    - role=both: returns 'both' terms.
-    - role=all: returns all active terms (for super admin / full listings).
+    GET view to return active privacy policies:
+    - Default (landing page / no role, or role=public): returns ONLY 'public' policies.
+    - role=business: returns 'business' and 'both' policies.
+    - role=creator or role=influencer: returns 'creator' and 'both' policies.
+    - role=business_support: returns 'business_support' and 'both' policies.
+    - role=creator_support: returns 'creator_support' and 'both' policies.
+    - role=both: returns 'both' policies.
+    - role=all: returns all active policies.
     """
     if request.method != "GET":
         return JsonResponse({"error": "Only GET requests are allowed"}, status=405)
 
     try:
-        # Determine target role strictly from query parameter
         role = request.GET.get("role")
         if role:
             role = role.lower().strip()
 
-        # Build query for active terms
-        queryset = TermsAndCondition.objects.filter(is_active=True)
+        queryset = PrivacyPolicy.objects.filter(is_active=True)
 
         if role in ("business", "brand"):
             queryset = queryset.filter(
@@ -46,26 +45,24 @@ def api_list_terms(request):
         elif role == "both":
             queryset = queryset.filter(target_audience__iexact="both")
         elif role == "all":
-            pass  # Return all active terms
+            pass
         else:
-            # Default for landing page (no role specified or role=public): only return public terms
             queryset = queryset.filter(target_audience__iexact="public")
 
-        # Serialize results
-        terms_list = []
-        for term in queryset.order_by("-id"):
-            terms_list.append({
-                "id": term.id,
-                "terms_id": term.terms_id,
-                "title": term.title,
-                "content": term.content,
-                "target_audience": (term.target_audience or "public").lower(),
-                "target_audience_display": term.get_target_audience_display(),
-                "created_at": term.created_at.isoformat(),
-                "updated_at": term.updated_at.isoformat(),
+        policies_list = []
+        for policy in queryset.order_by("-id"):
+            policies_list.append({
+                "id": policy.id,
+                "policy_id": policy.policy_id,
+                "title": policy.title,
+                "content": policy.content,
+                "target_audience": (policy.target_audience or "public").lower(),
+                "target_audience_display": policy.get_target_audience_display(),
+                "created_at": policy.created_at.isoformat(),
+                "updated_at": policy.updated_at.isoformat(),
             })
 
-        return JsonResponse({"terms": terms_list}, status=200)
+        return JsonResponse({"privacy_policies": policies_list}, status=200)
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)

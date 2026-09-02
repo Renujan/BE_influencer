@@ -64,6 +64,8 @@ INSTALLED_APPS = [
     "RateCard",
     "WorkspacePayment",
     "CreatorRating",
+    "privacy_policy",
+    "guide",
 ]
 
 

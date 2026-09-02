@@ -11,6 +11,8 @@ from campegin.models import (
 from rest_framework.authtoken.models import Token
 from FAQ.models import FAQ
 from terms.models import TermsAndCondition
+from privacy_policy.models import PrivacyPolicy
+from guide.models import Guide
 from complaint.models import Complaint
 from notifications.models import Notification
 
@@ -562,6 +564,31 @@ class Command(BaseCommand):
                 "title": "Public Platform Usage & Visitor Terms",
                 "content": "All visitors, unregistered guests, and public participants agree to adhere to standard community rules, non-infringement policies, and transparent interaction guidelines across Ampli.",
                 "target": "public"
+            },
+            {
+                "title": "Business Support & SLA Guidelines",
+                "content": "Business accounts are eligible for priority dispute mediation, dedicated ticketing SLA within 2 hours, and compliance auditing on active campaign deliverables.",
+                "target": "business_support"
+            },
+            {
+                "title": "Business Escalation & Mediation Terms",
+                "content": "In case of milestone delays or deliverable mismatches, business clients can request administrative arbitration. All milestone escrow funds remain secured until resolution.",
+                "target": "business_support"
+            },
+            {
+                "title": "Creator Support & Payout Assistance Terms",
+                "content": "Creators have access to 24/7 self-service troubleshooting and express email assistance for payout verification, bank transfer reconciliation, and milestone disputes.",
+                "target": "creator_support"
+            },
+            {
+                "title": "Creator Deliverable Scope & Revision Protection",
+                "content": "Brands may not request revisions exceeding the parameters established in the approved campaign brief. Creators facing out-of-scope demands can request support intervention for additional compensation or brief enforcement.",
+                "target": "creator_support"
+            },
+            {
+                "title": "Universal Collaboration & Mediation Terms",
+                "content": "All creator and brand participants are protected under Ampli standard dispute resolution. Support officers mediate all escalations impartially according to verified campaign agreements.",
+                "target": "both"
             }
         ]
         for term in terms_data:
@@ -573,7 +600,121 @@ class Command(BaseCommand):
             )
         self.stdout.write("Terms and Conditions seeded.")
 
-        # 11. Clear and Seed Complaints
+        # 11. Clear and Seed Privacy Policies
+        PrivacyPolicy.objects.all().delete()
+        privacy_data = [
+            {
+                "title": "Public Data Collection & Visitor Privacy",
+                "content": "We collect minimal diagnostic telemetry and cookie preferences to deliver seamless navigation. Personal visitor data is never sold to third-party data brokers.",
+                "target": "public"
+            },
+            {
+                "title": "Cookie Preferences & Tracking Safeguards",
+                "content": "Visitors maintain complete control over analytical and functional cookie configurations. Essential security cookies are utilized solely to prevent malicious automated access.",
+                "target": "public"
+            },
+            {
+                "title": "Creator Profile Data & Analytics Privacy",
+                "content": "Social media metrics, engagement stats, and portfolio assets connected to Ampli are encrypted and displayed strictly to registered brands for collaboration verification.",
+                "target": "creator"
+            },
+            {
+                "title": "Payout & Banking Information Encryption",
+                "content": "Bank account details, tax forms, and payout histories are encrypted at rest with AES-256 and processed through PCI-DSS Level 1 compliant financial gateways.",
+                "target": "creator"
+            },
+            {
+                "title": "Brand Campaign Confidentiality & Data Protection",
+                "content": "Unreleased campaign briefs, target deliverables, and proprietary marketing assets remain strictly confidential between the brand and contracted creators.",
+                "target": "business"
+            },
+            {
+                "title": "Commercial Escrow Transaction Records",
+                "content": "Transaction ledgers, invoice details, and billing identities are securely archived for audit compliance and are accessible only by authorized financial administrators.",
+                "target": "business"
+            },
+            {
+                "title": "Creator Support Ticket Privacy & Audit Logs",
+                "content": "Communications, attachments, and audio notes submitted during support inquiries are preserved confidentially to resolve disputes and improve platform quality.",
+                "target": "creator"
+            },
+            {
+                "title": "Business Support Mediation & Data Handling",
+                "content": "Dispute tickets and arbitration submissions filed by business accounts are handled by certified compliance officers under strict confidentiality protocols.",
+                "target": "business"
+            },
+            {
+                "title": "Platform-Wide Communication Security & Encryption",
+                "content": "Direct chat messages, proposal negotiations, and file attachments transmitted between creators and businesses are end-to-end encrypted in transit and at rest.",
+                "target": "both"
+            }
+        ]
+        for p in privacy_data:
+            PrivacyPolicy.objects.create(
+                title=p["title"],
+                content=p["content"],
+                target_audience=p["target"],
+                is_active=True
+            )
+        self.stdout.write("Privacy Policies seeded.")
+
+        # 12. Clear and Seed Guides
+        Guide.objects.all().delete()
+        guides_data = [
+            {
+                "title": "Creator Handbook & Profile Optimization",
+                "category": "handbook",
+                "content": "Tips and strategies for optimizing your creator bio, connecting social channels, showcasing portfolio media, and maximizing discovery by top brands.",
+                "target": "creator"
+            },
+            {
+                "title": "Creator Protection & Earnings Guarantee",
+                "category": "protection",
+                "content": "How Ampli protects your work with upfront escrow funding, dispute arbitration, and secure milestone payout guarantees.",
+                "target": "creator"
+            },
+            {
+                "title": "Payment & Payout Lifecycle Guide",
+                "category": "payment",
+                "content": "A comprehensive breakdown of escrow deposits, milestone submissions, client approvals, fee calculations (5%), and bank payout settlement times.",
+                "target": "creator"
+            },
+            {
+                "title": "Brand Request Evaluation & Negotiation Guide",
+                "category": "brand_request",
+                "content": "How to evaluate incoming brand offers, review briefing requirements, submit counter-proposals, and accept campaign contracts.",
+                "target": "creator"
+            },
+            {
+                "title": "Brand Campaign Briefing & Influencer Hiring Guide",
+                "category": "general",
+                "content": "Best practices for drafting clear campaign briefs, establishing deliverable milestones, screening creator portfolios, and funding escrow.",
+                "target": "business"
+            },
+            {
+                "title": "Creator Support Ticket & Escalation Guide",
+                "category": "deliverable",
+                "content": "Step-by-step instructions on submitting support tickets, requesting revision arbitration, and resolving communication disputes.",
+                "target": "creator"
+            },
+            {
+                "title": "Campaign Collaboration & Professional Etiquette",
+                "category": "general",
+                "content": "Guidelines for both creators and brand managers on maintaining clear communication, adhering to delivery deadlines, and ensuring seamless milestone sign-offs.",
+                "target": "both"
+            }
+        ]
+        for g in guides_data:
+            Guide.objects.create(
+                title=g["title"],
+                category=g["category"],
+                content=g["content"],
+                target_audience=g["target"],
+                is_active=True
+            )
+        self.stdout.write("Guides seeded.")
+
+        # 13. Clear and Seed Complaints
         Complaint.objects.all().delete()
         complaints_data = [
             {

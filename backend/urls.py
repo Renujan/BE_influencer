@@ -30,8 +30,8 @@ urlpatterns = [
     path("api/analytics/", include("user.analytics_urls")),
     path("api/creator-ratings/", include("CreatorRating.urls")),
     path("api/business-ratings/", include("CreatorRating.business_urls")),
-
-
+    path("api/privacy-policy/", include("privacy_policy.urls")),
+    path("api/guides/", include("guide.urls")),
 ]
 
 

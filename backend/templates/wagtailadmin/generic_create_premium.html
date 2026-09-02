@@ -157,6 +157,23 @@
         box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
     }
 
+    .custom-form-group input[type="file"] {
+        background-color: #ffffff;
+        border: 1px dashed #cbd5e1;
+        border-radius: 6px;
+        padding: 10px 14px;
+        font-size: 14px;
+        color: #334155;
+        width: 100%;
+        box-sizing: border-box;
+        cursor: pointer;
+    }
+
+    .custom-form-group input[type="file"]:hover {
+        border-color: #06b6d4;
+        background-color: #f8fafc;
+    }
+
     .custom-footer-actions {
         display: flex;
         justify-content: flex-start;
@@ -184,7 +201,7 @@
     </div>
 
     <!-- Body Content Card -->
-    <form method="POST" action="{{ action_url }}" class="custom-body-card" novalidate>
+    <form method="POST" action="{{ action_url }}" class="custom-body-card" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         
         <div>

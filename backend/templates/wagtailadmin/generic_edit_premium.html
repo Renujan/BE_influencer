@@ -157,6 +157,23 @@
         box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
     }
 
+    .custom-form-group input[type="file"] {
+        background-color: #ffffff;
+        border: 1px dashed #cbd5e1;
+        border-radius: 6px;
+        padding: 10px 14px;
+        font-size: 14px;
+        color: #334155;
+        width: 100%;
+        box-sizing: border-box;
+        cursor: pointer;
+    }
+
+    .custom-form-group input[type="file"]:hover {
+        border-color: #06b6d4;
+        background-color: #f8fafc;
+    }
+
     .custom-footer-actions {
         display: flex;
         justify-content: flex-start;
@@ -184,7 +201,7 @@
     </div>
 
     <!-- Body Content Card -->
-    <form method="POST" action="{{ action_url }}" class="custom-body-card" novalidate>
+    <form method="POST" action="{{ action_url }}" class="custom-body-card" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         
         <div>
@@ -221,8 +238,139 @@
     </form>
 </div>
 
+{% if countries_json %}
+<script id="countries-data" type="application/json">{{ countries_json|safe }}</script>
+{% endif %}
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    // 1. Cascading Country -> Province -> District logic
+    (function initCascadingLocation() {
+        const countrySelect = document.querySelector('select[name="country"], #id_country');
+        const provinceSelect = document.querySelector('select[name="province"], #id_province');
+        const districtSelect = document.querySelector('select[name="district"], #id_district');
+
+        if (!countrySelect || !provinceSelect) return;
+
+        let countriesData = [];
+        const countriesDataScript = document.getElementById("countries-data");
+        if (countriesDataScript && countriesDataScript.textContent) {
+            try {
+                countriesData = JSON.parse(countriesDataScript.textContent);
+            } catch (e) {
+                console.error("Error parsing countries data:", e);
+            }
+        }
+
+        function setupCascading(data) {
+            if (!Array.isArray(data) || data.length === 0) return;
+            countriesData = data;
+
+            // Preserve initial selections from server-rendered form
+            const initialCountryVal = countrySelect.value;
+            const initialProvinceVal = provinceSelect.value;
+            const initialDistrictVal = districtSelect ? districtSelect.value : null;
+
+            function findCountry(countryVal) {
+                if (!countryVal) return null;
+                return countriesData.find(function (c) {
+                    return String(c.id) === String(countryVal) || 
+                           c.name.trim().toLowerCase() === String(countryVal).trim().toLowerCase();
+                });
+            }
+
+            function populateProvinces(countryVal, selectedProvinceVal, preserveDistrictVal) {
+                const countryObj = findCountry(countryVal);
+                provinceSelect.innerHTML = "";
+
+                const defaultOpt = document.createElement("option");
+                defaultOpt.value = "";
+                defaultOpt.textContent = countryObj ? "Select Province" : "---------";
+                provinceSelect.appendChild(defaultOpt);
+
+                if (!countryObj || !countryObj.provinces || countryObj.provinces.length === 0) {
+                    if (districtSelect) {
+                        populateDistricts(null, null);
+                    }
+                    return;
+                }
+
+                let provinceMatched = false;
+                countryObj.provinces.forEach(function (p) {
+                    const opt = document.createElement("option");
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    if (selectedProvinceVal && (String(p.id) === String(selectedProvinceVal) || p.name.trim().toLowerCase() === String(selectedProvinceVal).trim().toLowerCase())) {
+                        opt.selected = true;
+                        provinceMatched = true;
+                    }
+                    provinceSelect.appendChild(opt);
+                });
+
+                if (districtSelect) {
+                    const currentProvVal = provinceMatched ? provinceSelect.value : null;
+                    populateDistricts(currentProvVal, preserveDistrictVal);
+                }
+            }
+
+            function populateDistricts(provinceVal, selectedDistrictVal) {
+                if (!districtSelect) return;
+                districtSelect.innerHTML = "";
+
+                const defaultOpt = document.createElement("option");
+                defaultOpt.value = "";
+                defaultOpt.textContent = provinceVal ? "Select District" : "---------";
+                districtSelect.appendChild(defaultOpt);
+
+                if (!provinceVal) return;
+
+                const countryObj = findCountry(countrySelect.value);
+                if (!countryObj || !countryObj.districts || countryObj.districts.length === 0) return;
+
+                const filteredDistricts = countryObj.districts.filter(function (d) {
+                    const dProv = (typeof d.province === 'object' && d.province !== null) ? (d.province.id || d.province.name) : (d.province !== undefined ? d.province : d.province_id);
+                    return String(dProv) === String(provinceVal) || 
+                           (d.province_name && d.province_name.trim().toLowerCase() === String(provinceVal).trim().toLowerCase());
+                });
+
+                filteredDistricts.forEach(function (d) {
+                    const opt = document.createElement("option");
+                    opt.value = d.id;
+                    opt.textContent = d.name;
+                    if (selectedDistrictVal && (String(d.id) === String(selectedDistrictVal) || d.name.trim().toLowerCase() === String(selectedDistrictVal).trim().toLowerCase())) {
+                        opt.selected = true;
+                    }
+                    districtSelect.appendChild(opt);
+                });
+            }
+
+            // Populate on page load with initial selected values
+            populateProvinces(initialCountryVal, initialProvinceVal, initialDistrictVal);
+
+            // React to user selecting a different Country
+            countrySelect.addEventListener("change", function () {
+                populateProvinces(countrySelect.value, null, null);
+            });
+
+            // React to user selecting a different Province
+            provinceSelect.addEventListener("change", function () {
+                if (districtSelect) {
+                    populateDistricts(provinceSelect.value, null);
+                }
+            });
+        }
+
+        if (countriesData && countriesData.length > 0) {
+            setupCascading(countriesData);
+        } else {
+            fetch("/api/countries/")
+                .then(function (res) { return res.json(); })
+                .then(function (data) { setupCascading(data); })
+                .catch(function (err) { console.error("Error loading countries for cascading dropdowns:", err); });
+        }
+    })();
+
+    // 2. Custom Multi-Select UI enhancements for select[multiple]
     const multiSelects = document.querySelectorAll("select[multiple]");
     
     multiSelects.forEach(function (selectEl) {

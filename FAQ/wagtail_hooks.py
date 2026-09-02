@@ -1,10 +1,16 @@
 from wagtail import hooks
 from wagtail.admin.viewsets.model import ModelViewSet
-from wagtail.admin.views.generic.models import IndexView
+from wagtail.admin.views.generic.models import IndexView, InspectView
 from wagtail.admin.ui.tables import TitleColumn
 from django.utils.translation import gettext_lazy
 from django.urls import reverse
 from .models import FAQ
+
+class FAQInspectView(InspectView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["instance"] = self.object
+        return context
 
 class FAQIndexView(IndexView):
     def _get_title_column(self, field_name, column_class=TitleColumn, **kwargs):
@@ -44,6 +50,7 @@ class FAQViewSet(ModelViewSet):
     add_to_admin_menu = True
     exclude_form_fields = ["faq_id"]
     inspect_view_enabled = True
+    inspect_view_class = FAQInspectView
     inspect_template_name = "FAQ/inspect_faq.html"
     index_view_class = FAQIndexView
     list_display = ("faq_id", "question", "target_audience", "type", "is_active", "created_at")
@@ -56,4 +63,3 @@ class FAQViewSet(ModelViewSet):
 @hooks.register("register_admin_viewset")
 def register_faqs_viewset():
     return FAQViewSet()
-
