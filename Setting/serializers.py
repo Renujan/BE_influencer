@@ -296,11 +296,17 @@ class BusinessFullSettingsSerializer(serializers.Serializer):
         BusinessSettings.objects.get_or_create(business=instance)
         
         rep = super().to_representation(instance)
-        # Parse business types from comma-separated string to list
+        # Collect business types from both ManyToMany and CharField
+        types_set = []
+        if instance.business_types.exists():
+            for bt in instance.business_types.all():
+                if bt.name and bt.name.strip() not in types_set:
+                    types_set.append(bt.name.strip())
         if instance.business_type:
-            rep["business_types"] = [t.strip() for t in instance.business_type.split(",") if t.strip()]
-        else:
-            rep["business_types"] = []
+            for t in instance.business_type.replace(",", " ").split():
+                if t.strip() and t.strip() not in types_set:
+                    types_set.append(t.strip())
+        rep["business_types"] = types_set
             
         if getattr(instance, "province", None):
             rep["province"] = instance.province.name
@@ -377,10 +383,17 @@ class BusinessFullSettingsSerializer(serializers.Serializer):
             else:
                 instance.district = None
         
-        # Update business types as comma-separated string
+        # Update business types as both ManyToMany relation and comma-separated string
         if "business_types" in validated_data:
+            from user.models import BusinessType
             types_list = validated_data["business_types"]
-            instance.business_type = ",".join([t.strip() for t in types_list if t.strip()])
+            clean_types = [t.strip() for t in types_list if t.strip()]
+            instance.business_type = ", ".join(clean_types)
+            bt_objects = []
+            for t_name in clean_types:
+                bt_obj, _ = BusinessType.objects.get_or_create(name=t_name)
+                bt_objects.append(bt_obj)
+            instance.business_types.set(bt_objects)
             
         # Update social links
         instance.facebook_url = validated_data.get("facebook_url", instance.facebook_url)

@@ -477,6 +477,17 @@
                 </div>
 
                 <div class="custom-form-group full-width">
+                    <label class="custom-form-label">Mediums / Platforms</label>
+                    <div class="custom-form-control-readonly" style="flex-wrap: wrap; gap: 6px; min-height: auto; padding: 12px;">
+                        {% for m in instance.mediums.all %}
+                            <span class="tag-item" style="margin-bottom: 0; background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">{{ m.name }}</span>
+                        {% empty %}
+                            <span style="color: #94a3b8;">No Mediums Selected</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="custom-form-group full-width">
                     <label class="custom-form-label">Company Bio / Summary</label>
                     <div class="custom-form-control-readonly textarea">{{ instance.bio|default:"-" }}</div>
                 </div>

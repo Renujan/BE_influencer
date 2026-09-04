@@ -33,33 +33,96 @@ def get_user_from_request(request):
 
 
 def parse_views_number(v):
-    """Parse '1.2M', '840K', '25000' into a float number."""
+    """Parse '1.2M', '840K', '1T', '25000' into a float number."""
     if not v:
         return 0.0
     v_str = str(v).strip().upper().replace(",", "")
     try:
-        if v_str.endswith("M"):
-            return float(v_str[:-1]) * 1_000_000
-        elif v_str.endswith("K"):
-            return float(v_str[:-1]) * 1_000
+        if v_str.endswith("T"):
+            return float(v_str[:-1]) * 1_000_000_000_000.0
         elif v_str.endswith("B"):
-            return float(v_str[:-1]) * 1_000_000_000
+            return float(v_str[:-1]) * 1_000_000_000.0
+        elif v_str.endswith("M"):
+            return float(v_str[:-1]) * 1_000_000.0
+        elif v_str.endswith("K"):
+            return float(v_str[:-1]) * 1_000.0
         else:
             return float(v_str)
     except Exception:
         return 0.0
 
 
+def normalize_url(url):
+    """Ensure URL has scheme (https:// or http://) so it resolves as external link."""
+    if not url:
+        return None
+    u = str(url).strip()
+    if not u:
+        return None
+    if u.startswith("http://") or u.startswith("https://") or u.startswith("//"):
+        return u
+    return f"https://{u}"
+
+
 def format_reach(total_reach_raw):
     """Format numeric reach into '1.2M', '840K', or '120' string."""
-    if total_reach_raw >= 1_000_000:
-        val = total_reach_raw / 1_000_000
+    if total_reach_raw >= 1_000_000_000_000:
+        val = total_reach_raw / 1_000_000_000_000.0
+        return f"{val:.1f}T".replace(".0T", "T")
+    elif total_reach_raw >= 1_000_000_000:
+        val = total_reach_raw / 1_000_000_000.0
+        return f"{val:.1f}B".replace(".0B", "B")
+    elif total_reach_raw >= 1_000_000:
+        val = total_reach_raw / 1_000_000.0
         return f"{val:.1f}M".replace(".0M", "M")
     elif total_reach_raw >= 1_000:
-        val = total_reach_raw / 1_000
+        val = total_reach_raw / 1_000.0
         return f"{val:.1f}K".replace(".0K", "K")
     else:
         return str(int(total_reach_raw))
+
+
+def format_reach_by_largest(views_list):
+    """
+    Given a list of views strings (e.g. ['100k', '1m']):
+    Identify the largest unit scale among the items, convert all items to that scale,
+    sum them, and return the rounded total value in the largest format (e.g. 1.1M).
+    """
+    units_order = ["T", "B", "M", "K"]
+    highest_unit = None
+    parsed_numbers = []
+
+    for v in views_list:
+        if not v:
+            continue
+        v_str = str(v).strip().upper().replace(",", "")
+        num = parse_views_number(v)
+        parsed_numbers.append(num)
+
+        for u in units_order:
+            if v_str.endswith(u):
+                if highest_unit is None or units_order.index(u) < units_order.index(highest_unit):
+                    highest_unit = u
+                break
+
+    total_num = sum(parsed_numbers)
+    if not total_num:
+        return "0"
+
+    if total_num >= 1_000_000_000_000 or highest_unit == "T":
+        val = round(total_num / 1_000_000_000_000.0, 1)
+        return f"{val:.1f}T".replace(".0T", "T")
+    elif total_num >= 1_000_000_000 or highest_unit == "B":
+        val = round(total_num / 1_000_000_000.0, 1)
+        return f"{val:.1f}B".replace(".0B", "B")
+    elif total_num >= 1_000_000 or highest_unit == "M":
+        val = round(total_num / 1_000_000.0, 1)
+        return f"{val:.1f}M".replace(".0M", "M")
+    elif total_num >= 1_000 or highest_unit == "K":
+        val = round(total_num / 1_000.0, 1)
+        return f"{val:.1f}K".replace(".0K", "K")
+    else:
+        return str(int(round(total_num)))
 
 
 def build_thumbnail_url(request, item):
@@ -129,8 +192,7 @@ def portfolio_items_view(request):
         # Compute stats from real data
         total = items.count()
         avg_er = round(sum(i.engagement_rate for i in items) / total, 1) if total else 0.0
-        total_reach_raw = sum(parse_views_number(i.views) for i in items)
-        total_reach = format_reach(total_reach_raw)
+        total_reach = format_reach_by_largest([i.views for i in items])
         brands = set(i.brand.strip() for i in items if i.brand and i.brand.strip() not in ("—", "-"))
 
         stats = {
@@ -151,6 +213,8 @@ def portfolio_items_view(request):
                         "content_type": r.content_type,
                         "platforms": r.platforms,
                         "price": str(r.price),
+                        "min_price": str(r.min_price) if r.min_price is not None else str(r.price),
+                        "max_price": str(r.max_price) if r.max_price is not None else str(r.price),
                         "notes": r.notes or "",
                     })
         except Exception:
@@ -188,7 +252,7 @@ def portfolio_items_view(request):
             brand = (body.get("brand") or "").strip()
             if brand and len(brand) > 100:
                 return JsonResponse({"error": "Brand cannot exceed 100 letters"}, status=400)
-            post_link = (body.get("post_link") or "").strip() or None
+            post_link = normalize_url(body.get("post_link"))
             is_featured = str(body.get("is_featured", "false")).lower() in ("true", "1", "yes")
 
             item = PortfolioItem(
@@ -233,15 +297,22 @@ def portfolio_item_detail_view(request, item_id):
     except PortfolioItem.DoesNotExist:
         return JsonResponse({"error": "Item not found"}, status=404)
 
-    if request.method in ("PATCH", "PUT"):
+    if request.method in ("PATCH", "PUT", "POST"):
         try:
-            is_multipart = request.content_type and "multipart/form-data" in request.content_type
+            is_multipart = bool(request.content_type and "multipart/form-data" in request.content_type)
+            files = {}
             if is_multipart:
-                body = request.POST
+                if request.method == "POST":
+                    body = request.POST
+                    files = request.FILES
+                else:
+                    from django.http.multipartparser import MultiPartParser
+                    body, files = MultiPartParser(request.META, request, request.upload_handlers).parse()
             elif request.content_type and "application/json" in request.content_type:
                 body = json.loads(request.body.decode("utf-8") or "{}")
             else:
                 body = request.POST
+                files = request.FILES
 
             if "title" in body:
                 t = (body["title"] or "").strip()
@@ -276,28 +347,27 @@ def portfolio_item_detail_view(request, item_id):
                     return JsonResponse({"error": "Brand cannot exceed 100 letters"}, status=400)
                 item.brand = b
             if "post_link" in body:
-                raw_link = str(body["post_link"]).strip()
-                item.post_link = raw_link if raw_link else None
+                item.post_link = normalize_url(body.get("post_link"))
             if "is_featured" in body:
                 val = body["is_featured"]
                 item.is_featured = str(val).lower() in ("true", "1", "yes") or val is True
 
             # Handle file replacement with automatic disk cleanup
-            if is_multipart and "thumbnail" in request.FILES:
+            if is_multipart and "thumbnail" in files:
                 if item.thumbnail:
                     try:
                         item.thumbnail.delete(save=False)
                     except Exception:
                         pass
-                item.thumbnail = request.FILES["thumbnail"]
+                item.thumbnail = files["thumbnail"]
 
-            if is_multipart and "proof_screenshot" in request.FILES:
+            if is_multipart and "proof_screenshot" in files:
                 if item.proof_screenshot:
                     try:
                         item.proof_screenshot.delete(save=False)
                     except Exception:
                         pass
-                item.proof_screenshot = request.FILES["proof_screenshot"]
+                item.proof_screenshot = files["proof_screenshot"]
 
             item.save()
             return JsonResponse({"item": serialize_item(item, request)}, status=200)

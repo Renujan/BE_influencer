@@ -715,9 +715,11 @@ class GoogleLoginView(APIView):
                         status="pending",
                         country=country_obj
                     )
-                    business_types_data = request.data.get("business_types", [])
+                    business_types_data = request.data.get("business_types") or request.data.get("business_type") or []
                     if isinstance(business_types_data, str):
                         business_types_data = [x.strip() for x in business_types_data.split(",") if x.strip()]
+                    if business_types_data:
+                        profile.business_type = ", ".join(business_types_data)
                     for bt_name in business_types_data:
                         bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
                         profile.business_types.add(bt_obj)
@@ -821,9 +823,11 @@ class GoogleLoginView(APIView):
                                     country_obj = Country.objects.create(name=str(country_data).strip())
                             profile.country = country_obj
                         
-                        business_types_data = request.data.get("business_types", [])
+                        business_types_data = request.data.get("business_types") or request.data.get("business_type") or []
                         if isinstance(business_types_data, str):
                             business_types_data = [x.strip() for x in business_types_data.split(",") if x.strip()]
+                        if business_types_data:
+                            profile.business_type = ", ".join(business_types_data)
                         for bt_name in business_types_data:
                             bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
                             profile.business_types.add(bt_obj)
@@ -954,9 +958,11 @@ class GoogleLoginView(APIView):
                     status="pending",
                     country=country_obj
                 )
-                business_types_data = request.data.get("business_types", [])
+                business_types_data = request.data.get("business_types") or request.data.get("business_type") or []
                 if isinstance(business_types_data, str):
                     business_types_data = [x.strip() for x in business_types_data.split(",") if x.strip()]
+                if business_types_data:
+                    profile.business_type = ", ".join(business_types_data)
                 for bt_name in business_types_data:
                     bt_obj, _ = BusinessType.objects.get_or_create(name=bt_name)
                     profile.business_types.add(bt_obj)
@@ -1261,6 +1267,7 @@ class PendingUsersView(APIView):
                 "email": bp.user.email,
                 "phone": bp.phone or "",
                 "category": bp.business_type or "Tech",
+                "mediums": [m.name for m in bp.mediums.all()],
                 "business_reg_number": bp.business_reg_number or "",
                 "business_document": bp.business_document.url if bp.business_document else "",
             })
@@ -1655,6 +1662,7 @@ def download_profile_pdf_view(request, profile_type, profile_id):
             "instance": business_profile,
             "settings": settings,
             "business_types": business_types,
+            "mediums": business_profile.mediums.all(),
             "profile_type": "Business Profile",
         }
         template_name = "user/profile_pdf.html"

@@ -234,6 +234,18 @@
             </tr>
             <tr>
                 <td colspan="2">
+                    <div class="label">Mediums / Platforms</div>
+                    <div class="value">
+                        {% for m in instance.mediums.all %}
+                            <span class="tag" style="background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">{{ m.name }}</span>
+                        {% empty %}
+                            <span style="color: #94a3b8;">No Mediums Selected</span>
+                        {% endfor %}
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
                     <div class="label">Company Bio / Summary</div>
                     <div class="value value-textarea">{{ instance.bio|default:"-" }}</div>
                 </td>

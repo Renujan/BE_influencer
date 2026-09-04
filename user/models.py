@@ -170,6 +170,22 @@ class BusinessProfile(models.Model):
                 return COUNTRY_CURRENCY_SYMBOL_MAP[self.country.name]
         return "$"
 
+    def get_mediums_display(self):
+        medium_names = [m.name for m in self.mediums.all()]
+        if not medium_names:
+            return "-"
+        from django.utils.html import mark_safe
+        badges = "".join([
+            f'<span style="background-color: #f0fdf4; color: #166534; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; border: 1px solid #bbf7d0; display: inline-block; margin: 1px 2px;">{name}</span>'
+            for name in medium_names
+        ])
+        return mark_safe(badges)
+    get_mediums_display.short_description = "Mediums"
+
+    @property
+    def mediums_list(self):
+        return ", ".join([m.name for m in self.mediums.all()])
+
     def __str__(self):
         return f"{self.company_name or self.user.username} (Business)"
 

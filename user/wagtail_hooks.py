@@ -117,6 +117,7 @@ class BusinessProfileInspectView(InspectView):
             # handle both comma and space separation
             business_types = [t.strip() for t in business_profile.business_type.replace(",", " ").split() if t.strip()]
         context["business_types"] = business_types
+        context["mediums"] = business_profile.mediums.all()
         context["payout_methods"] = business_profile.payout_methods.all()
         return context
 
@@ -166,9 +167,9 @@ class BusinessProfileViewSet(ModelViewSet):
     edit_template_name = "wagtailadmin/generic_edit_premium.html"
     create_template_name = "wagtailadmin/generic_create_premium.html"
     
-    list_display = ("user", "company_name", "business_type", "phone", "otp_verified", "status", "country")
-    list_export = ("id", "user.username", "user.email", "company_name", "business_type", "website", "phone", "otp_verified", "status", "country.name")
-    list_filter = ("otp_verified", "status")
+    list_display = ("user", "company_name", "business_type", "get_mediums_display", "phone", "otp_verified", "status", "country")
+    list_export = ("id", "user.username", "user.email", "company_name", "business_type", "mediums_list", "website", "phone", "otp_verified", "status", "country.name")
+    list_filter = ("otp_verified", "status", "mediums")
     search_fields = ("user__username", "user__email", "company_name", "phone")
 
     @property
