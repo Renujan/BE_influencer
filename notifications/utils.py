@@ -22,14 +22,17 @@ FRONTEND_ADMIN_ROUTE_MAP = {
     "/dashboard/requests": "wagtailsnippets_campegin_campaign:list",
     "/dashboard/settings": "businessprofile:index",
     "/dashboard/business-services": "inquiry:index",
+    "/dashboard/services": "inquiry:index",
     "/creator": "creatorprofile:index",
     "/creator/campaigns": "wagtailsnippets_campegin_campaign:list",
     "/creator/earnings": "wagtailsnippets_campegin_campaign:list",
+    "/creator/requests": "wagtailsnippets_campegin_campaign:list",
     "/creator/support": "admincomplianceticket:index",
     "/creator/pitches": "wagtailsnippets_campegin_campaign:list",
     "/creator/profile": "creatorprofile:index",
     "/creator/portfolio": "creatorprofile:index",
     "/creator/business-services": "inquiry:index",
+    "/creator/services": "inquiry:index",
 }
 
 

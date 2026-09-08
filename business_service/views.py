@@ -166,7 +166,7 @@ def download_business_service_pdf(request, pk):
             [Paragraph("Provider:", bold_body_style), Paragraph(service.provider, body_style)],
             [Paragraph("Category:", bold_body_style), Paragraph(service.category.name if service.category else "N/A", body_style)],
             [Paragraph("Rate Tier:", bold_body_style), Paragraph(service.rate, body_style)],
-            [Paragraph("Timeline / Speed:", bold_body_style), Paragraph(service.speed, body_style)],
+            [Paragraph("Number of Days:", bold_body_style), Paragraph(service.speed, body_style)],
             [Paragraph("Target Audience:", bold_body_style), Paragraph(service.get_target_audience_display(), body_style)],
             [Paragraph("Status:", bold_body_style), Paragraph("Active" if service.is_active else "Inactive", body_style)],
         ]

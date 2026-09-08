@@ -189,7 +189,7 @@ def create_pitch_notification(sender, instance, created, **kwargs):
                 message=f"Your pitch for '{camp_name}' has been submitted.",
                 category="campaign",
                 icon="fas fa-paper-plane",
-                target_url="/creator/pitches"
+                target_url="/creator/requests"
             )
         if brand_user:
             Notification.objects.create(
@@ -284,7 +284,7 @@ def create_pitch_delete_notification(sender, instance, **kwargs):
                 message=f"Pitch for '{camp_name}' was removed.",
                 category="campaign",
                 icon="fas fa-trash",
-                target_url="/creator/pitches"
+                target_url="/creator/requests"
             )
     except Exception:
         pass

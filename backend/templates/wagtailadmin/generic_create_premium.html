@@ -3,6 +3,9 @@
 {% block titletag %}Create {{ view.get_verbose_name.title }}{% endblock %}
 
 {% block extra_css %}
+{{ block.super }}
+{{ media.css }}
+{% if not media %}{{ form.media.css }}{% endif %}
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
     .custom-inspect-wrapper {
@@ -237,4 +240,12 @@
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    {{ media.js }}
+    {% if not media %}{{ form.media.js }}{% endif %}
+    {% if edit_handler_data %}{{ edit_handler_data|json_script:"w-edit-handler-data" }}{% endif %}
+    {% include "wagtailadmin/pages/_editor_js.html" %}
 {% endblock %}

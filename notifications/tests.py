@@ -120,3 +120,67 @@ class NotificationTests(TestCase):
             resolve_admin_redirect_url(notification),
             "/admin/snippets/campegin/campaign/inspect/42/"
         )
+
+    def test_api_notifications_routing_and_retention(self):
+        import datetime
+        from django.utils import timezone
+        from rest_framework.authtoken.models import Token
+        from user.models import CreatorProfile, BusinessProfile
+
+        creator_user = User.objects.create_user(username="test_creator_u", email="c@test.com", password="pw")
+        CreatorProfile.objects.create(user=creator_user)
+        token_c = Token.objects.create(user=creator_user)
+
+        # 1. Old notification (> 14 days ago)
+        old_time = timezone.now() - datetime.timedelta(days=15)
+        old_notif = Notification.objects.create(
+            user=creator_user,
+            target_role="creator",
+            title="Old Notification",
+            message="Too old",
+            category="campaign",
+            target_url="/creator/requests"
+        )
+        Notification.objects.filter(id=old_notif.id).update(created_at=old_time)
+
+        # 2. Fresh pitch notification with legacy /creator/pitches URL
+        pitch_notif = Notification.objects.create(
+            user=creator_user,
+            target_role="creator",
+            title="Pitch Submitted",
+            message="Your pitch was submitted",
+            category="campaign",
+            target_url="/creator/pitches"
+        )
+
+        # 3. Support complaint notification
+        complaint_notif = Notification.objects.create(
+            user=creator_user,
+            target_role="creator",
+            title="Support Ticket Created",
+            message="Ticket #5 has been opened.",
+            category="compliance",
+            target_url="/admin/complaint/inspect/5/"
+        )
+
+        # Call API as creator
+        response = self.client.get(
+            "/api/notifications/?role=creator",
+            HTTP_AUTHORIZATION=f"Token {token_c.key}"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json().get("notifications", [])
+
+        # Old notification must be deleted or excluded
+        ids = [item["id"] for item in data]
+        self.assertNotIn(old_notif.id, ids)
+        self.assertIn(pitch_notif.id, ids)
+        self.assertIn(complaint_notif.id, ids)
+
+        # Legacy /creator/pitches mapped to /creator/requests
+        p_item = next(item for item in data if item["id"] == pitch_notif.id)
+        self.assertEqual(p_item["targetUrl"], "/creator/requests")
+
+        # Support complaint mapped to /creator/support
+        c_item = next(item for item in data if item["id"] == complaint_notif.id)
+        self.assertEqual(c_item["targetUrl"], "/creator/support")

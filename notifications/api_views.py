@@ -104,15 +104,30 @@ def get_notifications(request):
                         front_url = "/business-workspace?tab=Payments" if active_role == "business" else "/creator-workspace?tab=Payments"
 
             if active_role == "business":
-                if front_url.startswith("/dashboard/business-services"):
+                if front_url.startswith("/dashboard/business-services") or front_url.startswith("/creator/business-services"):
                     front_url = "/dashboard/services"
-                elif front_url.startswith("/creator/business-services"):
-                    front_url = "/dashboard/services"
+                elif front_url.startswith("/creator/pitches") or front_url.startswith("/dashboard/pitches"):
+                    front_url = "/dashboard/requests"
+                elif front_url.startswith("/creator/profile") or front_url.startswith("/dashboard/profile"):
+                    front_url = "/dashboard/settings"
+                elif front_url.startswith("/creator/payments"):
+                    front_url = "/dashboard/payments"
                 elif "/admin/snippets/campegin/campaign/inspect/" in front_url:
                     camp_match = re.search(r'/campaign/inspect/(\d+)', front_url)
                     front_url = f"/workspace/{camp_match.group(1)}" if camp_match else "/dashboard/campaigns"
                 elif front_url.startswith("/admin/"):
-                    front_url = "/dashboard"
+                    if "complaint" in front_url or "support" in front_url or "ticket" in front_url:
+                        front_url = "/dashboard/support"
+                    elif "service" in front_url:
+                        front_url = "/dashboard/services"
+                    elif "businessprofile" in front_url or "setting" in front_url:
+                        front_url = "/dashboard/settings"
+                    elif "creatorprofile" in front_url:
+                        front_url = "/dashboard/discover"
+                    elif "campaign" in front_url:
+                        front_url = "/dashboard/campaigns"
+                    else:
+                        front_url = "/dashboard"
                 elif front_url.startswith("/creator/") and not is_payment_action:
                     if "campaign" in front_url:
                         front_url = "/dashboard/campaigns"
@@ -146,18 +161,35 @@ def get_notifications(request):
             else:
                 if front_url.startswith("/creator/business-services") or front_url.startswith("/dashboard/business-services"):
                     front_url = "/creator/services"
+                elif front_url.startswith("/creator/pitches") or front_url.startswith("/dashboard/pitches"):
+                    front_url = "/creator/requests"
+                elif front_url.startswith("/creator/profile") or front_url.startswith("/dashboard/profile"):
+                    front_url = "/creator/portfolio"
+                elif front_url.startswith("/creator/payments") or front_url.startswith("/dashboard/payments"):
+                    front_url = "/creator/earnings"
                 elif "/admin/snippets/campegin/campaign/inspect/" in front_url:
                     import re
                     camp_match = re.search(r'/campaign/inspect/(\d+)', front_url)
                     front_url = f"/workspace/{camp_match.group(1)}" if camp_match else "/creator/campaigns"
                 elif front_url.startswith("/admin/"):
-                    front_url = "/creator"
+                    if "complaint" in front_url or "support" in front_url or "ticket" in front_url:
+                        front_url = "/creator/support"
+                    elif "service" in front_url:
+                        front_url = "/creator/services"
+                    elif "creatorprofile" in front_url or "setting" in front_url:
+                        front_url = "/creator/portfolio"
+                    elif "businessprofile" in front_url:
+                        front_url = "/creator/brands"
+                    elif "campaign" in front_url:
+                        front_url = "/creator/campaigns"
+                    else:
+                        front_url = "/creator"
                 elif front_url.startswith("/dashboard/"):
                     if "campaign" in front_url:
                         front_url = "/creator/campaigns"
-                    elif "payment" in front_url:
+                    elif "payment" in front_url or "earning" in front_url:
                         front_url = "/creator/earnings"
-                    elif "request" in front_url:
+                    elif "request" in front_url or "pitch" in front_url:
                         front_url = "/creator/requests"
                     elif "service" in front_url:
                         front_url = "/creator/services"
@@ -165,6 +197,8 @@ def get_notifications(request):
                         front_url = "/creator/support"
                     elif "setting" in front_url:
                         front_url = "/creator/settings"
+                    elif "discover" in front_url:
+                        front_url = "/creator/brands"
                     else:
                         front_url = "/creator"
                 elif not front_url:
@@ -176,13 +210,19 @@ def get_notifications(request):
                     elif n.category == "compliance":
                         front_url = "/creator/support"
                     elif n.category == "signup":
-                        front_url = "/creator/profile"
+                        front_url = "/creator/portfolio"
+
+                    if "request" in n.title.lower() or "request" in n.message.lower() or "pitch" in n.title.lower():
+                        front_url = "/creator/requests"
+                    elif "service" in n.title.lower() or "service" in n.message.lower():
+                        front_url = "/creator/services"
 
             data.append({
                 "id": n.id,
                 "title": n.title,
                 "body": n.message,
                 "time": f"{timesince(n.created_at, timezone.now()).split(',')[0]} ago",
+                "created_at": n.created_at.isoformat(),
                 "read": n.is_read,
                 "category": n.category,
                 "icon": n.icon,
@@ -196,6 +236,12 @@ def get_notifications(request):
 @csrf_exempt
 def mark_read(request, pk):
     if request.method == "POST":
+        cutoff_14d = timezone.now() - datetime.timedelta(days=14)
+        try:
+            Notification.objects.filter(created_at__lt=cutoff_14d).delete()
+        except Exception:
+            pass
+
         req_user = request.user
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Token "):
@@ -218,6 +264,12 @@ def mark_read(request, pk):
 @csrf_exempt
 def mark_all_read_api(request):
     if request.method == "POST":
+        cutoff_14d = timezone.now() - datetime.timedelta(days=14)
+        try:
+            Notification.objects.filter(created_at__lt=cutoff_14d).delete()
+        except Exception:
+            pass
+
         req_user = request.user
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Token "):

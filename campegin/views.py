@@ -2023,22 +2023,56 @@ class PitchViewSet(viewsets.ModelViewSet):
         return Pitch.objects.filter(models.Q(brand=user) | models.Q(creator=user))
 
     def create(self, request, *args, **kwargs):
-        # Enforce 2 pitch requests per day limit for creator
+        # Enforce 2 pitch requests per day and 10 pitch requests per month limit for creator
         user = request.user
         if not (user.is_staff or user.is_superuser):
-            from datetime import date
-            today_str1 = date.today().strftime("%b %d, %Y")
-            today_str2 = date.today().strftime("%Y-%m-%d")
+            from datetime import date, datetime
+            today = date.today()
+            today_str1 = today.strftime("%b %d, %Y")
+            today_str2 = today.strftime("%Y-%m-%d")
+            today_str3 = f"{today.strftime('%b')} {today.day}, {today.year}"
             req_date = request.data.get("sent_date")
 
             query = Pitch.objects.filter(creator=user).filter(
                 models.Q(sent_date=today_str1) |
                 models.Q(sent_date=today_str2) |
+                models.Q(sent_date=today_str3) |
                 (models.Q(sent_date=req_date) if req_date else models.Q())
             )
             if query.count() >= 2:
                 return Response(
                     {"error": "Daily request limit reached. Creators can only send a maximum of 2 pitch requests per day."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Enforce 10 pitch requests per month limit for creator
+            month_short = today.strftime("%b").lower()
+            month_full = today.strftime("%B").lower()
+            year_str = str(today.year)
+            month_iso = today.strftime("%Y-%m")
+
+            monthly_pitches = Pitch.objects.filter(creator=user)
+            monthly_count = 0
+            for p in monthly_pitches:
+                s_date = str(p.sent_date or "").strip().lower()
+                matched = False
+                if ((month_short in s_date or month_full in s_date) and year_str in s_date) or s_date.startswith(month_iso):
+                    matched = True
+                else:
+                    for fmt in ("%b %d, %Y", "%B %d, %Y", "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y", "%Y/%m/%d"):
+                        try:
+                            d = datetime.strptime(s_date, fmt).date()
+                            if d.year == today.year and d.month == today.month:
+                                matched = True
+                                break
+                        except Exception:
+                            pass
+                if matched:
+                    monthly_count += 1
+
+            if monthly_count >= 10:
+                return Response(
+                    {"error": "Monthly request limit reached. Creators can only send a maximum of 10 pitch requests per month."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 

@@ -92,7 +92,7 @@ class BusinessServiceViewSet(SnippetViewSet):
     inspect_view_class = BusinessServiceInspectView
     inspect_template_name = "business_service/inspect_business_service.html"
     index_view_class = BusinessServiceIndexView
-    list_display = ("service_id", "title", "provider", "category", "rate", "target_audience", "is_active", "created_at")
+    list_display = ("service_id", "title", "provider", "category", "rate", "speed", "target_audience", "is_active", "created_at")
     list_export = ("service_id", "title", "provider", "category.name", "rate", "speed", "description", "bullet_points", "target_audience", "is_active", "created_at", "updated_at")
     list_filter = ("category", "target_audience", "is_active")
     search_fields = ("service_id", "title", "provider", "description")

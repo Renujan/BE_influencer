@@ -31,7 +31,8 @@ class BusinessService(models.Model):
     )
     speed = models.CharField(
         max_length=255,
-        help_text="e.g. '3-5 Days' or 'Ongoing'"
+        verbose_name="Number of Days",
+        help_text="Estimated delivery or turnaround time in number of days (e.g. '5' or '3-5 Days')."
     )
     category = models.ForeignKey(
         ServiceCategory,
