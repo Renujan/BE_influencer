@@ -57,8 +57,19 @@ class CreatorFullSettingsSerializer(serializers.Serializer):
     settings = CreatorSettingsSerializer(required=False)
 
     def to_representation(self, instance):
-        # Ensure CreatorSettings exists
-        CreatorSettings.objects.get_or_create(creator=instance)
+        # Ensure CreatorSettings exists with proper country currency format
+        from Setting.models import CreatorSettings, get_country_currency_format
+
+        expected_curr = get_country_currency_format(instance.country, instance.phone)
+
+        settings_obj, created = CreatorSettings.objects.get_or_create(
+            creator=instance,
+            defaults={"currency": expected_curr}
+        )
+        country_name = instance.country.name if instance.country else None
+        if not created and settings_obj.currency in ["USD ($)", "USD"] and (country_name or instance.phone) and country_name != "United States":
+            settings_obj.currency = expected_curr
+            settings_obj.save(update_fields=["currency"])
         
         rep = super().to_representation(instance)
         # Representation of niches

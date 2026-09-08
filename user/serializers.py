@@ -265,9 +265,19 @@ class CreatorProfileSerializer(serializers.ModelSerializer):
         return format_followers(total) if total > 0 else "0"
     
     def get_settings(self, instance):
-        from Setting.models import CreatorSettings
+        from Setting.models import CreatorSettings, get_country_currency_format
         from Setting.serializers import CreatorSettingsSerializer
-        settings_obj, _ = CreatorSettings.objects.get_or_create(creator=instance)
+
+        expected_curr = get_country_currency_format(instance.country, instance.phone)
+        settings_obj, created = CreatorSettings.objects.get_or_create(
+            creator=instance,
+            defaults={"currency": expected_curr}
+        )
+        country_name = instance.country.name if instance.country else None
+        if not created and settings_obj.currency in ["USD ($)", "USD"] and (country_name or instance.phone) and country_name != "United States":
+            settings_obj.currency = expected_curr
+            settings_obj.save(update_fields=["currency"])
+
         return CreatorSettingsSerializer(settings_obj).data
 
     def get_portfolio(self, instance):

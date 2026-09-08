@@ -999,6 +999,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
         campaign.save()
 
         Notification.objects.create(
+            target_role="admin",
             title="Campaign Counter Accepted - Awaiting Admin Approval",
             message=f"The counter offer for campaign '{campaign.name}' was accepted and is awaiting Admin Approval to become Live.",
             category="campaign",
@@ -1028,6 +1029,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
         )
 
         Notification.objects.create(
+            target_role="admin",
             title="Campaign Counter Declined",
             message=f"The counter offer for campaign '{campaign.name}' was declined. Reason: {reason}",
             category="campaign",
@@ -1086,6 +1088,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
         campaign.save()
 
         Notification.objects.create(
+            target_role="admin",
             title="Business Replied to Counter Offer",
             message=f"Business submitted a counter-response of {counter_price} for campaign '{campaign.name}'.",
             category="campaign",
@@ -1146,6 +1149,7 @@ class RequestViewSet(viewsets.ModelViewSet):
 
         if campaign.status == "Accepted_Pending_Admin":
             Notification.objects.create(
+                target_role="admin",
                 title="Campaign Counter Accepted - Awaiting Admin Approval",
                 message=f"The counter offer for campaign '{campaign.name}' was accepted and is awaiting Admin Approval to become Live.",
                 category="campaign",
@@ -1175,6 +1179,7 @@ class RequestViewSet(viewsets.ModelViewSet):
         )
 
         Notification.objects.create(
+            target_role="admin",
             title="Campaign Request Declined",
             message=f"Campaign '{campaign.name}' was declined. Reason: {reason}",
             category="campaign",
@@ -1236,6 +1241,7 @@ class RequestViewSet(viewsets.ModelViewSet):
         campaign.save()
         
         Notification.objects.create(
+            target_role="admin",
             title="Campaign Counter Offer",
             message=f"A creator counter offer of {counter_price} was submitted for campaign '{campaign.name}'.",
             category="campaign",
@@ -1257,6 +1263,7 @@ class RequestViewSet(viewsets.ModelViewSet):
         campaign.save()
         
         Notification.objects.create(
+            target_role="admin",
             title="Campaign Counter Accepted - Awaiting Admin Approval",
             message=f"The counter offer for campaign '{campaign.name}' was accepted and is awaiting Admin Approval to become Live.",
             category="campaign",

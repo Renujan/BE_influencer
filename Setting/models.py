@@ -2,6 +2,53 @@ from django.db import models
 from user.models import CreatorProfile, BusinessProfile
 from wagtail.snippets.models import register_snippet
 
+COUNTRY_CURRENCY_MAP = {
+    "United States": "USD ($)",
+    "United Kingdom": "GBP (£)",
+    "Canada": "CAD ($)",
+    "Australia": "AUD (A$)",
+    "India": "INR (₹)",
+    "Sri Lanka": "LKR (Rs)",
+    "Germany": "EUR (€)",
+    "France": "EUR (€)",
+    "Italy": "EUR (€)",
+    "Spain": "EUR (€)",
+    "Japan": "JPY (¥)",
+    "China": "CNY (¥)",
+    "South Korea": "KRW (₩)",
+    "Brazil": "BRL (R$)",
+    "Mexico": "MXN ($)",
+    "South Africa": "ZAR (R)",
+    "Nigeria": "NGN (₦)",
+    "New Zealand": "NZD ($)",
+    "Singapore": "SGD (S$)",
+    "United Arab Emirates": "AED (د.إ)",
+    "UAE": "AED (د.إ)",
+    "Saudi Arabia": "SAR (﷼)",
+    "Netherlands": "EUR (€)",
+    "Sweden": "SEK (kr)",
+    "Switzerland": "CHF (Fr)",
+}
+
+def get_country_currency_format(country=None, phone=None):
+    country_name = country.name if hasattr(country, "name") else (str(country).strip() if country else None)
+    if country_name and country_name in COUNTRY_CURRENCY_MAP:
+        return COUNTRY_CURRENCY_MAP[country_name]
+
+    clean_phone = (phone or "").strip()
+    if clean_phone.startswith("+94") or clean_phone.startswith("94"):
+        return "LKR (Rs)"
+    elif clean_phone.startswith("+91") or clean_phone.startswith("91"):
+        return "INR (₹)"
+    elif clean_phone.startswith("+44"):
+        return "GBP (£)"
+    elif clean_phone.startswith("+61"):
+        return "AUD (A$)"
+    elif clean_phone.startswith("+1"):
+        return "USD ($)"
+
+    return "LKR (Rs)"
+
 @register_snippet
 class CreatorSettings(models.Model):
     creator = models.OneToOneField(CreatorProfile, on_delete=models.CASCADE, related_name="settings")

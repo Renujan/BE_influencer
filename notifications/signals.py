@@ -299,22 +299,24 @@ def create_workspace_message_notification(sender, instance, created, **kwargs):
         b_name = getattr(camp, 'brand_name', None) or (camp.brand.username if getattr(camp, 'brand', None) else "Brand")
         c_name = getattr(camp, 'creator_name', None) or (camp.creator.username if getattr(camp, 'creator', None) else "Creator")
 
-        if camp.brand and sender_user == camp.brand and camp.creator:
+        if camp.creator and sender_user != camp.creator:
+            sender_title = b_name if sender_user == camp.brand else "Admin Support"
             Notification.objects.create(
                 user=camp.creator,
                 target_role="creator",
                 title="New Workspace Message",
-                message=f"Message from '{b_name}': {snippet}",
+                message=f"Message from '{sender_title}': {snippet}",
                 category="compliance",
                 icon="fas fa-comment-dots",
                 target_url=f"/workspace/{camp.id}"
             )
-        elif camp.creator and sender_user == camp.creator and camp.brand:
+        if camp.brand and sender_user != camp.brand:
+            sender_title = c_name if sender_user == camp.creator else "Admin Support"
             Notification.objects.create(
                 user=camp.brand,
                 target_role="business",
                 title="New Workspace Message",
-                message=f"Message from '{c_name}': {snippet}",
+                message=f"Message from '{sender_title}': {snippet}",
                 category="compliance",
                 icon="fas fa-comment-dots",
                 target_url=f"/workspace/{camp.id}"
@@ -400,7 +402,7 @@ def create_payment_notification(sender, instance, created, **kwargs):
                 message=f"Payment of ${instance.amount:,.2f} for '{instance.campaign.name}' milestone '{instance.milestone_name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-wallet",
-                target_url="/dashboard/payments"
+                target_url=f"/workspace/{instance.campaign.id}?tab=Payments"
             )
         if instance.campaign.creator:
             Notification.objects.create(
@@ -410,7 +412,7 @@ def create_payment_notification(sender, instance, created, **kwargs):
                 message=f"Payment of ${instance.amount:,.2f} for '{instance.campaign.name}' milestone '{instance.milestone_name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-wallet",
-                target_url="/creator/earnings"
+                target_url=f"/workspace/{instance.campaign.id}?tab=Payments"
             )
 
 @receiver(post_save, sender=WorkspacePaymentNegotiation)
@@ -431,7 +433,7 @@ def create_workspace_payment_negotiation_notification(sender, instance, created,
                 message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: {fp_str}.",
                 category="payment",
                 icon="fas fa-hand-holding-usd",
-                target_url="/dashboard/payments"
+                target_url=f"/workspace/{camp.id}?tab=Payments"
             )
         if camp.creator:
             Notification.objects.create(
@@ -441,7 +443,7 @@ def create_workspace_payment_negotiation_notification(sender, instance, created,
                 message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: {fp_str}.",
                 category="payment",
                 icon="fas fa-hand-holding-usd",
-                target_url="/creator/earnings"
+                target_url=f"/workspace/{camp.id}?tab=Payments"
             )
 
 @receiver(post_save, sender=WorkspaceInstallment)
@@ -464,7 +466,7 @@ def create_workspace_installment_notification(sender, instance, created, **kwarg
                 message=f"Installment '{milestone_title}' ({amt_str}) for '{camp.name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-file-invoice-dollar",
-                target_url="/dashboard/payments"
+                target_url=f"/workspace/{camp.id}?tab=Payments"
             )
         if camp.creator:
             Notification.objects.create(
@@ -474,7 +476,7 @@ def create_workspace_installment_notification(sender, instance, created, **kwarg
                 message=f"Installment '{milestone_title}' ({amt_str}) for '{camp.name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-file-invoice-dollar",
-                target_url="/creator/earnings"
+                target_url=f"/workspace/{camp.id}?tab=Payments"
             )
 
 # --- Portfolio Item Signals ---
@@ -546,7 +548,7 @@ def create_business_service_request_notification(sender, instance, created, **kw
             message=f"Inquiry submitted for service '{instance.service.title}' (Provider: {instance.service.provider}).",
             category="campaign",
             icon="fas fa-paper-plane",
-            target_url="/dashboard/business-services" if t_role == "business" else "/creator/business-services"
+            target_url="/dashboard/services" if t_role == "business" else "/creator/services"
         )
     else:
         old_status = getattr(instance, "_old_status", None)
@@ -562,7 +564,7 @@ def create_business_service_request_notification(sender, instance, created, **kw
                     message=f"Inquiry for '{instance.service.title}' has been successfully connected.",
                     category="campaign",
                     icon="fas fa-handshake",
-                    target_url="/dashboard/business-services" if t_role == "business" else "/creator/business-services"
+                    target_url="/dashboard/services" if t_role == "business" else "/creator/services"
                 )
             elif instance.status == "declined":
                 Notification.objects.create(
@@ -572,7 +574,7 @@ def create_business_service_request_notification(sender, instance, created, **kw
                     message=f"Inquiry for '{instance.service.title}' has been declined.",
                     category="campaign",
                     icon="fas fa-times-circle",
-                    target_url="/dashboard/business-services" if t_role == "business" else "/creator/business-services"
+                    target_url="/dashboard/services" if t_role == "business" else "/creator/services"
                 )
 
 

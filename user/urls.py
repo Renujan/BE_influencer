@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     SendOTPView, VerifyOTPView, RegisterView, LoginView, GoogleLoginView, MeView,
+    ForgotPasswordView, VerifyResetOTPView, ResetPasswordView,
     NicheViewSet, BusinessTypeViewSet, CountryViewSet, MediumViewSet, CreatorViewSet, BusinessViewSet, PendingUsersView, ApproveUserView, RestrictUserView,
     SubmitVerificationView, CreatorSubmitVerificationView, WithdrawFundsView, toggle_save_brand,
     RequestCreatorDeletionView, CancelCreatorDeletionView, AdminHandleCreatorDeletionView,
@@ -21,6 +22,9 @@ urlpatterns = [
     # Auth endpoints
     path("auth/send-otp/", SendOTPView.as_view(), name="send_otp"),
     path("auth/verify-otp/", VerifyOTPView.as_view(), name="verify_otp"),
+    path("auth/forgot-password/", ForgotPasswordView.as_view(), name="forgot_password"),
+    path("auth/verify-reset-otp/", VerifyResetOTPView.as_view(), name="verify_reset_otp"),
+    path("auth/reset-password/", ResetPasswordView.as_view(), name="reset_password"),
     path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/signup/", RegisterView.as_view(), name="signup"),
     path("auth/login/", LoginView.as_view(), name="login"),

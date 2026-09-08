@@ -354,7 +354,7 @@ class OTPVerification(models.Model):
     otp_code = models.CharField(max_length=6)
     otp_method = models.CharField(max_length=10, choices=[("email", "Email"), ("mobile", "Mobile")], default="email")
     role = models.CharField(max_length=20, choices=[("business", "Business"), ("influencer", "Creator")], default="influencer")
-    purpose = models.CharField(max_length=20, choices=[("signin", "Sign In"), ("signup", "Sign Up")], default="signup")
+    purpose = models.CharField(max_length=20, choices=[("signin", "Sign In"), ("signup", "Sign Up"), ("forgot_password", "Forgot Password")], default="signup")
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

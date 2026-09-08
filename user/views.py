@@ -339,7 +339,172 @@ class VerifyOTPView(APIView):
             })
         else:
             return Response({"error": "Invalid OTP code"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+class ForgotPasswordView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = (request.data.get("email") or "").strip().lower()
+        if not email:
+            return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            return Response({"error": "No account found with this email address."}, status=status.HTTP_404_NOT_FOUND)
+
+        profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+        if profile and profile.status == "restricted":
+            return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+
+        role = "business" if hasattr(user, "business_profile") else "influencer"
+        otp = str(random.randint(100000, 999999))
+
+        # Clear any existing forgot_password OTP records for this email
+        OTPVerification.objects.filter(email__iexact=email, purpose="forgot_password").delete()
+        OTPVerification.objects.create(
+            email=email,
+            otp_code=otp,
+            otp_method="email",
+            role=role,
+            purpose="forgot_password",
+            is_verified=False
+        )
+
+        user_display_name = user.first_name or user.username or "there"
+        # Send Email
+        try:
+            send_mail(
+                subject="Reset Your Ampli Password",
+                message=(
+                    f"Hi {user_display_name},\n\n"
+                    f"We received a request to reset your Ampli account password.\n\n"
+                    f"Your password reset verification code is:\n\n"
+                    f"  {otp}\n\n"
+                    f"This code will expire in 10 minutes. If you did not request this password reset, please ignore this email or contact support.\n\n"
+                    f"Best regards,\nThe Ampli Team"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+                html_message=(
+                    f"""
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 520px; margin: auto; padding: 32px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+                      <div style="text-align: center; margin-bottom: 24px;">
+                        <h2 style="color: #2F54EB; font-size: 24px; font-weight: 700; margin: 0;">Ampli</h2>
+                        <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Password Reset Request</p>
+                      </div>
+                      <p style="color: #334155; font-size: 15px; line-height: 1.6;">Hi <strong>{user_display_name}</strong>,</p>
+                      <p style="color: #475569; font-size: 15px; line-height: 1.6;">We received a request to reset your password. Use the verification code below to complete the reset process:</p>
+                      <div style="background: #f8fafc; border: 2px dashed #2F54EB; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
+                        <span style="font-size: 38px; font-weight: 800; letter-spacing: 8px; color: #2F54EB; font-family: monospace;">{otp}</span>
+                      </div>
+                      <p style="color: #64748b; font-size: 13px; line-height: 1.5;">This code expires in <strong>10 minutes</strong>. If you did not request a password reset, you can safely ignore this email.</p>
+                      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+                      <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 0;">Sent securely by Ampli Platform</p>
+                    </div>
+                    """
+                ),
+            )
+            print(f"\n[PASSWORD RESET OTP] Sent to: {user.email} | Code: {otp}\n")
+        except Exception as e:
+            print(f"\n[PASSWORD RESET OTP] SMTP error: {e}")
+            print(f"[PASSWORD RESET OTP] Fallback code for {user.email}: {otp}\n")
+            return Response({
+                "message": "Password reset code generated.",
+                "otp_code": otp,
+                "email": user.email
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "message": f"Password reset verification code sent to {user.email}.",
+            "email": user.email
+        }, status=status.HTTP_200_OK)
+
+
+class VerifyResetOTPView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = (request.data.get("email") or "").strip().lower()
+        otp_code = (request.data.get("otp_code") or "").strip()
+
+        if not email or not otp_code:
+            return Response({"error": "Email and OTP code are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_record = OTPVerification.objects.filter(
+            email__iexact=email,
+            otp_code=otp_code,
+            purpose="forgot_password"
+        ).order_by("-created_at").first()
+
+        if not otp_record:
+            return Response({"error": "Invalid verification code."}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.utils import timezone
+        import datetime
+        if timezone.now() - otp_record.created_at > datetime.timedelta(minutes=10):
+            return Response({"error": "Verification code has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_record.is_verified = True
+        otp_record.save()
+
+        return Response({
+            "message": "Verification code verified successfully.",
+            "is_verified": True
+        }, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = (request.data.get("email") or "").strip().lower()
+        otp_code = (request.data.get("otp_code") or "").strip()
+        new_password = request.data.get("new_password") or ""
+        confirm_password = request.data.get("confirm_password") or ""
+
+        if not email or not otp_code or not new_password or not confirm_password:
+            return Response({"error": "All fields are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_password != confirm_password:
+            return Response({"error": "Passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(new_password) < 8:
+            return Response({"error": "Password must be at least 8 characters long."}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_record = OTPVerification.objects.filter(
+            email__iexact=email,
+            otp_code=otp_code,
+            purpose="forgot_password"
+        ).order_by("-created_at").first()
+
+        if not otp_record:
+            return Response({"error": "Invalid or expired verification code."}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.utils import timezone
+        import datetime
+        if timezone.now() - otp_record.created_at > datetime.timedelta(minutes=10):
+            return Response({"error": "Verification code has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            return Response({"error": "No account found with this email."}, status=status.HTTP_404_NOT_FOUND)
+
+        profile = getattr(user, "business_profile", None) or getattr(user, "creator_profile", None)
+        if profile and profile.status == "restricted":
+            return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
+
+        user.set_password(new_password)
+        user.save()
+
+        # Clean up the used OTP
+        OTPVerification.objects.filter(email__iexact=email, purpose="forgot_password").delete()
+
+        return Response({
+            "message": "Password has been successfully reset. You can now log in with your new password."
+        }, status=status.HTTP_200_OK)
+
+
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -558,6 +723,14 @@ class RegisterView(APIView):
                     
             profile.otp_verified = True
             profile.save()
+
+            from Setting.models import CreatorSettings, get_country_currency_format
+            country_curr = get_country_currency_format(profile.country, profile.phone)
+            CreatorSettings.objects.update_or_create(
+                creator=profile,
+                defaults={"currency": country_curr}
+            )
+
             profile_data = CreatorProfileSerializer(profile).data
 
         token, _ = Token.objects.get_or_create(user=user)
@@ -778,6 +951,14 @@ class GoogleLoginView(APIView):
                             profile.mediums.add(medium_obj)
 
                     profile.save()
+
+                    from Setting.models import CreatorSettings, get_country_currency_format
+                    country_curr = get_country_currency_format(profile.country, profile.phone)
+
+                    CreatorSettings.objects.update_or_create(
+                        creator=profile,
+                        defaults={"currency": country_curr}
+                    )
                 
                 password = request.data.get("password")
                 if password:
@@ -1021,6 +1202,13 @@ class GoogleLoginView(APIView):
                         profile.mediums.add(medium_obj)
 
                 profile.save()
+
+                from Setting.models import CreatorSettings, get_country_currency_format
+                country_curr = get_country_currency_format(profile.country, profile.phone)
+                CreatorSettings.objects.update_or_create(
+                    creator=profile,
+                    defaults={"currency": country_curr}
+                )
 
         # 3. Retrieve or create Auth Token
         token, _ = Token.objects.get_or_create(user=user)
