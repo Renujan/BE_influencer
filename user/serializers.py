@@ -219,15 +219,45 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         return instance.user.brand_campaigns.exclude(creator__isnull=True).values('creator').distinct().count()
 
     def get_total_spent(self, instance):
-        from django.db.models import Sum
-        total = instance.user.brand_campaigns.aggregate(Sum('budget'))['budget__sum']
-        return float(total) if total else 0.0
+        try:
+            from WorkspacePayment.models import WorkspaceInstallment, WorkspacePaymentNegotiation
+            from django.db.models import Sum, Q
+            paid_biz_insts = WorkspaceInstallment.objects.filter(
+                campaign__brand=instance.user,
+                installment_type='business'
+            ).filter(Q(is_paid=True) | Q(status__iexact='released'))
+            biz_insts_sum = float(paid_biz_insts.aggregate(total=Sum("amount"))["total"] or 0)
+
+            paid_negs = WorkspacePaymentNegotiation.objects.filter(campaign__brand=instance.user, business_fee_is_paid=True)
+            biz_fee_sum = sum(float(neg.business_platform_charge_amount or 0) for neg in paid_negs)
+
+            # Legacy completed campaigns without workspace payments
+            legacy_completed = instance.user.brand_campaigns.filter(
+                status__in=["Completed", "completed", "Finished", "finished", "Done", "done"]
+            ).filter(workspace_installments__isnull=True).distinct()
+            legacy_sum = float(legacy_completed.aggregate(total=Sum("budget"))["total"] or 0)
+
+            return round(biz_insts_sum + biz_fee_sum + legacy_sum, 2)
+        except Exception:
+            return 0.0
     
     def get_settings(self, instance):
         from Setting.models import BusinessSettings
         from Setting.serializers import BusinessSettingsSerializer
         settings_obj, _ = BusinessSettings.objects.get_or_create(business=instance)
         return BusinessSettingsSerializer(settings_obj).data
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        active_names = [bt.name for bt in instance.business_types.all() if bt.name]
+        if active_names:
+            rep["business_type"] = ", ".join(active_names)
+        elif instance.business_type:
+            from user.models import BusinessType
+            valid_types = set(BusinessType.objects.values_list("name", flat=True))
+            filtered = [t.strip() for t in instance.business_type.split(",") if t.strip() and t.strip() in valid_types]
+            rep["business_type"] = ", ".join(filtered) if filtered else None
+        return rep
 
 class CreatorProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)

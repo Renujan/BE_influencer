@@ -139,7 +139,7 @@ class SendOTPView(APIView):
                 except Exception as e:
                     print(f"\n[EMAIL OTP - SIGNUP] SMTP error: {e}")
                     print(f"[EMAIL OTP - SIGNUP] Fallback code for {email}: {otp}\n")
-                    return Response({"message": f"OTP generated (email delivery failed): {e}", "otp_code": otp, "otp_method": "email"}, status=status.HTTP_200_OK)
+                    return Response({"message": "OTP generated. Email delivery could not be completed, please check your inbox shortly or contact support.", "otp_method": "email"}, status=status.HTTP_200_OK)
 
                 return Response({"message": f"OTP successfully sent to email {email}", "otp_method": "email"})
 
@@ -228,7 +228,7 @@ class SendOTPView(APIView):
                 except Exception as e:
                     print(f"\n[EMAIL OTP - SIGNIN] SMTP error: {e}")
                     print(f"[EMAIL OTP - SIGNIN] Fallback code for {recipient_email}: {otp}\n")
-                    return Response({"message": f"OTP generated (email delivery failed): {e}", "otp_code": otp, "otp_method": "email"}, status=status.HTTP_200_OK)
+                    return Response({"message": "OTP generated. Email delivery could not be completed, please check your inbox shortly or contact support.", "otp_method": "email"}, status=status.HTTP_200_OK)
 
                 return Response({"message": f"OTP successfully sent to email {recipient_email}", "otp_method": "email"})
 
@@ -410,8 +410,7 @@ class ForgotPasswordView(APIView):
             print(f"\n[PASSWORD RESET OTP] SMTP error: {e}")
             print(f"[PASSWORD RESET OTP] Fallback code for {user.email}: {otp}\n")
             return Response({
-                "message": "Password reset code generated.",
-                "otp_code": otp,
+                "message": "Password reset code generated. Email delivery could not be completed, please check your inbox shortly or contact support.",
                 "email": user.email
             }, status=status.HTTP_200_OK)
 
@@ -549,7 +548,11 @@ class RegisterView(APIView):
         else:
             # No user exists with this email, check if username is taken
             if User.objects.filter(username__iexact=username).exists():
-                return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
+                base_username = username
+                counter = 1
+                while User.objects.filter(username__iexact=username).exists():
+                    username = f"{base_username}{counter}"
+                    counter += 1
 
             # Create new user
             user = User.objects.create_user(
@@ -744,7 +747,7 @@ class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        username_or_email = request.data.get("username") or request.data.get("email")
+        username_or_email = (request.data.get("username") or request.data.get("email") or "").strip()
         password = request.data.get("password")
         # Role the user selected on the login screen ("business" or "influencer")
         requested_role = request.data.get("role")
@@ -752,11 +755,20 @@ class LoginView(APIView):
         if not username_or_email or not password:
             return Response({"error": "Credentials are required"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 1. Try direct authenticate with given username/email
         user = authenticate(username=username_or_email, password=password)
+
+        # 2. Try case-insensitive username lookup
         if not user:
-            user_obj = User.objects.filter(email=username_or_email).first()
-            if user_obj:
-                user = authenticate(username=user_obj.username, password=password)
+            user_by_username = User.objects.filter(username__iexact=username_or_email).first()
+            if user_by_username:
+                user = authenticate(username=user_by_username.username, password=password)
+
+        # 3. Try case-insensitive email lookup
+        if not user:
+            user_by_email = User.objects.filter(email__iexact=username_or_email).first()
+            if user_by_email:
+                user = authenticate(username=user_by_email.username, password=password)
 
         if not user:
             return Response({"error": "Invalid username/email or password"}, status=status.HTTP_400_BAD_REQUEST)
@@ -765,27 +777,32 @@ class LoginView(APIView):
         if profile and profile.status == "restricted":
             return Response({"error": "This account is permanently restricted."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Determine the actual role of this account
-        actual_role = "business" if hasattr(user, "business_profile") else "influencer"
+        # Safely determine the actual role of this account
+        business_prof = getattr(user, "business_profile", None)
+        creator_prof = getattr(user, "creator_profile", None)
 
-        # If the frontend sent a role, enforce it — reject cross-role logins
-        if requested_role and requested_role != actual_role:
+        if business_prof:
+            actual_role = "business"
+            profile_data = BusinessProfileSerializer(business_prof).data
+        elif creator_prof:
+            actual_role = "influencer"
+            profile_data = CreatorProfileSerializer(creator_prof).data
+        else:
+            actual_role = requested_role or "business"
+            profile_data = None
+
+        # If the frontend sent a role, enforce it when a profile exists — reject cross-role logins
+        if requested_role and (business_prof or creator_prof) and requested_role != actual_role:
             return Response(
-                {"error": f"This email is registered as a {'Creator' if actual_role == 'influencer' else 'Business'}. Please log in with the correct role selection."},
+                {"error": f"This account is registered as a {'Creator' if actual_role == 'influencer' else 'Business'}. Please log in with the correct role selection."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
         token, _ = Token.objects.get_or_create(user=user)
 
-        role = actual_role
-        if role == "business":
-            profile_data = BusinessProfileSerializer(user.business_profile).data
-        else:
-            profile_data = CreatorProfileSerializer(user.creator_profile).data
-
         return Response({
             "token": token.key,
-            "role": role,
+            "role": actual_role,
             "profile": profile_data
         })
 
@@ -1361,8 +1378,8 @@ class NicheViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        active_only = self.request.query_params.get("active_only")
-        if active_only and active_only.lower() in ["true", "1"]:
+        include_all = self.request.query_params.get("include_all") or self.request.query_params.get("all")
+        if not (include_all and include_all.lower() in ["true", "1"]):
             qs = qs.filter(is_active=True)
         return qs
 

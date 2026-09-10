@@ -329,6 +329,30 @@
         </div>
     </div>
 
+    <!-- SYNCHRONIZED MILESTONE DIVISION (COMMON PANEL) -->
+    <div style="background: #faf5ff; border: 1.5px solid #d8b4fe; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div>
+            <div style="font-size: 14px; font-weight: 700; color: #6b21a8; display: flex; align-items: center; gap: 6px;">
+                ⚡ Synchronized Milestone Division (Both Business &amp; Creator)
+            </div>
+            <div style="font-size: 12px; color: #7e22ce; margin-top: 3px;">
+                Divide both parties simultaneously into the same ratio:
+                Business Pool (<strong>{{ formatted_target_business_pool }}</strong>) &amp; Creator Pool (<strong>{{ formatted_target_creator_pool }}</strong>).
+            </div>
+        </div>
+        <form method="POST" style="margin: 0; display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            {% csrf_token %}
+            <input type="hidden" name="action_type" value="divide_installments">
+            <input type="hidden" name="installment_type" value="both">
+            <button type="submit" name="preset" value="3_milestones" class="btn-action" style="background-color: #7c3aed; border-color: #6d28d9; padding: 8px 16px; font-weight: 600;">
+                Divide into 3 Milestones (30% / 40% / 30%)
+            </button>
+            <button type="submit" name="preset" value="50_50" class="btn-preset" style="border-color: #c084fc; color: #6b21a8; padding: 8px 16px; font-weight: 600; background: #ffffff;">
+                Divide into 2 Milestones (50% / 50%)
+            </button>
+        </form>
+    </div>
+
     <!-- 1. BUSINESS MILESTONE INSTALLMENTS SECTION -->
     <div class="divide-section" style="border-top: 3px solid #2563eb;">
         <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -344,13 +368,18 @@
         </div>
 
         <!-- Quick Divide for Business -->
-        <form method="POST" style="margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <form method="POST" style="margin-bottom: 16px; background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             {% csrf_token %}
             <input type="hidden" name="action_type" value="divide_installments">
-            <input type="hidden" name="installment_type" value="business">
-            <p style="font-size: 12px; color: #64748b; margin-bottom: 8px;">Quick Divide Business Total Payable Pool (<strong>{{ formatted_target_business_pool }}</strong>) into Inbound Milestones:</p>
-            <button type="submit" name="preset" value="3_milestones" class="btn-action">Divide into 3 Milestones (30% / 40% / 30%)</button>
-            <button type="submit" name="preset" value="50_50" class="btn-preset">Divide into 2 Milestones (50% / 50%)</button>
+            <input type="hidden" name="installment_type" value="both">
+            <div>
+                <p style="font-size: 12px; color: #1e3a8a; font-weight: 600; margin: 0 0 2px 0;">Quick Divide Business Total Payable Pool (<strong>{{ formatted_target_business_pool }}</strong>) into Inbound Milestones:</p>
+                <span style="font-size: 11px; color: #64748b;">(Applies matching ratio to both Business and Creator installments using their respective pool amounts)</span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="submit" name="preset" value="3_milestones" class="btn-action">Divide into 3 Milestones (30% / 40% / 30%)</button>
+                <button type="submit" name="preset" value="50_50" class="btn-preset">Divide into 2 Milestones (50% / 50%)</button>
+            </div>
         </form>
 
         <table class="table-custom">
@@ -486,13 +515,18 @@
         </div>
 
         <!-- Quick Divide for Creator -->
-        <form method="POST" style="margin-bottom: 16px; background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0;">
+        <form method="POST" style="margin-bottom: 16px; background: #f0fdf4; padding: 12px 14px; border-radius: 8px; border: 1px solid #bbf7d0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             {% csrf_token %}
             <input type="hidden" name="action_type" value="divide_installments">
-            <input type="hidden" name="installment_type" value="creator">
-            <p style="font-size: 12px; color: #166534; margin-bottom: 8px;">Quick Divide Creator Net Pool (<strong>{{ formatted_target_creator_pool }}</strong>) into Outbound Milestones:</p>
-            <button type="submit" name="preset" value="3_milestones" class="btn-action-emerald">Divide into 3 Milestones (30% / 40% / 30%)</button>
-            <button type="submit" name="preset" value="50_50" class="btn-preset">Divide into 2 Milestones (50% / 50%)</button>
+            <input type="hidden" name="installment_type" value="both">
+            <div>
+                <p style="font-size: 12px; color: #166534; font-weight: 600; margin: 0 0 2px 0;">Quick Divide Creator Net Pool (<strong>{{ formatted_target_creator_pool }}</strong>) into Outbound Milestones:</p>
+                <span style="font-size: 11px; color: #64748b;">(Applies matching ratio to both Creator and Business installments using their respective pool amounts)</span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="submit" name="preset" value="3_milestones" class="btn-action-emerald">Divide into 3 Milestones (30% / 40% / 30%)</button>
+                <button type="submit" name="preset" value="50_50" class="btn-preset">Divide into 2 Milestones (50% / 50%)</button>
+            </div>
         </form>
 
         <table class="table-custom">

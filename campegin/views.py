@@ -199,7 +199,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
         name_val = str(data.get("name", "")).strip()
         if not name_val:
             return Response({"name": ["Campaign name is required."]}, status=status.HTTP_400_BAD_REQUEST)
-        if Campaign.objects.filter(brand=request.user, name__iexact=name_val).exists():
+        if Campaign.objects.filter(name__iexact=name_val).exists():
             return Response({"name": ["A campaign with this name already exists. Please choose a unique campaign name."]}, status=status.HTTP_400_BAD_REQUEST)
 
         # Distinguish Campaign Category and Niche
@@ -238,13 +238,14 @@ class CampaignViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop('partial', True)
         instance = self.get_object()
-        # Only pending campaigns can be edited by non-staff users
+        # Only under review campaigns can be edited by non-staff users (once admin approved, edit option is locked)
         if not (request.user.is_staff or request.user.is_superuser):
-            if str(instance.status or "").lower() != "pending":
+            status_clean = str(instance.status or "").lower().replace(" ", "").replace("_", "").replace("-", "")
+            if status_clean != "underreview":
                 return Response(
-                    {"detail": "Only pending campaigns can be edited."},
+                    {"detail": "Only campaigns under review can be edited. Admin approved campaigns cannot be modified."},
                     status=status.HTTP_403_FORBIDDEN
                 )
 
@@ -280,7 +281,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
             name_val = str(data.get("name", "")).strip()
             if not name_val:
                 return Response({"name": ["Campaign name is required."]}, status=status.HTTP_400_BAD_REQUEST)
-            if Campaign.objects.filter(brand=request.user, name__iexact=name_val).exclude(id=instance.id).exists():
+            if Campaign.objects.filter(name__iexact=name_val).exclude(id=instance.id).exists():
                 return Response({"name": ["A campaign with this name already exists. Please choose a unique campaign name."]}, status=status.HTTP_400_BAD_REQUEST)
 
         # Distinguish Campaign Category and Niche
@@ -326,18 +327,26 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 if not re.search(r'\b(19\d\d|20\d\d)\b', e_date):
                     e_date = f"{e_date}, {datetime.now().year}"
                 data["end_date"] = e_date
-        serializer = self.get_serializer(instance, data=data, partial=partial)
+
+        # Remove string media file fields from serializer data so DRF FileField does not reject strings.
+        # perform_update handles preserving/saving media paths via clean_media_path or request.FILES.
+        for media_key in ["voice_brief", "screenshare_brief", "video_brief"]:
+            if media_key in data and isinstance(data[media_key], str):
+                data.pop(media_key, None)
+
+        serializer = self.get_serializer(instance, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Only pending campaigns can be deleted by non-staff users
+        # Only pending or under review campaigns can be deleted by non-staff users
         if not (request.user.is_staff or request.user.is_superuser):
-            if str(instance.status or "").lower() != "pending":
+            status_clean = str(instance.status or "").lower().replace(" ", "").replace("_", "").replace("-", "")
+            if status_clean not in ["underreview", "pending"]:
                 return Response(
-                    {"detail": "Only pending campaigns can be deleted."},
+                    {"detail": "Only pending or under review campaigns can be deleted."},
                     status=status.HTTP_403_FORBIDDEN
                 )
         self.perform_destroy(instance)
@@ -1464,12 +1473,17 @@ class CampaignSettingsView(APIView):
         platforms = CampaignPlatform.objects.all()
         niches = CampaignNiche.objects.filter(is_active=True)
 
+        campaign_names = list(Campaign.objects.values_list("name", flat=True).distinct())
+        pitch_names = list(Pitch.objects.values_list("campaign_name", flat=True).distinct())
+        all_campaign_names = list(set([n.strip() for n in (campaign_names + pitch_names) if n and n.strip()]))
+
         return Response({
             "categories": CampaignCategorySerializer(categories, many=True).data,
             "languages": CampaignLanguageSerializer(languages, many=True).data,
             "deliverables": CampaignDeliverableSerializer(deliverables, many=True).data,
             "platforms": CampaignPlatformSerializer(platforms, many=True).data,
             "niches": CampaignNicheSerializer(niches, many=True).data,
+            "campaign_names": all_campaign_names,
         })
 
     def post(self, request):

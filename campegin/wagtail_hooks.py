@@ -1027,12 +1027,14 @@ class WorkspacePaymentInspectView(InspectView):
             return redirect(request.path)
 
         elif action_type == 'divide_installments':
-            preset = request.POST.get('preset')
-            installment_type = request.POST.get('installment_type', 'creator')
+            preset = request.POST.get('preset', '3_milestones')
+            installment_type = request.POST.get('installment_type', 'both')
 
             final_val = float(negotiation.final_price or 0)
             biz_fee = float(negotiation.business_platform_charge_amount or 0)
             creator_fee = float(negotiation.creator_platform_charge_amount or 0)
+            target_business_pool = float(negotiation.business_total_payment or (final_val + biz_fee))
+            target_creator_pool = float(negotiation.creator_net_received or (final_val - creator_fee))
 
             symbol = "Rs"
             if campaign and campaign.country:
@@ -1055,47 +1057,80 @@ class WorkspacePaymentInspectView(InspectView):
 
             from WorkspacePayment.models import WorkspaceInstallment
 
-            WorkspaceInstallment.objects.filter(campaign=campaign, installment_type=installment_type).delete()
+            # Synchronize both Business and Creator installments to the exact same ratio
+            types_to_divide = ['business', 'creator']
 
-            if installment_type == 'business':
-                target_pool = float(negotiation.business_total_payment or (final_val + biz_fee))
-                if preset == '3_milestones':
-                    items = [
-                        ('Milestone 1 (30%)', round((final_val * 0.3) + biz_fee, 2), f"Includes full platform charge fee (+{symbol}{biz_fee:,.2f})"),
-                        ('Milestone 2 (40%)', round(final_val * 0.4, 2), None),
-                        ('Milestone 3 (30%)', round(final_val * 0.3, 2), None),
-                    ]
-                else:
-                    items = [
-                        ('Installment 1 (50%)', round((final_val * 0.5) + biz_fee, 2), f"Includes full platform charge fee (+{symbol}{biz_fee:,.2f})"),
-                        ('Installment 2 (50%)', round(final_val * 0.5, 2), None),
-                    ]
+            if negotiation:
+                WorkspaceInstallment.objects.filter(negotiation=negotiation, installment_type__in=types_to_divide).delete()
             else:
-                target_pool = float(negotiation.creator_net_received or (final_val - creator_fee))
-                if preset == '3_milestones':
-                    items = [
-                        ('Kickoff payment (30%)', round((final_val * 0.3) - creator_fee, 2), f"Includes full platform charge fee deduction (-{symbol}{creator_fee:,.2f})"),
-                        ('Drafts approved (40%)', round(final_val * 0.4, 2), None),
-                        ('Final delivery (30%)', round(final_val * 0.3, 2), None),
-                    ]
-                else:
-                    items = [
-                        ('Installment 1 (50%)', round((final_val * 0.5) - creator_fee, 2), f"Includes full platform charge fee deduction (-{symbol}{creator_fee:,.2f})"),
-                        ('Installment 2 (50%)', round(final_val * 0.5, 2), None),
-                    ]
+                WorkspaceInstallment.objects.filter(campaign=campaign, installment_type__in=types_to_divide).delete()
 
-            for title, amt, desc in items:
+            # Business Milestone Items (Inbound)
+            b_desc = f"Includes full platform charge fee (+{symbol}{biz_fee:,.2f})" if biz_fee > 0 else None
+            if preset == '3_milestones':
+                b_m1 = round((final_val * 0.3) + biz_fee, 2)
+                b_m2 = round(final_val * 0.4, 2)
+                b_m3 = round(target_business_pool - (b_m1 + b_m2), 2)
+                business_items = [
+                    ('Milestone 1 (30%)', b_m1, b_desc),
+                    ('Milestone 2 (40%)', b_m2, None),
+                    ('Milestone 3 (30%)', b_m3, None),
+                ]
+            else:
+                b_i1 = round((final_val * 0.5) + biz_fee, 2)
+                b_i2 = round(target_business_pool - b_i1, 2)
+                business_items = [
+                    ('Installment 1 (50%)', b_i1, b_desc),
+                    ('Installment 2 (50%)', b_i2, None),
+                ]
+
+            for title, amt, desc in business_items:
                 WorkspaceInstallment.objects.create(
                     campaign=campaign,
                     negotiation=negotiation,
-                    installment_type=installment_type,
+                    installment_type='business',
                     title=title,
                     description=desc,
                     amount=amt,
                     status='pending'
                 )
-            party_label = "Business" if installment_type == 'business' else "Creator"
-            messages.success(request, f"Divided {party_label} pool ({target_pool:,.2f}) into milestone installments (Platform fee included in 1st installment).")
+
+            # Creator Milestone Items (Outbound)
+            c_desc = f"Includes full platform charge fee deduction (-{symbol}{creator_fee:,.2f})" if creator_fee > 0 else None
+            if preset == '3_milestones':
+                c_m1 = round((final_val * 0.3) - creator_fee, 2)
+                c_m2 = round(final_val * 0.4, 2)
+                c_m3 = round(target_creator_pool - (c_m1 + c_m2), 2)
+                creator_items = [
+                    ('Kickoff payment (30%)', c_m1, c_desc),
+                    ('Drafts approved (40%)', c_m2, None),
+                    ('Final delivery (30%)', c_m3, None),
+                ]
+            else:
+                c_i1 = round((final_val * 0.5) - creator_fee, 2)
+                c_i2 = round(target_creator_pool - c_i1, 2)
+                creator_items = [
+                    ('Installment 1 (50%)', c_i1, c_desc),
+                    ('Installment 2 (50%)', c_i2, None),
+                ]
+
+            for title, amt, desc in creator_items:
+                WorkspaceInstallment.objects.create(
+                    campaign=campaign,
+                    negotiation=negotiation,
+                    installment_type='creator',
+                    title=title,
+                    description=desc,
+                    amount=amt,
+                    status='pending'
+                )
+
+            ratio_label = "3 Milestones (30% / 40% / 30%)" if preset == '3_milestones' else "2 Milestones (50% / 50%)"
+            messages.success(
+                request,
+                f"Divided both Business pool ({symbol}{target_business_pool:,.2f}) and Creator pool ({symbol}{target_creator_pool:,.2f}) into {ratio_label} installments."
+            )
+            return redirect(request.path)
 
         elif action_type == 'add_installment_manual':
             installment_type = request.POST.get('installment_type', 'creator')

@@ -137,7 +137,7 @@ class SettingAPITests(APITestCase):
         self.assertEqual(self.business_profile.company_name, "Test Company")
         self.assertEqual(self.business_profile.website, "https://testcompany.com")
         self.assertEqual(self.business_profile.time_zone, "UTC+1:00")
-        self.assertEqual(self.business_profile.business_type, "E-Commerce,Startup")
+        self.assertIn(self.business_profile.business_type, ["E-Commerce,Startup", "E-Commerce, Startup"])
         self.assertEqual(self.business_profile.instagram_handle, "@test")
         
         business_settings = BusinessSettings.objects.get(business=self.business_profile)

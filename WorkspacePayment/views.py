@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone
 from campegin.models import Campaign
 from .models import WorkspacePaymentNegotiation, WorkspaceInstallment
 from .serializers import WorkspacePaymentNegotiationSerializer, WorkspaceInstallmentSerializer
@@ -70,7 +71,7 @@ def propose_final_price(request):
 def business_action(request):
     campaign_id = request.data.get('campaign_id')
     action = request.data.get('action') # 'accept' or 'revise'
-    revision_reason = request.data.get('revision_reason', '')
+    revision_reason = request.data.get('revision_reason') or request.data.get('reason') or request.data.get('revisionReason') or ''
 
     if not campaign_id or action not in ['accept', 'revise']:
         return Response({'error': 'campaign_id and valid action (accept or revise) are required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -125,6 +126,20 @@ def business_action(request):
             if revision_reason:
                 negotiation.revision_reason = str(revision_reason).strip()
 
+            camp = getattr(negotiation, 'campaign', None)
+            if camp:
+                if negotiation.final_price is not None:
+                    camp.counter_price = negotiation.final_price
+                history = list(camp.counter_history) if isinstance(camp.counter_history, list) else []
+                history.append({
+                    'price': float(negotiation.final_price) if negotiation.final_price is not None else None,
+                    'by': 'business',
+                    'reason': str(revision_reason).strip() if revision_reason else '',
+                    'created_at': timezone.now().isoformat()
+                })
+                camp.counter_history = history
+                camp.save()
+
         if request.user and request.user.is_authenticated:
             negotiation.action_by = request.user
 
@@ -141,7 +156,7 @@ def business_action(request):
 def creator_action(request):
     campaign_id = request.data.get('campaign_id')
     action = request.data.get('action') # 'accept' or 'revise'
-    revision_reason = request.data.get('revision_reason', '')
+    revision_reason = request.data.get('revision_reason') or request.data.get('reason') or request.data.get('revisionReason') or ''
 
     if not campaign_id or action not in ['accept', 'revise']:
         return Response({'error': 'campaign_id and valid action (accept or revise) are required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -212,6 +227,20 @@ def creator_action(request):
                     pass
                     
             negotiation.revision_reason = reason_str
+
+            camp = getattr(negotiation, 'campaign', None)
+            if camp:
+                if negotiation.final_price is not None:
+                    camp.counter_price = negotiation.final_price
+                history = list(camp.counter_history) if isinstance(camp.counter_history, list) else []
+                history.append({
+                    'price': float(negotiation.final_price) if negotiation.final_price is not None else None,
+                    'by': 'creator',
+                    'reason': reason_str,
+                    'created_at': timezone.now().isoformat()
+                })
+                camp.counter_history = history
+                camp.save()
 
         if request.user and request.user.is_authenticated:
             negotiation.action_by = request.user
@@ -566,6 +595,30 @@ def verify_installment(request):
 
     installment.save()
     sync_platform_fee_from_installment(installment)
+
+    # When creator verifies the installment payout (e.g. Installment 1),
+    # synchronize the matching business installment so its status transitions from 'approved' (verified) to 'released'.
+    if installment.installment_type == 'creator' and installment.campaign:
+        creator_insts = list(WorkspaceInstallment.objects.filter(campaign=installment.campaign, installment_type='creator').order_by('id'))
+        try:
+            idx = [ci.id for ci in creator_insts].index(installment.id)
+        except ValueError:
+            idx = -1
+
+        if idx != -1:
+            biz_insts = list(WorkspaceInstallment.objects.filter(campaign=installment.campaign, installment_type='business').order_by('id'))
+            if idx < len(biz_insts):
+                matching_biz = biz_insts[idx]
+                if action == 'release':
+                    matching_biz.status = 'released'
+                    matching_biz.is_paid = True
+                    if not matching_biz.paid_date:
+                        from django.utils import timezone
+                        matching_biz.paid_date = timezone.now().date()
+                    matching_biz.save()
+                elif action == 'reject':
+                    matching_biz.status = 'approved'
+                    matching_biz.save()
 
     serializer = WorkspaceInstallmentSerializer(installment, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)

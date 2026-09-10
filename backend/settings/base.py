@@ -17,6 +17,12 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 BASE_DIR = PROJECT_DIR.parent
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / ".env")
+except ImportError:
+    pass
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -228,14 +234,14 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 
-# Email settings (SMTP via Gmail)
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "amplinow2026@gmail.com"
-EMAIL_HOST_PASSWORD = "rtqpgnqxjpahlbpt"
-DEFAULT_FROM_EMAIL = "Ampli Platform <atom.lift.1@gmail.com>"
+# Email settings (SMTP via Gmail or transactional email service)
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() in ("true", "1", "yes")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "amplinow2026@gmail.com")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "rtqpgnqxjpahlbpt")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", f"Ampli Platform <{EMAIL_HOST_USER}>")
 
 # Google OAuth settings
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "58882443328-44qvoqt4rbai23n9fpv75c54k72dtk0c.apps.googleusercontent.com")

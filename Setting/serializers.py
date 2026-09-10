@@ -307,17 +307,20 @@ class BusinessFullSettingsSerializer(serializers.Serializer):
         BusinessSettings.objects.get_or_create(business=instance)
         
         rep = super().to_representation(instance)
-        # Collect business types from both ManyToMany and CharField
+        # Collect business types from ManyToMany (authoritative source) validated against active BusinessTypes
+        from user.models import BusinessType
+        valid_types = set(BusinessType.objects.values_list("name", flat=True))
         types_set = []
         if instance.business_types.exists():
             for bt in instance.business_types.all():
-                if bt.name and bt.name.strip() not in types_set:
+                if bt.name and bt.name.strip() in valid_types and bt.name.strip() not in types_set:
                     types_set.append(bt.name.strip())
-        if instance.business_type:
-            for t in instance.business_type.replace(",", " ").split():
-                if t.strip() and t.strip() not in types_set:
-                    types_set.append(t.strip())
+        elif instance.business_type:
+            for t in [x.strip() for x in instance.business_type.split(",") if x.strip()]:
+                if t in valid_types and t not in types_set:
+                    types_set.append(t)
         rep["business_types"] = types_set
+        rep["business_type"] = ", ".join(types_set)
             
         if getattr(instance, "province", None):
             rep["province"] = instance.province.name

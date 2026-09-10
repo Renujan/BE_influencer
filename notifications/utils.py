@@ -99,3 +99,59 @@ def resolve_admin_redirect_url(notification):
             return resolved
 
     return "/admin/"
+
+
+def get_user_currency_symbol(user):
+    if not user:
+        return "Rs"
+    profile = getattr(user, 'business_profile', None) or getattr(user, 'creator_profile', None)
+    if profile:
+        country = getattr(profile, 'country', None)
+        phone = getattr(profile, 'phone', None)
+        if country or phone:
+            try:
+                from Setting.models import get_country_currency_format
+                from campegin.models import extract_currency_symbol
+                fmt = get_country_currency_format(country, phone)
+                s = extract_currency_symbol(fmt)
+                if s:
+                    return s
+            except Exception:
+                pass
+        sym = getattr(profile, 'currency_symbol', None)
+        if sym:
+            return sym
+    return "Rs"
+
+
+def format_currency_amount(amount, user):
+    sym = get_user_currency_symbol(user)
+    sep = "" if sym in ["$", "₹", "£", "€", "¥"] else " "
+    try:
+        amt_float = float(amount or 0)
+        return f"{sym}{sep}{amt_float:,.2f}"
+    except Exception:
+        return f"{sym}{sep}{amount}"
+
+
+def format_notification_text_currency(text, user_or_sym):
+    if not text:
+        return ""
+    if isinstance(user_or_sym, str):
+        sym = user_or_sym
+    else:
+        sym = get_user_currency_symbol(user_or_sym)
+
+    if not sym or sym == "$":
+        return str(text)
+
+    sep = "" if sym in ["₹", "£", "€", "¥"] else " "
+
+    # 1. Replace $amount or USD amount (e.g. $20,000.00, $20,000, USD 20000)
+    formatted = re.sub(r'(?:\$|USD\s*)\s*([\d,]+(?:\.\d+)?)', rf'{sym}{sep}\1', str(text))
+
+    # 2. Phrasing like counter-response of 20000 or budget of 20000
+    formatted = re.sub(r'(counter-response of|budget of|price of|payment of)\s+([\d,]+(?:\.\d+)?)(?!\s*[\w])', rf'\1 {sym}{sep}\2', formatted, flags=re.IGNORECASE)
+
+    return formatted
+

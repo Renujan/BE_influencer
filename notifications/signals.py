@@ -8,6 +8,7 @@ from WorkspacePayment.models import WorkspacePaymentNegotiation, WorkspaceInstal
 from portfolio.models import PortfolioItem
 from chat_monitor.models import ChatReview
 from notifications.models import Notification
+from .utils import format_currency_amount
 
 @receiver(user_logged_in)
 def create_login_notification(sender, request, user, **kwargs):
@@ -68,13 +69,8 @@ def cache_campaign_status(sender, instance, **kwargs):
 @receiver(post_save, sender=Campaign)
 def create_campaign_notification(sender, instance, created, **kwargs):
     if created:
-        try:
-            b_float = float(instance.budget or 0)
-            budget_str = f"${b_float:,.2f}"
-        except Exception:
-            budget_str = f"${instance.budget}"
-
         if instance.brand:
+            budget_str = format_currency_amount(instance.budget, instance.brand)
             Notification.objects.create(
                 user=instance.brand,
                 target_role="business",
@@ -395,21 +391,23 @@ def create_payment_notification(sender, instance, created, **kwargs):
     if created:
         status_text = "funded & secured in escrow" if instance.status == "In Escrow" else "released to creator"
         if instance.campaign.brand:
+            brand_amt = format_currency_amount(instance.amount, instance.campaign.brand)
             Notification.objects.create(
                 user=instance.campaign.brand,
                 target_role="business",
                 title="Escrow Payment Action",
-                message=f"Payment of ${instance.amount:,.2f} for '{instance.campaign.name}' milestone '{instance.milestone_name}' was {status_text}.",
+                message=f"Payment of {brand_amt} for '{instance.campaign.name}' milestone '{instance.milestone_name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-wallet",
                 target_url=f"/workspace/{instance.campaign.id}?tab=Payments"
             )
         if instance.campaign.creator:
+            creator_amt = format_currency_amount(instance.amount, instance.campaign.creator)
             Notification.objects.create(
                 user=instance.campaign.creator,
                 target_role="creator",
                 title="Escrow Payment Action",
-                message=f"Payment of ${instance.amount:,.2f} for '{instance.campaign.name}' milestone '{instance.milestone_name}' was {status_text}.",
+                message=f"Payment of {creator_amt} for '{instance.campaign.name}' milestone '{instance.milestone_name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-wallet",
                 target_url=f"/workspace/{instance.campaign.id}?tab=Payments"
@@ -419,28 +417,24 @@ def create_payment_notification(sender, instance, created, **kwargs):
 def create_workspace_payment_negotiation_notification(sender, instance, created, **kwargs):
     if instance.campaign:
         camp = instance.campaign
-        try:
-            fp_float = float(instance.final_price or 0)
-            fp_str = f"${fp_float:,.2f}"
-        except Exception:
-            fp_str = f"${instance.final_price}"
-
         if camp.brand:
+            brand_fp = format_currency_amount(instance.final_price, camp.brand)
             Notification.objects.create(
                 user=camp.brand,
                 target_role="business",
                 title="Payment Negotiation Update",
-                message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: {fp_str}.",
+                message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: {brand_fp}.",
                 category="payment",
                 icon="fas fa-hand-holding-usd",
                 target_url=f"/workspace/{camp.id}?tab=Payments"
             )
         if camp.creator:
+            creator_fp = format_currency_amount(instance.final_price, camp.creator)
             Notification.objects.create(
                 user=camp.creator,
                 target_role="creator",
                 title="Payment Negotiation Update",
-                message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: {fp_str}.",
+                message=f"Payment negotiation for campaign '{camp.name}' was updated. Final Price: {creator_fp}.",
                 category="payment",
                 icon="fas fa-hand-holding-usd",
                 target_url=f"/workspace/{camp.id}?tab=Payments"
@@ -452,28 +446,25 @@ def create_workspace_installment_notification(sender, instance, created, **kwarg
     if camp:
         status_text = "released" if str(instance.status).lower() in ["released", "paid"] else ("funded in escrow" if str(instance.status).lower() in ["funded", "in_escrow"] else "updated")
         milestone_title = getattr(instance, 'title', None) or getattr(instance, 'milestone_name', 'Installment')
-        try:
-            amt_float = float(instance.amount or 0)
-            amt_str = f"${amt_float:,.2f}"
-        except Exception:
-            amt_str = f"${instance.amount}"
 
         if camp.brand:
+            brand_amt = format_currency_amount(instance.amount, camp.brand)
             Notification.objects.create(
                 user=camp.brand,
                 target_role="business",
                 title="Installment Payment Action",
-                message=f"Installment '{milestone_title}' ({amt_str}) for '{camp.name}' was {status_text}.",
+                message=f"Installment '{milestone_title}' ({brand_amt}) for '{camp.name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-file-invoice-dollar",
                 target_url=f"/workspace/{camp.id}?tab=Payments"
             )
         if camp.creator:
+            creator_amt = format_currency_amount(instance.amount, camp.creator)
             Notification.objects.create(
                 user=camp.creator,
                 target_role="creator",
                 title="Installment Payment Action",
-                message=f"Installment '{milestone_title}' ({amt_str}) for '{camp.name}' was {status_text}.",
+                message=f"Installment '{milestone_title}' ({creator_amt}) for '{camp.name}' was {status_text}.",
                 category="payment",
                 icon="fas fa-file-invoice-dollar",
                 target_url=f"/workspace/{camp.id}?tab=Payments"

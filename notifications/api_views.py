@@ -4,6 +4,7 @@ from django.utils.timesince import timesince
 from django.utils import timezone
 from django.db.models import Q
 from .models import Notification
+from .utils import format_notification_text_currency
 from campegin.models import Campaign
 import datetime
 import json
@@ -217,16 +218,18 @@ def get_notifications(request):
                     elif "service" in n.title.lower() or "service" in n.message.lower():
                         front_url = "/creator/services"
 
+            formatted_title = format_notification_text_currency(n.title, req_user)
+            formatted_body = format_notification_text_currency(n.message, req_user)
             data.append({
                 "id": n.id,
-                "title": n.title,
-                "body": n.message,
+                "title": formatted_title,
+                "body": formatted_body,
                 "time": f"{timesince(n.created_at, timezone.now()).split(',')[0]} ago",
                 "created_at": n.created_at.isoformat(),
                 "read": n.is_read,
                 "category": n.category,
                 "icon": n.icon,
-                "expandDetail": n.message,
+                "expandDetail": formatted_body,
                 "actionLabel": "View Details",
                 "targetUrl": front_url
             })

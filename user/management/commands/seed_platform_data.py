@@ -23,10 +23,14 @@ class Command(BaseCommand):
         self.stdout.write("Seeding platform database...")
 
         # 1. Niches
-        niche_names = ["Fashion", "Beauty", "Travel", "Food", "Tech", "Fitness", "Gaming", "Lifestyle", "Music", "Finance"]
+        niche_names = [
+            "Lifestyle", "Beauty", "Fashion", "Fitness", "Food", "Tech",
+            "Travel", "Gaming", "Parenting", "Finance", "Health", "Comedy",
+            "Education", "Music", "Sports"
+        ]
         niches = {}
         for name in niche_names:
-            niche, _ = Niche.objects.get_or_create(name=name)
+            niche, _ = Niche.objects.get_or_create(name=name, defaults={"is_active": True})
             niches[name] = niche
         self.stdout.write("Niches created.")
 
