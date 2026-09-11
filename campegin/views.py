@@ -1155,9 +1155,14 @@ class RequestViewSet(viewsets.ModelViewSet):
             q_filter = models.Q(creator=user)
             if profile:
                 q_filter |= models.Q(creator__creator_profile=profile)
-            qs = Campaign.objects.filter(q_filter).distinct()
+            qs = Campaign.objects.filter(q_filter).distinct().exclude(status="Under_Review")
         else:
-            qs = Campaign.objects.filter(models.Q(brand=user) | models.Q(creator=user))
+            profile = getattr(user, "profile", None)
+            role = str(getattr(profile, "role", "") or "").lower().strip()
+            if role in ["creator", "influencer"]:
+                qs = Campaign.objects.filter(creator=user).exclude(status="Under_Review")
+            else:
+                qs = Campaign.objects.filter(models.Q(brand=user) | models.Q(creator=user))
 
         if self.action == "list":
             qs = qs.exclude(created_via="pitch")
@@ -1171,6 +1176,8 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):
         campaign = self.get_object()
+        if campaign.status == "Under_Review":
+            return Response({"error": "Campaign is currently under admin review and cannot be accepted yet."}, status=status.HTTP_400_BAD_REQUEST)
         if campaign.counter_price:
             campaign.budget = campaign.counter_price
         elif campaign.counter_history and len(campaign.counter_history) > 0:
@@ -1199,6 +1206,8 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def decline(self, request, pk=None):
         campaign = self.get_object()
+        if campaign.status == "Under_Review":
+            return Response({"error": "Campaign is currently under admin review and cannot be declined yet."}, status=status.HTTP_400_BAD_REQUEST)
         reason = request.data.get("reason") or request.data.get("note") or request.data.get("message") or "Campaign request declined."
         campaign.status = "Rejected"
         campaign.decline_reason = reason
@@ -1229,6 +1238,8 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def counter(self, request, pk=None):
         campaign = self.get_object()
+        if campaign.status == "Under_Review":
+            return Response({"error": "Campaign is currently under admin review and cannot be countered yet."}, status=status.HTTP_400_BAD_REQUEST)
         if (campaign.counter_round or 0) >= 4:
             return Response({"error": "Maximum counter offer rounds reached."}, status=status.HTTP_400_BAD_REQUEST)
         counter_price = request.data.get("price")
