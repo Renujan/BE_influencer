@@ -218,26 +218,33 @@ def chat_monitor_review_view(request, campaign_id):
         action = request.POST.get("action", "create")
         review_id = request.POST.get("review_id")
 
-        if action == "delete" and review_id:
-            rev = ChatReview.objects.filter(id=review_id, campaign=campaign).first()
-            if rev:
-                raw_text = rev.review_text
-                # Delete any associated AdminComplianceTicket so auto-sync will not recreate it
-                for t in campaign.tickets.all():
-                    s_role = getattr(t, "sender_role", "both") or "both"
-                    s_name = getattr(t, "sender_name", "") or (t.sender.username if getattr(t, "sender", None) else "")
-                    prefix = f"[{s_role.upper()} REQUEST{' by ' + s_name if s_name else ''}]"
-                    expected_text = f"{prefix} {t.message}"
-                    
-                    if (t.message == raw_text or 
-                        expected_text == raw_text or 
-                        f"Directive: {raw_text}" == t.message or
-                        t.reply == raw_text or
-                        (raw_text and raw_text.endswith(t.message))):
-                        t.delete()
+        ticket_id = request.POST.get("ticket_id")
+        if action == "delete":
+            if ticket_id:
+                t = campaign.tickets.filter(id=ticket_id).first()
+                if t:
+                    t_msg = t.message.strip()
+                    for rev in campaign.chat_reviews.all():
+                        raw_text = rev.review_text.strip()
+                        if t_msg in raw_text or raw_text.endswith(t_msg):
+                            rev.delete()
+                    t.delete()
+                return redirect(reverse("chat_monitor_review", args=[campaign.id]))
 
-                rev.delete()
-            return redirect(reverse("chat_monitor_review", args=[campaign.id]))
+            if review_id:
+                rev = ChatReview.objects.filter(id=review_id, campaign=campaign).first()
+                if rev:
+                    raw_text = rev.review_text.strip()
+                    for t in campaign.tickets.all():
+                        t_msg = t.message.strip()
+                        if (t_msg == raw_text or 
+                            raw_text.endswith(t_msg) or 
+                            t_msg in raw_text or
+                            f"Directive: {raw_text}" == t.message or
+                            t.reply.strip() == raw_text):
+                            t.delete()
+                    rev.delete()
+                return redirect(reverse("chat_monitor_review", args=[campaign.id]))
 
         if action == "edit" and review_id:
             rev = ChatReview.objects.filter(id=review_id, campaign=campaign).first()
@@ -302,21 +309,87 @@ def chat_monitor_review_view(request, campaign_id):
                 target_audience="creator" if s_role in ["creator", "influencer"] else ("business" if s_role == "business" else "both")
             )
 
-    all_reviews = campaign.chat_reviews.all().order_by("-id")
-    user_requests = []
+    # Build unified requests and directives list from both ChatReview and AdminComplianceTicket
+    creator_requests = []
+    business_requests = []
     admin_directives = []
+    seen_messages = set()
 
-    for r in all_reviews:
-        text = r.review_text or ""
-        if text.startswith("[CREATOR REQUEST") or text.startswith("[INFLUENCER REQUEST") or text.startswith("[BUSINESS REQUEST"):
-            user_requests.append(r)
+    # 1. Add tickets
+    for t in campaign.tickets.all().order_by("-id"):
+        s_role = (getattr(t, "sender_role", "") or "").lower().strip()
+        msg_norm = (t.message or "").strip().lower()
+
+        if s_role in ["creator", "influencer"]:
+            seen_messages.add(msg_norm)
+            creator_requests.append({
+                "id": f"ticket-{t.id}",
+                "ticket_id": t.id,
+                "review_id": None,
+                "category": t.category or "Safety / Guidelines",
+                "review_text": t.message,
+                "message": t.message,
+                "target_audience": t.target_audience or "creator",
+                "created_at": getattr(t, "created_at", None) or t.date or "Just now",
+                "request_type": "creator",
+                "sender_display": t.sender.username if t.sender else "Creator",
+                "is_ticket": True,
+            })
+        elif s_role in ["business", "brand"]:
+            seen_messages.add(msg_norm)
+            business_requests.append({
+                "id": f"ticket-{t.id}",
+                "ticket_id": t.id,
+                "review_id": None,
+                "category": t.category or "Safety / Guidelines",
+                "review_text": t.message,
+                "message": t.message,
+                "target_audience": t.target_audience or "business",
+                "created_at": getattr(t, "created_at", None) or t.date or "Just now",
+                "request_type": "business",
+                "sender_display": t.sender.username if t.sender else "Business",
+                "is_ticket": True,
+            })
+
+    # 2. Add ChatReviews
+    for r in campaign.chat_reviews.all().order_by("-id"):
+        text = (r.review_text or "").strip()
+        text_norm = text.lower()
+
+        if text.startswith("[CREATOR REQUEST") or text.startswith("[INFLUENCER REQUEST"):
+            # Extract clean msg to deduplicate
+            import re
+            clean_msg = re.sub(r"^\[(CREATOR|INFLUENCER) REQUEST[^\]]*\]\s*", "", text, flags=re.IGNORECASE).strip().lower()
+            if clean_msg and clean_msg in seen_messages:
+                continue
+            seen_messages.add(clean_msg or text_norm)
+            r.request_type = "creator"
+            r.review_id = r.id
+            r.sender_display = "Creator"
+            creator_requests.append(r)
+        elif text.startswith("[BUSINESS REQUEST"):
+            import re
+            clean_msg = re.sub(r"^\[BUSINESS REQUEST[^\]]*\]\s*", "", text, flags=re.IGNORECASE).strip().lower()
+            if clean_msg and clean_msg in seen_messages:
+                continue
+            seen_messages.add(clean_msg or text_norm)
+            r.request_type = "business"
+            r.review_id = r.id
+            r.sender_display = "Business"
+            business_requests.append(r)
         else:
+            r.request_type = "admin"
+            r.review_id = r.id
             admin_directives.append(r)
+
+    user_requests = creator_requests + business_requests
 
     context = {
         "campaign": campaign,
-        "reviews": all_reviews,
+        "reviews": campaign.chat_reviews.all().order_by("-id"),
         "user_requests": user_requests,
+        "creator_requests": creator_requests,
+        "business_requests": business_requests,
         "admin_directives": admin_directives,
     }
     return render(request, "chat_monitor/review_chat.html", context)

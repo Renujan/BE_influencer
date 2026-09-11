@@ -86,8 +86,18 @@ class CampaignSerializer(serializers.ModelSerializer):
         if user.is_staff or user.is_superuser:
             return AdminComplianceTicketSerializer(obj.tickets.all(), many=True).data
 
-        profile = getattr(user, "profile", None)
-        is_creator = (user == obj.creator or (obj.creator and user.id == obj.creator.id) or hasattr(user, "creator_profile") or getattr(profile, "role", "") in ["influencer", "creator"])
+        role_param = str(getattr(request, 'query_params', {}).get("role", "")).lower().strip()
+        if role_param in ["creator", "influencer"]:
+            is_creator = True
+        elif role_param in ["business", "brand"]:
+            is_creator = False
+        elif user == obj.creator and user != obj.brand:
+            is_creator = True
+        elif user == obj.brand and user != obj.creator:
+            is_creator = False
+        else:
+            profile = getattr(user, "profile", None)
+            is_creator = getattr(profile, "role", "") in ["influencer", "creator"] or (hasattr(user, "creator_profile") and not hasattr(user, "business_profile"))
 
         if is_creator:
             qs = obj.tickets.filter(
@@ -126,12 +136,12 @@ class CampaignSerializer(serializers.ModelSerializer):
             # Admin sees all messages
             msgs = obj.messages.all()
         else:
-            if hasattr(user, "business_profile"):
-                msgs = obj.messages.filter(message_type__in=['main', 'admin_business'])
-            elif hasattr(user, "creator_profile"):
-                msgs = obj.messages.filter(message_type__in=['main', 'admin_creator'])
-            else:
-                msgs = obj.messages.filter(message_type='main')
+            allowed_types = ['main']
+            if user == obj.brand or hasattr(user, "business_profile"):
+                allowed_types.append('admin_business')
+            if user == obj.creator or hasattr(user, "creator_profile"):
+                allowed_types.append('admin_creator')
+            msgs = obj.messages.filter(message_type__in=allowed_types)
         return WorkspaceMessageSerializer(msgs, many=True).data
 
     def get_reviews(self, obj):
@@ -140,8 +150,21 @@ class CampaignSerializer(serializers.ModelSerializer):
             return ChatReviewSerializer(obj.chat_reviews.all(), many=True).data
 
         user = request.user
-        profile = getattr(user, "profile", None)
-        is_creator = (user == obj.creator or (obj.creator and user.id == obj.creator.id) or hasattr(user, "creator_profile") or getattr(profile, "role", "") in ["influencer", "creator"])
+        if user.is_staff or user.is_superuser:
+            return ChatReviewSerializer(obj.chat_reviews.all(), many=True).data
+
+        role_param = str(getattr(request, 'query_params', {}).get("role", "")).lower().strip()
+        if role_param in ["creator", "influencer"]:
+            is_creator = True
+        elif role_param in ["business", "brand"]:
+            is_creator = False
+        elif user == obj.creator and user != obj.brand:
+            is_creator = True
+        elif user == obj.brand and user != obj.creator:
+            is_creator = False
+        else:
+            profile = getattr(user, "profile", None)
+            is_creator = getattr(profile, "role", "") in ["influencer", "creator"] or (hasattr(user, "creator_profile") and not hasattr(user, "business_profile"))
 
         if is_creator:
             qs = obj.chat_reviews.filter(

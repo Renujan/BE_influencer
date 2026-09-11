@@ -155,7 +155,7 @@ class BusinessProfileViewSet(ModelViewSet):
     menu_icon = "user"
     menu_item_name = "business_profiles"
     add_to_admin_menu = False
-    exclude_form_fields = ["featured_at"]
+    exclude_form_fields = ["featured_at", "otp_code", "time_zone"]
     create_view_enabled = False
     
     # Custom Index, Inspect, and Edit Views
@@ -168,7 +168,7 @@ class BusinessProfileViewSet(ModelViewSet):
     create_template_name = "wagtailadmin/generic_create_premium.html"
     
     list_display = ("user", "company_name", "business_type", "get_mediums_display", "phone", "otp_verified", "status", "country")
-    list_export = ("id", "user.username", "user.email", "company_name", "business_type", "mediums_list", "website", "phone", "otp_verified", "status", "country.name")
+    list_export = ("id", "user.username", "user.email", "company_name", "business_type", "mediums_list", "website", "phone", "otp_verified", "status", "country_name")
     list_filter = ("otp_verified", "status", "mediums")
     search_fields = ("user__username", "user__email", "company_name", "phone")
 
@@ -205,7 +205,7 @@ class CreatorProfileViewSet(ModelViewSet):
     create_template_name = "wagtailadmin/generic_create_premium.html"
     
     list_display = ("user", "phone", "location", "country", "get_formatted_wallet", "otp_verified", "get_status_badge", "get_rating_display")
-    list_export = ("id", "user.username", "user.email", "phone", "location", "country.name", "wallet_balance", "otp_verified", "status")
+    list_export = ("id", "user.username", "user.email", "phone", "location", "country_name", "wallet_balance", "otp_verified", "status")
     list_filter = ("otp_verified", "status")
     search_fields = ("user__username", "user__email", "phone", "location")
 

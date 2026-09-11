@@ -23,11 +23,98 @@ def dashboard_metrics(request):
 
     # 2. Budget and Escrow calculations
     total_budget = Campaign.objects.aggregate(total=Sum('budget'))['total'] or 0.0
-    released_payments = PaymentInstallment.objects.filter(status="Released").aggregate(total=Sum('amount'))['total'] or 0.0
-    escrow_payments = PaymentInstallment.objects.filter(status="In Escrow").aggregate(total=Sum('amount'))['total'] or 0.0
-    funded_payments = PaymentInstallment.objects.filter(status="Funded").aggregate(total=Sum('amount'))['total'] or 0.0
-    
-    total_escrow_balance = float(escrow_payments) + float(funded_payments)
+
+    total_escrow_balance = 0.0
+    released_payments = 0.0
+    escrow_payments = 0.0
+
+    try:
+        from WorkspacePayment.models import WorkspaceInstallment
+        from django.db.models import Q
+
+        # Inbound business payments received/verified into escrow (active protected funds)
+        ws_in_escrow = WorkspaceInstallment.objects.filter(
+            status__in=["in_escrow", "approved"],
+            installment_type="business"
+        ).aggregate(total=Sum('amount'))['total'] or 0.0
+
+        # Outbound creator payments released
+        ws_released = WorkspaceInstallment.objects.filter(
+            Q(status__iexact="released") | Q(is_paid=True, installment_type="creator")
+        ).aggregate(total=Sum('amount'))['total'] or 0.0
+
+        # Currently in escrow status (inbound milestone funds pending release)
+        ws_currently_in_escrow = WorkspaceInstallment.objects.filter(
+            status="in_escrow",
+            installment_type="business"
+        ).aggregate(total=Sum('amount'))['total'] or 0.0
+
+        if ws_in_escrow > 0 or ws_released > 0:
+            total_escrow_balance = float(ws_in_escrow)
+            released_payments = float(ws_released)
+            escrow_payments = float(ws_currently_in_escrow) if ws_currently_in_escrow > 0 else float(ws_in_escrow)
+    except Exception:
+        pass
+
+    if total_escrow_balance == 0.0 and released_payments == 0.0:
+        # Fallback to legacy PaymentInstallment
+        released_payments = float(PaymentInstallment.objects.filter(status="Released").aggregate(total=Sum('amount'))['total'] or 0.0)
+        escrow_payments = float(PaymentInstallment.objects.filter(status="In Escrow").aggregate(total=Sum('amount'))['total'] or 0.0)
+        funded_payments = float(PaymentInstallment.objects.filter(status="Funded").aggregate(total=Sum('amount'))['total'] or 0.0)
+        total_escrow_balance = escrow_payments + funded_payments
+
+    # 2b. Social platform creator counts breakdown
+    from django.db.models import Q
+    platform_creator_counts = [
+        {
+            "name": "Instagram",
+            "key": "instagram",
+            "count": CreatorSocialAccount.objects.filter(platform__icontains="insta").values("user_id").distinct().count(),
+            "icon": "fab fa-instagram",
+            "bg_color": "linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)",
+            "text_color": "#e1306c",
+        },
+        {
+            "name": "YouTube",
+            "key": "youtube",
+            "count": CreatorSocialAccount.objects.filter(Q(platform__icontains="you") | Q(platform__icontains="yt")).values("user_id").distinct().count(),
+            "icon": "fab fa-youtube",
+            "bg_color": "linear-gradient(135deg, #ff0000, #cc0000)",
+            "text_color": "#ff0000",
+        },
+        {
+            "name": "TikTok",
+            "key": "tiktok",
+            "count": CreatorSocialAccount.objects.filter(platform__icontains="tik").values("user_id").distinct().count(),
+            "icon": "fab fa-tiktok",
+            "bg_color": "linear-gradient(135deg, #010101, #25F4EE)",
+            "text_color": "#0f172a",
+        },
+        {
+            "name": "Facebook",
+            "key": "facebook",
+            "count": CreatorSocialAccount.objects.filter(Q(platform__icontains="face") | Q(platform__icontains="fb")).values("user_id").distinct().count(),
+            "icon": "fab fa-facebook",
+            "bg_color": "linear-gradient(135deg, #1877f2, #0d5bbd)",
+            "text_color": "#1877f2",
+        },
+        {
+            "name": "LinkedIn",
+            "key": "linkedin",
+            "count": CreatorSocialAccount.objects.filter(platform__icontains="link").values("user_id").distinct().count(),
+            "icon": "fab fa-linkedin-in",
+            "bg_color": "linear-gradient(135deg, #0a66c2, #004182)",
+            "text_color": "#0a66c2",
+        },
+        {
+            "name": "X / Twitter",
+            "key": "twitter",
+            "count": CreatorSocialAccount.objects.filter(Q(platform__icontains="twit") | Q(platform__iexact="x")).values("user_id").distinct().count(),
+            "icon": "fab fa-twitter",
+            "bg_color": "linear-gradient(135deg, #1e293b, #0f172a)",
+            "text_color": "#0f172a",
+        },
+    ]
 
     # 3. Complaints and support dispute tickets
     total_tickets = Complaint.objects.count()
@@ -117,5 +204,6 @@ def dashboard_metrics(request):
         'currency_symbol': user_currency_symbol,
         'unread_notifications_count': unread_notifications_count,
         'recent_notifications': recent_notifications,
+        'platform_creator_counts': platform_creator_counts,
         'FRONTEND_URL': getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
     }

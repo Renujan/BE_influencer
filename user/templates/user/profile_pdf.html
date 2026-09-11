@@ -131,7 +131,7 @@
                 </div>
             </td>
             <td style="text-align: right; vertical-align: bottom; color: #94a3b8; font-size: 9pt;">
-                Generated: {% now "Y-m-d H:i" %}
+                Downloaded: {{ downloaded_at }}
             </td>
         </tr>
     </table>
@@ -181,11 +181,7 @@
                 </td>
             </tr>
             <tr>
-                <td>
-                    <div class="label">Time Zone</div>
-                    <div class="value">{{ instance.time_zone|default:"-" }}</div>
-                </td>
-                <td>
+                <td colspan="2">
                     <div class="label">Profile Status</div>
                     <div class="value">
                         <span class="badge badge-{{ instance.status }}">{{ instance.get_status_display }}</span>
@@ -436,7 +432,7 @@
                     <div class="value" style="font-size: 9pt;">
                         <strong>{{ sa.username }}</strong> 
                         <span style="color: #7f8c8d; font-size: 8pt; float: right;">
-                            {{ sa.followers_count }} followers &middot; {{ sa.engagement_rate }}% ER
+                            {{ sa.followers_count }} followers
                         </span>
                     </div>
                 </td>

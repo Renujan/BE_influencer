@@ -205,28 +205,61 @@
     <!-- User Compliance Requests Submitted to Admin -->
     <div style="margin-bottom: 32px;">
         <h3 style="font-weight: 700; font-size: 1rem; color: #0f172a; margin-bottom: 16px;">
-            📩 User Audit Requests Received ({% if user_requests %}{{ user_requests|length }}{% else %}{{ reviews|length }}{% endif %})
+            📩 User Audit Requests Received ({% if user_requests %}{{ user_requests|length }}{% else %}0{% endif %})
         </h3>
-        {% for review in reviews %}
-            {% if review.review_text|slice:":17" == "[CREATOR REQUEST" or review.review_text|slice:":20" == "[INFLUENCER REQUEST" or review.review_text|slice:":18" == "[BUSINESS REQUEST" %}
-                <div class="directive-item" style="border-left: 4px solid #3b82f6; background: #f8fafc;" id="directive-{{ review.id }}">
+        {% for review in user_requests %}
+            {% if review.request_type == "creator" %}
+                <!-- Creator Request: Orange -->
+                <div class="directive-item" style="border-left: 4px solid #f97316; background: #fff7ed;" id="directive-{{ review.id }}">
                     <div class="directive-header">
-                        <span style="color: #1e40af; font-weight: 700;">Audit Request: {{ review.category }}</span>
+                        <span style="color: #c2410c; font-weight: 700;">Creator Request Admin Review: {{ review.category }}</span>
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-weight: 500; font-size: 0.75rem; color: #64748b;">{{ review.created_at|date:"M d, Y · H:i" }}</span>
+                            <span style="font-weight: 500; font-size: 0.75rem; color: #64748b;">{{ review.created_at|date:"M d, Y · H:i"|default:review.created_at }}</span>
                             <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this compliance audit ticket request?');">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="review_id" value="{{ review.id }}">
+                                {% if review.ticket_id %}
+                                    <input type="hidden" name="ticket_id" value="{{ review.ticket_id }}">
+                                {% else %}
+                                    <input type="hidden" name="review_id" value="{{ review.id }}">
+                                {% endif %}
                                 <button type="submit" style="background:none;border:none;color:#ef4444;font-weight:600;cursor:pointer;font-size:0.75rem;">🗑️ Delete</button>
                             </form>
                         </div>
                     </div>
-                    <div style="margin-bottom: 8px;">
-                        <span class="directive-badge" style="background: #e0f2fe; color: #0369a1;">Target: {{ review.get_target_audience_display }}</span>
+                    <div style="margin-bottom: 8px; display: flex; gap: 6px; align-items: center;">
+                        <span class="directive-badge" style="background: #ffedd5; color: #c2410c; font-weight: 700;">👤 Creator Request Admin Review</span>
+                        <span class="directive-badge" style="background: #fed7aa; color: #9a3412;">{% if review.sender_display %}From: {{ review.sender_display }}{% else %}Target: {{ review.get_target_audience_display }}{% endif %}</span>
                     </div>
                     <div class="directive-content" style="color: #334155; font-weight: 500;">
-                        {{ review.review_text }}
+                        {{ review.message|default:review.review_text }}
+                    </div>
+                </div>
+            {% else %}
+                <!-- Business Request: Blue -->
+                <div class="directive-item" style="border-left: 4px solid #3b82f6; background: #eff6ff;" id="directive-{{ review.id }}">
+                    <div class="directive-header">
+                        <span style="color: #1d4ed8; font-weight: 700;">Business Request Admin Review: {{ review.category }}</span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-weight: 500; font-size: 0.75rem; color: #64748b;">{{ review.created_at|date:"M d, Y · H:i"|default:review.created_at }}</span>
+                            <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this compliance audit ticket request?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete">
+                                {% if review.ticket_id %}
+                                    <input type="hidden" name="ticket_id" value="{{ review.ticket_id }}">
+                                {% else %}
+                                    <input type="hidden" name="review_id" value="{{ review.id }}">
+                                {% endif %}
+                                <button type="submit" style="background:none;border:none;color:#ef4444;font-weight:600;cursor:pointer;font-size:0.75rem;">🗑️ Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 8px; display: flex; gap: 6px; align-items: center;">
+                        <span class="directive-badge" style="background: #dbeafe; color: #1d4ed8; font-weight: 700;">🏢 Business Request Admin Review</span>
+                        <span class="directive-badge" style="background: #bfdbfe; color: #1e40af;">{% if review.sender_display %}From: {{ review.sender_display }}{% else %}Target: {{ review.get_target_audience_display }}{% endif %}</span>
+                    </div>
+                    <div class="directive-content" style="color: #334155; font-weight: 500;">
+                        {{ review.message|default:review.review_text }}
                     </div>
                 </div>
             {% endif %}
@@ -240,30 +273,30 @@
     <!-- Official Admin Review Directives Issued -->
     <div>
         <h3 style="font-weight: 700; font-size: 1rem; color: #0f172a; margin-bottom: 16px;">
-            🛡️ Official Platform Directives Issued
+            🛡️ Official Platform Directives Issued ({% if admin_directives %}{{ admin_directives|length }}{% else %}0{% endif %})
         </h3>
-        {% for review in reviews %}
-            {% if not review.review_text|slice:":17" == "[CREATOR REQUEST" and not review.review_text|slice:":20" == "[INFLUENCER REQUEST" and not review.review_text|slice:":18" == "[BUSINESS REQUEST" %}
-                <div class="directive-item approved" id="directive-{{ review.id }}">
-                    <div class="directive-header">
-                        <span>Directive: {{ review.category }}</span>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-weight: 500; font-size: 0.75rem;">{{ review.created_at|date:"M d, Y · H:i" }}</span>
-                            <button type="button" onclick="toggleEditDirective({{ review.id }})" style="background:none;border:none;color:#4f46e5;font-weight:600;cursor:pointer;font-size:0.75rem;">✏️ Edit</button>
-                            <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this review directive note?');">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="review_id" value="{{ review.id }}">
-                                <button type="submit" style="background:none;border:none;color:#ef4444;font-weight:600;cursor:pointer;font-size:0.75rem;">🗑️ Delete</button>
-                            </form>
-                        </div>
+        {% for review in admin_directives %}
+            <div class="directive-item approved" style="border-left: 4px solid #10b981; background: #ecfdf5;" id="directive-{{ review.id }}">
+                <div class="directive-header">
+                    <span style="color: #047857; font-weight: 700;">Directive: {{ review.category }}</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: 500; font-size: 0.75rem; color: #64748b;">{{ review.created_at|date:"M d, Y · H:i" }}</span>
+                        <button type="button" onclick="toggleEditDirective({{ review.id }})" style="background:none;border:none;color:#4f46e5;font-weight:600;cursor:pointer;font-size:0.75rem;">✏️ Edit</button>
+                        <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this review directive note?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="review_id" value="{{ review.id }}">
+                            <button type="submit" style="background:none;border:none;color:#ef4444;font-weight:600;cursor:pointer;font-size:0.75rem;">🗑️ Delete</button>
+                        </form>
                     </div>
-                    <div style="margin-bottom: 8px;">
-                        <span class="directive-badge">Target: {{ review.get_target_audience_display }}</span>
-                    </div>
-                    <div class="directive-content" id="directive-text-{{ review.id }}">
-                        {{ review.review_text }}
-                    </div>
+                </div>
+                <div style="margin-bottom: 8px; display: flex; gap: 6px; align-items: center;">
+                    <span class="directive-badge" style="background: #d1fae5; color: #065f46; font-weight: 700;">🛡️ Official Platform Directive</span>
+                    <span class="directive-badge" style="background: #a7f3d0; color: #047857;">Target: {{ review.get_target_audience_display }}</span>
+                </div>
+                <div class="directive-content" id="directive-text-{{ review.id }}">
+                    {{ review.review_text }}
+                </div>
 
                     <!-- Inline Edit Form -->
                     <form method="POST" action="" id="edit-form-{{ review.id }}" style="display:none; margin-top:12px; background:#fff; padding:16px; border-radius:8px; border:1px solid #cbd5e1;">
@@ -299,7 +332,10 @@
                         </div>
                     </form>
                 </div>
-            {% endif %}
+        {% empty %}
+            <div class="empty-list">
+                <p>No official platform directives issued yet for this campaign.</p>
+            </div>
         {% endfor %}
     </div>
 </div>

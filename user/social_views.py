@@ -132,7 +132,7 @@ def admin_social_account_list_view(request):
     creators_qs = CreatorProfile.objects.select_related("user", "country").prefetch_related("niches", "user__social_accounts").all()
 
     if query:
-        creators_qs = creators_qs.filter(
+        q_filter = (
             Q(user__username__icontains=query) |
             Q(user__first_name__icontains=query) |
             Q(user__last_name__icontains=query) |
@@ -143,13 +143,38 @@ def admin_social_account_list_view(request):
             Q(user__social_accounts__username__icontains=query) |
             Q(user__social_accounts__platform__icontains=query) |
             Q(user__social_accounts__proof_link__icontains=query)
-        ).distinct()
+        )
+        if query.lower() in ["x", "twitter", "x / twitter"]:
+            q_filter |= Q(user__social_accounts__platform__iexact="x") | Q(user__social_accounts__platform__icontains="twit")
+        creators_qs = creators_qs.filter(q_filter).distinct()
+
+    if platform_filter != "all":
+        if platform_filter in ["twitter", "x"]:
+            creators_qs = creators_qs.filter(Q(user__social_accounts__platform__iexact="x") | Q(user__social_accounts__platform__icontains="twit")).distinct()
+        elif platform_filter == "instagram":
+            creators_qs = creators_qs.filter(user__social_accounts__platform__icontains="insta").distinct()
+        elif platform_filter == "youtube":
+            creators_qs = creators_qs.filter(Q(user__social_accounts__platform__icontains="you") | Q(user__social_accounts__platform__icontains="yt")).distinct()
+        elif platform_filter == "tiktok":
+            creators_qs = creators_qs.filter(user__social_accounts__platform__icontains="tik").distinct()
+        elif platform_filter == "facebook":
+            creators_qs = creators_qs.filter(Q(user__social_accounts__platform__icontains="face") | Q(user__social_accounts__platform__icontains="fb")).distinct()
+        elif platform_filter == "linkedin":
+            creators_qs = creators_qs.filter(user__social_accounts__platform__icontains="link").distinct()
+
+    if status_filter == "verified":
+        creators_qs = creators_qs.filter(user__social_accounts__is_verified=True).distinct()
+    elif status_filter == "pending":
+        creators_qs = creators_qs.filter(user__social_accounts__is_connected=True, user__social_accounts__is_verified=False).distinct()
+    elif status_filter == "disconnected":
+        creators_qs = creators_qs.filter(user__social_accounts__is_connected=False).distinct()
 
     creators_data = []
     total_accounts_count = 0
     total_verified_count = 0
     total_pending_count = 0
     total_reach_aggregate = 0
+    filtered_accounts_count = 0
 
     platform_counts = {
         "instagram": 0,
@@ -160,7 +185,8 @@ def admin_social_account_list_view(request):
         "linkedin": 0,
     }
 
-    all_social_accounts = CreatorSocialAccount.objects.select_related("user").all()
+    # Only count actual creator social accounts
+    all_social_accounts = CreatorSocialAccount.objects.filter(user__creator_profile__isnull=False).select_related("user").all()
     for sa in all_social_accounts:
         total_accounts_count += 1
         if sa.is_verified:
@@ -180,7 +206,12 @@ def admin_social_account_list_view(request):
 
         # Apply platform filter if selected
         if platform_filter != "all":
-            social_accounts = [sa for sa in social_accounts if platform_filter in sa.platform.lower()]
+            social_accounts = [
+                sa for sa in social_accounts
+                if normalize_platform_info(sa.platform)["key"] == platform_filter
+                or platform_filter in (sa.platform or "").lower()
+                or (platform_filter in ["twitter", "x"] and (sa.platform or "").lower() in ["twitter", "x"])
+            ]
 
         # Apply status filter if selected
         if status_filter == "verified":
@@ -224,6 +255,7 @@ def admin_social_account_list_view(request):
 
         country_name = cp.country.name if cp.country else (cp.location or "—")
         location_str = cp.location or country_name
+        filtered_accounts_count += len(accounts_payload)
 
         creators_data.append({
             "id": cp.id,
@@ -251,6 +283,7 @@ def admin_social_account_list_view(request):
         "creators": creators_data,
         "total_creators": len(creators_data),
         "total_accounts_count": total_accounts_count,
+        "filtered_accounts_count": filtered_accounts_count,
         "total_verified_count": total_verified_count,
         "total_pending_count": total_pending_count,
         "total_reach_formatted": format_followers_display(total_reach_aggregate),

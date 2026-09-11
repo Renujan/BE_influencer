@@ -296,7 +296,7 @@
 
   .sa-channel-metric-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 12px;
   }
 
@@ -508,10 +508,6 @@
         <div class="sa-stat-pill-val text-purple-600">{{ total_reach_formatted }}</div>
         <div class="sa-stat-pill-lbl">Total Reach</div>
       </div>
-      <div class="sa-stat-pill">
-        <div class="sa-stat-pill-val text-blue-600">{{ avg_engagement }}%</div>
-        <div class="sa-stat-pill-lbl">Avg. Eng.</div>
-      </div>
     </div>
   </div>
 
@@ -548,10 +544,6 @@
             <div class="sa-channel-metric-box">
               <div class="sa-channel-metric-val">{{ acc.followers_formatted }}</div>
               <div class="sa-channel-metric-lbl">Followers / Audience</div>
-            </div>
-            <div class="sa-channel-metric-box">
-              <div class="sa-channel-metric-val text-indigo-600">{{ acc.engagement_rate }}%</div>
-              <div class="sa-channel-metric-lbl">Engagement Rate</div>
             </div>
           </div>
 

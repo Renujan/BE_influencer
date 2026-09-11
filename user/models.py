@@ -186,6 +186,10 @@ class BusinessProfile(models.Model):
     def mediums_list(self):
         return ", ".join([m.name for m in self.mediums.all()])
 
+    @property
+    def country_name(self):
+        return self.country.name if self.country else ""
+
     def __str__(self):
         return f"{self.company_name or self.user.username} (Business)"
 
@@ -258,6 +262,10 @@ class CreatorProfile(models.Model):
     @property
     def role(self):
         return "creator"
+
+    @property
+    def country_name(self):
+        return self.country.name if self.country else ""
 
     @property
     def currency_symbol(self):

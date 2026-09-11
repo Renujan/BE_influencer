@@ -151,21 +151,41 @@ class CampaignViewSet(viewsets.ModelViewSet):
             qs = Campaign.objects.all()
         else:
             profile = getattr(user, "profile", None)
-            is_creator = hasattr(user, "creator_profile") or getattr(profile, "role", "") in ["influencer", "creator"]
-            is_business = hasattr(user, "business_profile") or getattr(profile, "role", "") in ["business", "brand"]
+            role = str(getattr(profile, "role", "") or "").lower().strip()
+            params = getattr(self.request, "query_params", getattr(self.request, "GET", {}))
+            role_param = str(params.get("role", "")).lower().strip()
 
-            if is_creator:
-                qs = Campaign.objects.filter(creator=user).exclude(status="Under_Review")
-            elif is_business:
+            if role_param in ["business", "brand"]:
+                qs = Campaign.objects.filter(models.Q(brand=user) | models.Q(creator=user))
+            elif role_param in ["creator", "influencer"]:
+                qs = Campaign.objects.filter(models.Q(creator=user) | models.Q(brand=user)).exclude(status="Under_Review")
+            elif role in ["business", "brand"]:
                 qs = Campaign.objects.filter(brand=user)
+            elif role in ["influencer", "creator"]:
+                qs = Campaign.objects.filter(creator=user).exclude(status="Under_Review")
+            elif hasattr(user, "business_profile") and not hasattr(user, "creator_profile"):
+                qs = Campaign.objects.filter(brand=user)
+            elif hasattr(user, "creator_profile") and not hasattr(user, "business_profile"):
+                qs = Campaign.objects.filter(creator=user).exclude(status="Under_Review")
             else:
-                qs = Campaign.objects.filter(models.Q(creator=user) | models.Q(brand=user))
+                if user.brand_campaigns.exists():
+                    qs = Campaign.objects.filter(brand=user)
+                else:
+                    qs = Campaign.objects.filter(models.Q(creator=user) | models.Q(brand=user))
 
         # Allow query-param filtering by status
-        status_param = self.request.query_params.get("status")
+        status_param = getattr(self.request, "query_params", getattr(self.request, "GET", {})).get("status")
         if status_param:
             qs = qs.filter(status=status_param)
         return qs.distinct()
+
+    @action(detail=False, methods=["get"], url_path="check-name")
+    def check_name(self, request):
+        name_val = str(request.query_params.get("name", "")).strip()
+        if not name_val:
+            return Response({"available": True, "exists": False})
+        exists = Campaign.objects.filter(name__iexact=name_val).exists()
+        return Response({"available": not exists, "exists": exists})
 
     def create(self, request, *args, **kwargs):
         # Extract data without using request.data.copy() to avoid pickling BufferedRandom uploaded files
@@ -673,9 +693,13 @@ class CampaignViewSet(viewsets.ModelViewSet):
         
         # Enforce message type rules
         if not (user.is_staff or user.is_superuser):
-            if hasattr(user, "creator_profile") and message_type not in ["main", "admin_creator"]:
-                message_type = "main"
-            elif hasattr(user, "business_profile") and message_type not in ["main", "admin_business"]:
+            if message_type == "admin_business":
+                if not (user == campaign.brand or hasattr(user, "business_profile")):
+                    message_type = "main"
+            elif message_type == "admin_creator":
+                if not (user == campaign.creator or hasattr(user, "creator_profile")):
+                    message_type = "main"
+            elif message_type != "main":
                 message_type = "main"
         
         import datetime
@@ -964,12 +988,17 @@ class CampaignViewSet(viewsets.ModelViewSet):
             return Response({"error": "Category and message are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         user = request.user
-        profile = getattr(user, "profile", None)
-        if user == campaign.creator or (campaign.creator and user.id == campaign.creator.id):
+        role_data = str(request.data.get("role") or request.query_params.get("role", "")).lower().strip()
+        if role_data in ["creator", "influencer"]:
+            sender_role = "creator"
+        elif role_data in ["business", "brand"]:
+            sender_role = "business"
+        elif user == campaign.creator or (campaign.creator and user.id == campaign.creator.id):
             sender_role = "creator"
         elif user == campaign.brand or (campaign.brand and user.id == campaign.brand.id):
             sender_role = "business"
         else:
+            profile = getattr(user, "profile", None)
             sender_role = "creator" if (hasattr(user, "creator_profile") or getattr(profile, "role", "") in ["influencer", "creator"]) else "business"
 
         ticket = AdminComplianceTicket.objects.create(
@@ -1662,7 +1691,7 @@ class BusinessAnalyticsView(APIView):
         # Average duration calculation across all campaigns
         avg_duration_days = int(sum(durations) / len(durations)) if len(durations) > 0 else 0
 
-        # 3. Total Paid: Business Workspace Payment Installments (installment_type='business', is_paid=True or status='released') + Business Platform Fee
+        # 3. Total Paid: Business Workspace Payment Installments (installment_type='business', is_paid=True or status='released')
         total_paid_amount = 0.0
         last_paid_milestone = "None"
         try:
@@ -1675,17 +1704,19 @@ class BusinessAnalyticsView(APIView):
 
             biz_insts_sum = float(paid_biz_insts.aggregate(total=Sum("amount"))["total"] or 0)
 
-            paid_negs = WorkspacePaymentNegotiation.objects.filter(campaign__brand=user, business_fee_is_paid=True)
-            biz_fee_sum = 0.0
-            for neg in paid_negs:
-                biz_fee_sum += float(neg.business_platform_charge_amount or 0)
+            # First installment already includes the platform charge fee; only include standalone fee if no business installments exist
+            standalone_negs = WorkspacePaymentNegotiation.objects.filter(
+                campaign__brand=user,
+                business_fee_is_paid=True
+            ).exclude(campaign__workspace_installments__installment_type='business')
+            standalone_fee_sum = sum(float(neg.business_platform_charge_amount or 0) for neg in standalone_negs)
 
-            total_paid_amount = round(biz_insts_sum + biz_fee_sum, 2)
+            total_paid_amount = round(biz_insts_sum + standalone_fee_sum, 2)
 
             last_obj = paid_biz_insts.order_by('-updated_at').first()
             if last_obj:
                 last_paid_milestone = last_obj.title
-            elif biz_fee_sum > 0:
+            elif standalone_fee_sum > 0:
                 last_paid_milestone = "Platform Fee Paid"
         except Exception as e:
             print("Error computing total_paid_amount:", e)
@@ -1743,13 +1774,14 @@ class BusinessAnalyticsView(APIView):
                         if c.counter_price and float(c.counter_price) > 0:
                             f_price = float(c.counter_price)
 
-                # 3. Actual Spend / Funds Released (Green Bar): Sum paid business installments + paid business platform fee
+                # 3. Actual Spend / Funds Released (Green Bar): Sum paid business installments (first installment embeds platform charge fee)
                 f_released = 0.0
                 if neg:
                     rel_biz_insts = neg.installments.filter(installment_type='business').filter(Q(is_paid=True) | Q(status__iexact='released'))
+                    has_biz_insts = neg.installments.filter(installment_type='business').exists()
                     if rel_biz_insts.exists():
                         f_released += float(rel_biz_insts.aggregate(total=Sum('amount'))['total'] or 0)
-                    if neg.business_fee_is_paid:
+                    elif not has_biz_insts and neg.business_fee_is_paid:
                         f_released += float(neg.business_platform_charge_amount or 0)
 
                 # Exact name string from JSON payload for X-Axis mapping
@@ -1862,7 +1894,7 @@ def populate_deliverables_from_pitch(campaign, pitch):
                     campaign=campaign,
                     name=deliv_name,
                     type=d_type,
-                    status="Pending Review",
+                    status="PENDING_SUBMISSION",
                     brief=item_brief
                 )
 

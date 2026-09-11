@@ -295,28 +295,74 @@ def create_workspace_message_notification(sender, instance, created, **kwargs):
         b_name = getattr(camp, 'brand_name', None) or (camp.brand.username if getattr(camp, 'brand', None) else "Brand")
         c_name = getattr(camp, 'creator_name', None) or (camp.creator.username if getattr(camp, 'creator', None) else "Creator")
 
-        if camp.creator and sender_user != camp.creator:
-            sender_title = b_name if sender_user == camp.brand else "Admin Support"
-            Notification.objects.create(
-                user=camp.creator,
-                target_role="creator",
-                title="New Workspace Message",
-                message=f"Message from '{sender_title}': {snippet}",
-                category="compliance",
-                icon="fas fa-comment-dots",
-                target_url=f"/workspace/{camp.id}"
-            )
-        if camp.brand and sender_user != camp.brand:
-            sender_title = c_name if sender_user == camp.creator else "Admin Support"
-            Notification.objects.create(
-                user=camp.brand,
-                target_role="business",
-                title="New Workspace Message",
-                message=f"Message from '{sender_title}': {snippet}",
-                category="compliance",
-                icon="fas fa-comment-dots",
-                target_url=f"/workspace/{camp.id}"
-            )
+        msg_type = getattr(instance, 'message_type', 'main') or 'main'
+
+        if msg_type == 'admin_business':
+            # Private chat between Business and Admin
+            if camp.brand and sender_user == camp.brand:
+                Notification.objects.create(
+                    target_role="admin",
+                    title="New Admin Support Message",
+                    message=f"Business '{b_name}' sent an Admin Support message for campaign '{camp.name}': {snippet}",
+                    category="compliance",
+                    icon="fas fa-comment-dots",
+                    target_url=f"/admin/chat-monitor/view-chat/{camp.id}/"
+                )
+            elif camp.brand and sender_user != camp.brand:
+                Notification.objects.create(
+                    user=camp.brand,
+                    target_role="business",
+                    title="Admin Support Reply",
+                    message=f"Admin Support replied to campaign '{camp.name}': {snippet}",
+                    category="compliance",
+                    icon="fas fa-comment-dots",
+                    target_url=f"/workspace/{camp.id}"
+                )
+        elif msg_type == 'admin_creator':
+            # Private chat between Creator and Admin
+            if camp.creator and sender_user == camp.creator:
+                Notification.objects.create(
+                    target_role="admin",
+                    title="New Admin Support Message",
+                    message=f"Creator '{c_name}' sent an Admin Support message for campaign '{camp.name}': {snippet}",
+                    category="compliance",
+                    icon="fas fa-comment-dots",
+                    target_url=f"/admin/chat-monitor/view-chat/{camp.id}/"
+                )
+            elif camp.creator and sender_user != camp.creator:
+                Notification.objects.create(
+                    user=camp.creator,
+                    target_role="creator",
+                    title="Admin Support Reply",
+                    message=f"Admin Support replied to campaign '{camp.name}': {snippet}",
+                    category="compliance",
+                    icon="fas fa-comment-dots",
+                    target_url=f"/workspace/{camp.id}"
+                )
+        else:
+            # Main Chat between Creator and Business
+            if camp.creator and sender_user != camp.creator:
+                sender_title = b_name if sender_user == camp.brand else "Admin Support"
+                Notification.objects.create(
+                    user=camp.creator,
+                    target_role="creator",
+                    title="New Workspace Message",
+                    message=f"Message from '{sender_title}': {snippet}",
+                    category="compliance",
+                    icon="fas fa-comment-dots",
+                    target_url=f"/workspace/{camp.id}"
+                )
+            if camp.brand and sender_user != camp.brand:
+                sender_title = c_name if sender_user == camp.creator else "Admin Support"
+                Notification.objects.create(
+                    user=camp.brand,
+                    target_role="business",
+                    title="New Workspace Message",
+                    message=f"Message from '{sender_title}': {snippet}",
+                    category="compliance",
+                    icon="fas fa-comment-dots",
+                    target_url=f"/workspace/{camp.id}"
+                )
 
 # --- Support & Chat Review Directives Signals ---
 @receiver(post_save, sender=AdminComplianceTicket)

@@ -228,8 +228,12 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             ).filter(Q(is_paid=True) | Q(status__iexact='released'))
             biz_insts_sum = float(paid_biz_insts.aggregate(total=Sum("amount"))["total"] or 0)
 
-            paid_negs = WorkspacePaymentNegotiation.objects.filter(campaign__brand=instance.user, business_fee_is_paid=True)
-            biz_fee_sum = sum(float(neg.business_platform_charge_amount or 0) for neg in paid_negs)
+            # First installment already includes the platform charge fee; only include standalone fee if no business installments exist
+            standalone_negs = WorkspacePaymentNegotiation.objects.filter(
+                campaign__brand=instance.user,
+                business_fee_is_paid=True
+            ).exclude(campaign__workspace_installments__installment_type='business')
+            standalone_fee_sum = sum(float(neg.business_platform_charge_amount or 0) for neg in standalone_negs)
 
             # Legacy completed campaigns without workspace payments
             legacy_completed = instance.user.brand_campaigns.filter(
@@ -237,7 +241,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             ).filter(workspace_installments__isnull=True).distinct()
             legacy_sum = float(legacy_completed.aggregate(total=Sum("budget"))["total"] or 0)
 
-            return round(biz_insts_sum + biz_fee_sum + legacy_sum, 2)
+            return round(biz_insts_sum + standalone_fee_sum + legacy_sum, 2)
         except Exception:
             return 0.0
     

@@ -535,21 +535,21 @@
 
       <!-- TABLE WRAPPER & CONTAINER (WITH FULL HORIZONTAL SCROLLING SUPPORT) -->
       <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm" id="tableCardWrapper">
-        <div class="overflow-x-auto w-full scrollbar-thin" id="tableScrollContainer">
-          <table class="w-full text-left text-xs border-collapse min-w-[1050px] whitespace-nowrap table-auto" id="campaignsTable">
-            <thead class="bg-slate-50 border-b border-slate-200 shadow-xs">
+        <div class="overflow-x-auto w-full [scrollbar-width:auto] pb-2" id="tableScrollContainer">
+          <table class="w-full text-left text-xs border-separate border-spacing-0 min-w-[1250px] whitespace-nowrap table-auto" id="campaignsTable">
+            <thead class="bg-slate-50 shadow-xs">
               <tr class="text-slate-500 font-semibold">
-                <th class="px-4 py-3 bg-slate-50 min-w-[200px] whitespace-nowrap">Campaign</th>
-                <th class="px-4 py-3 bg-slate-50 min-w-[240px] whitespace-nowrap">Platform / Category / Medium</th>
-                <th class="px-4 py-3 bg-slate-50 min-w-[130px] whitespace-nowrap">Created Date</th>
-                <th class="px-4 py-3 bg-slate-50 min-w-[120px] whitespace-nowrap">Agreed Price</th>
-                <th class="px-4 py-3 bg-slate-50 min-w-[130px] whitespace-nowrap">Platform Fee</th>
-                <th class="px-4 py-3 bg-slate-50 min-w-[110px] whitespace-nowrap">Status</th>
-                <th class="px-4 py-3 bg-slate-50 min-w-[140px] whitespace-nowrap">Flow Progress</th>
-                <th class="px-4 py-3 bg-slate-50 min-w-[120px] text-right whitespace-nowrap">Actions</th>
+                <th class="sticky left-0 z-30 bg-slate-50 border-b border-r border-slate-200 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.08)] px-4 py-3 min-w-[240px] whitespace-nowrap">Campaign</th>
+                <th class="border-b border-slate-200 px-4 py-3 min-w-[240px] whitespace-nowrap">Platform / Category / Medium</th>
+                <th class="border-b border-slate-200 px-4 py-3 min-w-[130px] whitespace-nowrap">Created Date</th>
+                <th class="border-b border-slate-200 px-4 py-3 min-w-[120px] whitespace-nowrap">Agreed Price</th>
+                <th class="border-b border-slate-200 px-4 py-3 min-w-[130px] whitespace-nowrap">Platform Fee</th>
+                <th class="border-b border-slate-200 px-4 py-3 min-w-[110px] whitespace-nowrap">Status</th>
+                <th class="border-b border-slate-200 px-4 py-3 min-w-[140px] whitespace-nowrap">Flow Progress</th>
+                <th class="border-b border-slate-200 px-4 py-3 min-w-[120px] text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100" id="campaignsTableBody">
+            <tbody id="campaignsTableBody">
               <!-- Rendered via JavaScript for dynamic filtering & pagination -->
             </tbody>
           </table>
@@ -587,6 +587,24 @@
     .scrollable-view-active {
       max-height: 480px !important;
       overflow-y: auto !important;
+    }
+    #tableScrollContainer {
+      overflow-x: auto !important;
+      scrollbar-width: auto;
+    }
+    #tableScrollContainer::-webkit-scrollbar {
+      height: 10px;
+    }
+    #tableScrollContainer::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 9999px;
+    }
+    #tableScrollContainer::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    #tableScrollContainer::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
   </style>
 
@@ -985,7 +1003,7 @@
       }
 
       if (pageItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-slate-400 text-xs">No campaign records match your active filters.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-slate-400 text-xs border-b border-slate-100">No campaign records match your active filters.</td></tr>`;
         return;
       }
 
@@ -997,12 +1015,12 @@
         const createdDate = c.created_at ? new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 
         return `
-          <tr class="hover:bg-slate-50/80 transition-colors whitespace-nowrap">
-            <td class="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">
+          <tr class="hover:bg-slate-50/80 transition-colors whitespace-nowrap group">
+            <td class="sticky left-0 z-20 bg-white group-hover:bg-slate-50 transition-colors border-b border-r border-slate-200 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.08)] px-4 py-3 font-bold text-slate-900 whitespace-nowrap">
               <div class="truncate max-w-[220px]">${c.name}</div>
               <div class="text-[10px] text-slate-400 font-normal">#${c.id}</div>
             </td>
-            <td class="px-4 py-3 whitespace-nowrap">
+            <td class="border-b border-slate-100 px-4 py-3 whitespace-nowrap">
               <div class="flex items-center gap-1.5 flex-nowrap">
                 <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-blue-50 text-blue-700 border border-blue-200 shrink-0">${c.platform || 'Instagram'}</span>
                 <span class="text-slate-400 text-[10px]">•</span>
@@ -1011,18 +1029,18 @@
                 <span class="text-slate-500 font-medium text-[11px]">${c.medium || 'English'}</span>
               </div>
             </td>
-            <td class="px-4 py-3 whitespace-nowrap text-slate-600 font-medium">
+            <td class="border-b border-slate-100 px-4 py-3 whitespace-nowrap text-slate-600 font-medium">
               <div class="flex items-center gap-1.5">
                 <i class="fa-regular fa-calendar text-slate-400"></i>
                 <span>${createdDate}</span>
               </div>
             </td>
-            <td class="px-4 py-3 font-mono font-bold text-slate-900 whitespace-nowrap">${sym}${fPrice.toFixed(2)}</td>
-            <td class="px-4 py-3 font-mono whitespace-nowrap">
+            <td class="border-b border-slate-100 px-4 py-3 font-mono font-bold text-slate-900 whitespace-nowrap">${sym}${fPrice.toFixed(2)}</td>
+            <td class="border-b border-slate-100 px-4 py-3 font-mono whitespace-nowrap">
               <span class="text-emerald-600 font-bold">${sym}${fee.toFixed(2)}</span>
               <span class="text-[10px] text-slate-400 ml-1">(2.5% + 1.5%)</span>
             </td>
-            <td class="px-4 py-3 whitespace-nowrap">
+            <td class="border-b border-slate-100 px-4 py-3 whitespace-nowrap">
               <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block ${
                 c.status === 'Live' || c.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                 c.status === 'Completed' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
@@ -1030,7 +1048,7 @@
                 'bg-slate-100 text-slate-600'
               }">${c.status || 'Pending'}</span>
             </td>
-            <td class="px-4 py-3 min-w-[130px] whitespace-nowrap">
+            <td class="border-b border-slate-100 px-4 py-3 min-w-[130px] whitespace-nowrap">
               <div class="flex items-center gap-2">
                 <div class="h-1.5 w-20 bg-slate-100 rounded-full overflow-hidden shrink-0">
                   <div class="h-full bg-blue-600 rounded-full" style="width: ${progress}%"></div>
@@ -1038,7 +1056,7 @@
                 <span class="text-[10px] font-mono text-slate-500 font-semibold">${progress}%</span>
               </div>
             </td>
-            <td class="px-4 py-3 text-right whitespace-nowrap">
+            <td class="border-b border-slate-100 px-4 py-3 text-right whitespace-nowrap">
               <button onclick="openModal(${c.id})" class="px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 font-bold text-slate-700 text-xs cursor-pointer inline-flex items-center gap-1.5 transition">
                 <i class="fa-solid fa-eye text-blue-600"></i> Drill-down
               </button>

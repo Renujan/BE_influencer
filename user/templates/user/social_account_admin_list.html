@@ -954,7 +954,14 @@
     <div class="sa-table-header-info">
       <div class="sa-table-header-left">
         <span class="sa-table-title"><i class="fa-solid fa-users-viewfinder text-indigo-600"></i> Creator Accounts Directory</span>
-        <span class="sa-table-count">{{ total_creators }} Creators • {{ total_accounts_count }} Connected Accounts</span>
+        <span class="sa-table-count">
+          {{ total_creators }} {% if total_creators == 1 %}Creator{% else %}Creators{% endif %} &bull; 
+          {% if platform_filter != 'all' or status_filter != 'all' or search_query %}
+            {{ filtered_accounts_count }} Filtered Accounts ({{ total_accounts_count }} Total)
+          {% else %}
+            {{ total_accounts_count }} Connected Accounts
+          {% endif %}
+        </span>
       </div>
       <div class="text-xs text-slate-400">
         <i class="fa-solid fa-circle-info mr-1"></i> Click any creator row to view platforms & verification
@@ -974,11 +981,11 @@
         <tbody>
           {% for creator in creators %}
           <!-- Master Creator Row -->
-          <tr id="creator-row-{{ creator.id }}" class="sa-creator-row" onclick="toggleCreatorChannels('{{ creator.id }}')">
+          <tr id="creator-row-{{ creator.id }}" class="sa-creator-row {% if platform_filter != 'all' or status_filter != 'all' or search_query %}expanded{% endif %}" onclick="toggleCreatorChannels('{{ creator.id }}')">
             <!-- Creator Profile -->
             <td>
               <div class="sa-creator-cell">
-                <button type="button" class="sa-expand-btn" id="expand-btn-{{ creator.id }}" title="Click to expand channels" onclick="event.stopPropagation(); toggleCreatorChannels('{{ creator.id }}')">
+                <button type="button" class="sa-expand-btn {% if platform_filter != 'all' or status_filter != 'all' or search_query %}rotated{% endif %}" id="expand-btn-{{ creator.id }}" title="Click to expand channels" onclick="event.stopPropagation(); toggleCreatorChannels('{{ creator.id }}')">
                   <i class="fa-solid fa-chevron-right" id="expand-icon-{{ creator.id }}"></i>
                 </button>
                 {% if creator.avatar_url %}
@@ -1039,7 +1046,7 @@
           </tr>
 
           <!-- Expandable Platform Details Drawer Row -->
-          <tr id="channels-drawer-{{ creator.id }}" class="sa-drawer-row" style="display: none;">
+          <tr id="channels-drawer-{{ creator.id }}" class="sa-drawer-row" {% if platform_filter == 'all' and status_filter == 'all' and not search_query %}style="display: none;"{% else %}style="display: table-row;"{% endif %}>
             <td colspan="4" class="sa-drawer-cell">
               <div class="sa-drawer-container">
                 <div class="sa-drawer-header">
@@ -1060,8 +1067,7 @@
                     <tr>
                       <th style="width: 160px;">Platform</th>
                       <th style="width: 180px;">Handle / Username</th>
-                      <th style="width: 130px;">Followers</th>
-                      <th style="width: 120px;">Engagement</th>
+                      <th style="width: 140px;">Followers</th>
                       <th style="width: 140px;">Proof Link</th>
                       <th style="width: 140px;">Verification</th>
                       <th style="width: 150px; text-align: right;">Audit Action</th>
@@ -1095,13 +1101,6 @@
                       <td>
                         <span class="sa-followers-tag" style="font-size: 0.76rem; padding: 2px 7px;">
                           <i class="fa-solid fa-users text-indigo-500"></i> {{ acc.followers_formatted }}
-                        </span>
-                      </td>
-
-                      <!-- Engagement -->
-                      <td>
-                        <span style="font-family: monospace; font-weight: 700; color: #475569; font-size: 0.76rem;">
-                          {{ acc.engagement_rate }}%
                         </span>
                       </td>
 

@@ -1850,6 +1850,10 @@ from Setting.models import CreatorSettings, BusinessSettings
 
 @user_passes_test(lambda u: u.is_staff)
 def download_profile_pdf_view(request, profile_type, profile_id):
+    from django.utils import timezone
+    now_local = timezone.localtime(timezone.now())
+    downloaded_at = now_local.strftime("%Y-%m-%d %I:%M %p")
+
     if profile_type == 'business':
         business_profile = get_object_or_404(BusinessProfile, pk=profile_id)
         BusinessSettings.objects.get_or_create(business=business_profile)
@@ -1869,6 +1873,7 @@ def download_profile_pdf_view(request, profile_type, profile_id):
             "business_types": business_types,
             "mediums": business_profile.mediums.all(),
             "profile_type": "Business Profile",
+            "downloaded_at": downloaded_at,
         }
         template_name = "user/profile_pdf.html"
         filename = f"business_profile_{business_profile.company_name or business_profile.user.username}.pdf"
@@ -1895,6 +1900,7 @@ def download_profile_pdf_view(request, profile_type, profile_id):
             "payout_methods": creator_profile.payout_methods.all(),
             "social_accounts": creator_profile.user.social_accounts.all(),
             "profile_type": "Creator Profile",
+            "downloaded_at": downloaded_at,
         }
         template_name = "user/profile_pdf.html"
         filename = f"creator_profile_{creator_profile.user.username}.pdf"
