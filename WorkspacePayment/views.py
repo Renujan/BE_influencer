@@ -296,13 +296,36 @@ def get_negotiation(request, campaign_id):
                     negotiation.final_price = float(last_price)
                     negotiation.status = 'creator_accepted'
                     negotiation.save(update_fields=['final_price', 'status'])
+        elif created_via == 'request' or getattr(campaign, 'is_request', False):
+            # For request campaigns, price is agreed from latest counter round, counter_price, or budget
+            camp_price = None
+            if campaign.counter_history and isinstance(campaign.counter_history, list) and len(campaign.counter_history) > 0:
+                camp_price = campaign.counter_history[-1].get("price")
+            elif campaign.counter_price:
+                camp_price = campaign.counter_price
+            elif campaign.budget:
+                camp_price = campaign.budget
+
+            last_price = camp_price or campaign.budget
+
+            if not negotiation:
+                negotiation = WorkspacePaymentNegotiation.objects.create(
+                    campaign=campaign,
+                    final_price=last_price,
+                    status='creator_accepted'
+                )
+            else:
+                if last_price and negotiation.status not in ['revision_requested', 'pending_creator_approval', 'pending_business_approval'] and (negotiation.final_price is None or negotiation.status == 'pending_proposal'):
+                    negotiation.final_price = float(last_price)
+                    negotiation.status = 'creator_accepted'
+                    negotiation.save(update_fields=['final_price', 'status'])
         elif not negotiation and campaign:
             negotiation = WorkspacePaymentNegotiation.objects.create(
                 campaign=campaign,
                 final_price=None,
                 status='pending_proposal'
             )
-        elif negotiation and campaign and created_via != 'pitch':
+        elif negotiation and campaign and created_via not in ['pitch', 'request']:
             # For direct request campaigns, if status was auto-set to creator_accepted without manual proposal, reset it to pending_proposal
             if negotiation.status == 'creator_accepted' and not negotiation.proposed_by and not negotiation.action_by:
                 negotiation.final_price = None

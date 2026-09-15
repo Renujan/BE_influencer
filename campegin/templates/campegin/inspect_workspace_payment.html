@@ -171,7 +171,7 @@
 
     .table-custom {
         width: 100%;
-        min-width: 1380px;
+        min-width: 1220px;
         border-collapse: collapse;
         font-size: 12px;
         white-space: nowrap;
@@ -180,7 +180,7 @@
     .table-custom th {
         background: #f8fafc;
         text-align: left;
-        padding: 10px 14px;
+        padding: 10px 12px;
         font-weight: 700;
         color: #475569;
         text-transform: uppercase;
@@ -191,11 +191,11 @@
     }
 
     .table-custom td {
-        padding: 10px 14px;
+        padding: 10px 12px;
         border-bottom: 1px solid #f1f5f9;
         color: #1e293b;
         white-space: nowrap;
-        vertical-align: middle;
+        vertical-align: top;
     }
 
     .table-custom tr {
@@ -203,33 +203,33 @@
     }
 
     .table-custom th.col-title, .table-custom td.col-title {
-        width: 440px;
-        min-width: 440px;
+        width: 290px;
+        min-width: 290px;
     }
 
     .table-custom th.col-amount, .table-custom td.col-amount {
-        width: 190px;
-        min-width: 190px;
+        width: 145px;
+        min-width: 145px;
     }
 
     .table-custom th.col-date, .table-custom td.col-date {
-        width: 160px;
-        min-width: 160px;
+        width: 145px;
+        min-width: 145px;
     }
 
     .table-custom th.col-status, .table-custom td.col-status {
-        width: 240px;
-        min-width: 240px;
+        width: 225px;
+        min-width: 225px;
     }
 
     .table-custom th.col-proof, .table-custom td.col-proof {
-        width: 240px;
-        min-width: 240px;
+        width: 245px;
+        min-width: 245px;
     }
 
     .table-custom th.col-actions, .table-custom td.col-actions {
-        width: 160px;
-        min-width: 160px;
+        width: 170px;
+        min-width: 170px;
     }
 
     .btn-action {
@@ -471,22 +471,22 @@
                         <input type="hidden" name="installment_type" value="business">
                     </form>
                     <td class="col-title">
-                        <input type="text" form="add-biz-form" name="title" placeholder="e.g. Milestone 1 (Business)" class="input-custom" style="width: 220px; font-size: 11px;" required>
+                        <input type="text" form="add-biz-form" name="title" placeholder="e.g. Milestone 1 (Business)" class="input-custom" style="width: 100%; max-width: 260px; font-size: 11px;" required>
                     </td>
                     <td class="col-amount">
-                        <input type="number" step="0.01" form="add-biz-form" name="amount" placeholder="{{ remaining_business }}" class="input-custom" style="width: 160px; font-family: monospace; font-size: 11px; font-weight: bold;" required>
+                        <input type="number" step="0.01" form="add-biz-form" name="amount" placeholder="{{ remaining_business }}" class="input-custom" style="width: 100%; max-width: 120px; font-family: monospace; font-size: 11px; font-weight: bold;" required>
                     </td>
                     <td class="col-date">
-                        <input type="date" form="add-biz-form" name="paid_date" class="input-custom" style="width: 140px; font-size: 11px; font-family: monospace;">
+                        <input type="date" form="add-biz-form" name="paid_date" class="input-custom" style="width: 100%; max-width: 125px; font-size: 11px; font-family: monospace;">
                     </td>
                     <td class="col-status">
-                        <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 11px; color: #475569; white-space: nowrap;">
+                        <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 11px; color: #475569; white-space: nowrap; min-height: 28px;">
                             <input type="checkbox" form="add-biz-form" name="is_paid" value="true">
                             Approved
                         </label>
                     </td>
                     <td class="col-proof">
-                        <span style="font-size: 11px; color: #94a3b8; white-space: nowrap;">Uploaded by Business</span>
+                        <span style="font-size: 11px; color: #94a3b8; white-space: nowrap; min-height: 28px; display: inline-flex; align-items: center;">Uploaded by Business</span>
                     </td>
                     <td class="col-actions">
                         <button type="submit" form="add-biz-form" class="btn-action" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 11px; white-space: nowrap;">
@@ -504,23 +504,23 @@
                         <input type="hidden" name="installment_id" value="{{ inst.id }}">
                     </form>
                     <td class="col-title">
-                        <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
-                            <input type="text" form="update-biz-form-{{ inst.id }}" name="title" value="{{ inst.title }}" class="input-custom" style="width: 220px; font-size: 11px;">
+                        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+                            <input type="text" form="update-biz-form-{{ inst.id }}" name="title" value="{{ inst.title }}" class="input-custom" style="width: 100%; max-width: 260px; font-size: 11px;">
                             {% if inst.description %}
-                                <span style="font-size: 10px; color: #2563eb; font-weight: 700; background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px 6px; border-radius: 4px; white-space: nowrap;" title="{{ inst.description }}">
+                                <span style="font-size: 10px; color: #2563eb; font-weight: 700; background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px 6px; border-radius: 4px; display: inline-block; white-space: nowrap;" title="{{ inst.description }}">
                                     🏷️ {{ inst.description }}
                                 </span>
                             {% endif %}
                         </div>
                     </td>
                     <td class="col-amount">
-                        <input type="text" form="update-biz-form-{{ inst.id }}" name="amount" value="{{ inst.amount }}" class="input-custom" style="width: 160px; font-family: monospace; font-size: 11px; font-weight: bold;">
+                        <input type="text" form="update-biz-form-{{ inst.id }}" name="amount" value="{{ inst.amount }}" class="input-custom" style="width: 100%; max-width: 120px; font-family: monospace; font-size: 11px; font-weight: bold;">
                     </td>
                     <td class="col-date">
-                        <input type="date" form="update-biz-form-{{ inst.id }}" name="paid_date" value="{{ inst.paid_date|date:'Y-m-d' }}" class="input-custom" style="width: 140px; font-size: 11px; font-family: monospace;">
+                        <input type="date" form="update-biz-form-{{ inst.id }}" name="paid_date" value="{{ inst.paid_date|date:'Y-m-d' }}" class="input-custom" style="width: 100%; max-width: 125px; font-size: 11px; font-family: monospace;">
                     </td>
                     <td class="col-status">
-                        <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 11px; white-space: nowrap;">
+                        <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 11px; white-space: nowrap; min-height: 28px;">
                             <input type="checkbox" form="update-biz-form-{{ inst.id }}" name="is_paid" value="true" {% if inst.is_paid or inst.status == 'approved' or inst.status == 'released' %}checked{% endif %}>
                             {% if inst.status == 'released' %}
                                 <span style="color: #059669; font-weight: 700;">✓ Released (Settled)</span>
@@ -535,21 +535,21 @@
                     </td>
                     <td class="col-proof">
                         {% if inst.receipt_image %}
-                            <div style="display: flex; gap: 8px; align-items: center; white-space: nowrap;">
+                            <div style="display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; min-height: 28px;">
                                 <a href="{{ inst.receipt_image.url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Proof</a>
                                 <a href="{{ inst.receipt_image.url }}" download target="_blank" style="color: #059669; font-weight: 600; text-decoration: underline;">Download</a>
                             </div>
                         {% elif inst.receipt_url %}
-                            <div style="display: flex; gap: 8px; align-items: center; white-space: nowrap;">
+                            <div style="display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; min-height: 28px;">
                                 <a href="{{ inst.receipt_url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">View Proof</a>
                                 <a href="{{ inst.receipt_url }}" download target="_blank" style="color: #059669; font-weight: 600; text-decoration: underline;">Download</a>
                             </div>
                         {% else %}
-                            <span style="color: #94a3b8; font-size: 11px; white-space: nowrap;">No proof uploaded by business</span>
+                            <span style="color: #94a3b8; font-size: 11px; white-space: nowrap; min-height: 28px; display: inline-flex; align-items: center;">No proof uploaded by business</span>
                         {% endif %}
                     </td>
                     <td class="col-actions">
-                        <div style="display: flex; gap: 6px; align-items: center; white-space: nowrap;">
+                        <div style="display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; min-height: 28px;">
                             <button type="submit" form="update-biz-form-{{ inst.id }}" class="btn-action">Save</button>
                             <form method="POST" style="display: inline; margin: 0;" onsubmit="return confirm('Delete this business installment?');">
                                 {% csrf_token %}
@@ -622,19 +622,19 @@
                         <input type="hidden" name="installment_type" value="creator">
                     </form>
                     <td class="col-title">
-                        <input type="text" form="add-creator-form" name="title" placeholder="e.g. Kickoff 30%" class="input-custom" style="width: 220px; font-size: 11px;" required>
+                        <input type="text" form="add-creator-form" name="title" placeholder="e.g. Kickoff 30%" class="input-custom" style="width: 100%; max-width: 260px; font-size: 11px;" required>
                     </td>
                     <td class="col-amount">
-                        <input type="number" step="0.01" form="add-creator-form" name="amount" placeholder="{{ remaining_creator }}" class="input-custom" style="width: 160px; font-family: monospace; font-size: 11px; font-weight: bold;" required>
+                        <input type="number" step="0.01" form="add-creator-form" name="amount" placeholder="{{ remaining_creator }}" class="input-custom" style="width: 100%; max-width: 120px; font-family: monospace; font-size: 11px; font-weight: bold;" required>
                     </td>
                     <td class="col-date">
-                        <input type="date" form="add-creator-form" name="paid_date" class="input-custom" style="width: 140px; font-size: 11px; font-family: monospace;">
+                        <input type="date" form="add-creator-form" name="paid_date" class="input-custom" style="width: 100%; max-width: 125px; font-size: 11px; font-family: monospace;">
                     </td>
                     <td class="col-status">
-                        <span style="color: #64748b; font-size: 11px; font-style: italic; white-space: nowrap;">Verified by Creator</span>
+                        <span style="color: #64748b; font-size: 11px; font-style: italic; white-space: nowrap; min-height: 28px; display: inline-flex; align-items: center;">Verified by Creator</span>
                     </td>
                     <td class="col-proof">
-                        <input type="file" form="add-creator-form" name="receipt_image" accept="image/*,.pdf" style="font-size: 11px; width: 220px;">
+                        <input type="file" form="add-creator-form" name="receipt_image" accept="image/*,.pdf" style="font-size: 11px; width: 100%; max-width: 210px;">
                     </td>
                     <td class="col-actions">
                         <button type="submit" form="add-creator-form" class="btn-action-emerald" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 11px; white-space: nowrap;">
@@ -652,32 +652,34 @@
                         <input type="hidden" name="installment_id" value="{{ inst.id }}">
                     </form>
                     <td class="col-title">
-                        <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
-                            <input type="text" form="update-cr-form-{{ inst.id }}" name="title" value="{{ inst.title }}" class="input-custom" style="width: 220px; font-size: 11px;">
+                        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+                            <input type="text" form="update-cr-form-{{ inst.id }}" name="title" value="{{ inst.title }}" class="input-custom" style="width: 100%; max-width: 260px; font-size: 11px;">
                             {% if inst.description %}
-                                <span style="font-size: 10px; color: #166534; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 2px 6px; border-radius: 4px; white-space: nowrap;" title="{{ inst.description }}">
+                                <span style="font-size: 10px; color: #166534; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 2px 6px; border-radius: 4px; display: inline-block; white-space: nowrap;" title="{{ inst.description }}">
                                     🏷️ {{ inst.description }}
                                 </span>
                             {% endif %}
                         </div>
                     </td>
                     <td class="col-amount">
-                        <input type="text" form="update-cr-form-{{ inst.id }}" name="amount" value="{{ inst.amount }}" class="input-custom" style="width: 160px; font-family: monospace; font-size: 11px; font-weight: bold;">
+                        <input type="text" form="update-cr-form-{{ inst.id }}" name="amount" value="{{ inst.amount }}" class="input-custom" style="width: 100%; max-width: 120px; font-family: monospace; font-size: 11px; font-weight: bold;">
                     </td>
                     <td class="col-date">
-                        <input type="date" form="update-cr-form-{{ inst.id }}" name="paid_date" value="{{ inst.paid_date|date:'Y-m-d' }}" class="input-custom" style="width: 140px; font-size: 11px; font-family: monospace;">
+                        <input type="date" form="update-cr-form-{{ inst.id }}" name="paid_date" value="{{ inst.paid_date|date:'Y-m-d' }}" class="input-custom" style="width: 100%; max-width: 125px; font-size: 11px; font-family: monospace;">
                     </td>
                     <td class="col-status">
-                        {% if inst.is_paid or inst.status == 'released' %}
-                            <span style="color: #059669; font-weight: 700; font-size: 11px; white-space: nowrap;">✓ Released &amp; Verified by Creator</span>
-                        {% elif inst.receipt_image or inst.receipt_url or inst.status == 'in_escrow' or inst.status == 'payment_submitted' %}
-                            <span style="color: #2563eb; font-weight: 700; font-size: 11px; white-space: nowrap;">⌛ In Escrow (Awaiting Creator Verification)</span>
-                        {% else %}
-                            <span style="color: #d97706; font-weight: 700; font-size: 11px; white-space: nowrap;">⏳ Pending Admin Payout</span>
-                        {% endif %}
+                        <div style="display: inline-flex; align-items: center; min-height: 28px; white-space: nowrap;">
+                            {% if inst.is_paid or inst.status == 'released' %}
+                                <span style="color: #059669; font-weight: 700; font-size: 11px; white-space: nowrap;">✓ Released &amp; Verified by Creator</span>
+                            {% elif inst.receipt_image or inst.receipt_url or inst.status == 'in_escrow' or inst.status == 'payment_submitted' %}
+                                <span style="color: #2563eb; font-weight: 700; font-size: 11px; white-space: nowrap;">⌛ In Escrow (Awaiting Creator Verification)</span>
+                            {% else %}
+                                <span style="color: #d97706; font-weight: 700; font-size: 11px; white-space: nowrap;">⏳ Pending Admin Payout</span>
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="col-proof">
-                        <div style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
+                        <div style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 28px;">
                             {% if inst.receipt_image %}
                                 <a href="{{ inst.receipt_image.url }}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline; font-size: 11px;">View</a>
                                 <a href="{{ inst.receipt_image.url }}" download target="_blank" style="color: #059669; font-weight: 600; text-decoration: underline; font-size: 11px;">Download</a>
@@ -687,11 +689,11 @@
                             {% else %}
                                 <span style="color: #94a3b8; font-size: 11px;">No receipt</span>
                             {% endif %}
-                            <input type="file" form="update-cr-form-{{ inst.id }}" name="receipt_image" accept="image/*,.pdf" style="font-size: 11px; width: 150px;">
+                            <input type="file" form="update-cr-form-{{ inst.id }}" name="receipt_image" accept="image/*,.pdf" style="font-size: 11px; width: 130px;">
                         </div>
                     </td>
                     <td class="col-actions">
-                        <div style="display: flex; gap: 6px; align-items: center; white-space: nowrap;">
+                        <div style="display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; min-height: 28px;">
                             <button type="submit" form="update-cr-form-{{ inst.id }}" class="btn-action">Save</button>
                             <form method="POST" style="display: inline; margin: 0;" onsubmit="return confirm('Delete this creator installment?');">
                                 {% csrf_token %}

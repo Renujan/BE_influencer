@@ -361,12 +361,12 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Only pending or under review campaigns can be deleted by non-staff users
+        # Only under review campaigns can be deleted by non-staff users
         if not (request.user.is_staff or request.user.is_superuser):
             status_clean = str(instance.status or "").lower().replace(" ", "").replace("_", "").replace("-", "")
-            if status_clean not in ["underreview", "pending"]:
+            if status_clean not in ["underreview"]:
                 return Response(
-                    {"detail": "Only pending or under review campaigns can be deleted."},
+                    {"detail": "Only under review campaigns can be deleted."},
                     status=status.HTTP_403_FORBIDDEN
                 )
         self.perform_destroy(instance)
@@ -1190,6 +1190,8 @@ class RequestViewSet(viewsets.ModelViewSet):
             campaign.status = "Accepted_Pending_Admin"
         else:
             campaign.status = "Live"
+        if not campaign.created_via:
+            campaign.created_via = "request"
         campaign.save()
 
         if campaign.status == "Accepted_Pending_Admin":

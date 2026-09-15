@@ -223,6 +223,25 @@ class WorkspacePaymentNegotiationSerializer(serializers.ModelSerializer):
                             instance.save(update_fields=["final_price", "status"])
                     except Exception:
                         pass
+            elif created_via == "request" or getattr(camp, "is_request", False):
+                camp_price = None
+                if camp.counter_history and isinstance(camp.counter_history, list) and len(camp.counter_history) > 0:
+                    camp_price = camp.counter_history[-1].get("price")
+                elif camp.counter_price:
+                    camp_price = camp.counter_price
+                elif camp.budget:
+                    camp_price = camp.budget
+
+                resolved_price = camp_price or camp.budget or instance.final_price
+                if resolved_price:
+                    try:
+                        resolved_float = float(resolved_price)
+                        if (instance.final_price != resolved_float or instance.status == "pending_proposal") and instance.status != "revision_requested":
+                            instance.final_price = resolved_float
+                            instance.status = "creator_accepted"
+                            instance.save(update_fields=["final_price", "status"])
+                    except Exception:
+                        pass
 
         data = super().to_representation(instance)
         return data
