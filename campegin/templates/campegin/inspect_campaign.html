@@ -52,13 +52,15 @@
         border: 1px solid rgba(255, 255, 255, 0.15);
         color: #ffffff !important;
         padding: 10px 20px;
-        border-radius: 6px;
+        min-height: 44px;
+        border-radius: 8px;
         font-weight: 600;
         font-size: 14px;
         text-decoration: none;
         transition: background-color 0.2s;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
     }
 
     .btn-header-secondary:hover {
@@ -69,7 +71,8 @@
         background-color: #06b6d4; /* Teal/Cyan */
         color: #ffffff !important;
         padding: 10px 20px;
-        border-radius: 6px;
+        min-height: 44px;
+        border-radius: 8px;
         font-weight: 600;
         font-size: 14px;
         text-decoration: none;
@@ -77,6 +80,7 @@
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         display: inline-flex;
         align-items: center;
+        justify-content: center;
     }
 
     .btn-header-primary:hover {
@@ -329,7 +333,8 @@
         color: #ffffff !important;
         border: none;
         padding: 10px 24px;
-        border-radius: 6px;
+        min-height: 44px;
+        border-radius: 8px;
         font-weight: 600;
         font-size: 14px;
         cursor: pointer;
@@ -337,10 +342,42 @@
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         text-decoration: none;
     }
     .btn-footer-submit:hover {
         background-color: #0891b2;
+    }
+
+    /* ── Mobile Media Queries (< 768px) ── */
+    @media (max-width: 768px) {
+        .custom-inspect-wrapper {
+            padding: 16px 12px 48px 12px;
+        }
+        .custom-header-bar {
+            padding: 20px 16px;
+            border-radius: 12px;
+            gap: 14px;
+        }
+        .custom-header-title h1 {
+            font-size: 1.35rem;
+        }
+        .custom-header-actions {
+            flex-direction: column;
+            width: 100%;
+            gap: 8px;
+        }
+        .custom-header-actions a,
+        .custom-header-actions button {
+            width: 100%;
+            min-height: 44px;
+            justify-content: center;
+        }
+        .custom-body-card {
+            padding: 18px 14px;
+            border-radius: 12px;
+            gap: 24px;
+        }
     }
 </style>
 {% endblock %}

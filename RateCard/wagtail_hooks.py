@@ -38,14 +38,16 @@ def rate_card_admin_css():
                 max-width: 100% !important;
                 -webkit-overflow-scrolling: touch !important;
             }
-            table.listing, .w-table {
-                width: max-content !important;
-                min-width: 100% !important;
-            }
-            table.listing td, table.listing th, .w-table td, .w-table th {
-                white-space: nowrap !important;
-                padding-left: 0.75rem !important;
-                padding-right: 0.75rem !important;
+            @media (min-width: 769px) {
+                table.listing, .w-table {
+                    width: max-content !important;
+                    min-width: 100% !important;
+                }
+                table.listing td, table.listing th, .w-table td, .w-table th {
+                    white-space: nowrap !important;
+                    padding-left: 0.75rem !important;
+                    padding-right: 0.75rem !important;
+                }
             }
 
             /* Hide any legacy Add Rate Card button/link in Wagtail admin */

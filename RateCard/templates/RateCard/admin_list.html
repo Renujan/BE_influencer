@@ -332,12 +332,14 @@
   .rc-btn-view {
     background: #1e293b;
     color: #ffffff !important;
-    padding: 7px 14px;
+    padding: 9px 16px;
+    min-height: 40px;
     border-radius: 8px;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 600;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 5px;
     text-decoration: none;
     transition: all 0.2s ease;
@@ -347,6 +349,71 @@
     background: #4f46e5;
     transform: translateY(-1px);
     box-shadow: 0 3px 8px rgba(79, 70, 229, 0.3);
+  }
+
+  /* ── Mobile Creator Cards (< 768px) ── */
+  .rc-mobile-card {
+    background: #ffffff;
+    border: 1px solid var(--rc-slate-200);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── Mobile Media Queries ── */
+  @media (max-width: 768px) {
+    .rc-container {
+      padding: 16px 12px 48px 12px;
+    }
+    .rc-header {
+      padding: 20px 16px;
+      border-radius: 14px;
+      gap: 14px;
+    }
+    .rc-header h1 {
+      font-size: 1.35rem;
+    }
+    .rc-toolbar {
+      padding: 14px;
+      border-radius: 14px;
+    }
+    .rc-search-form {
+      flex-direction: column;
+      width: 100%;
+      max-width: none;
+      gap: 8px;
+    }
+    .rc-search-wrapper {
+      width: 100%;
+    }
+    .rc-search-input {
+      height: 44px !important;
+    }
+    .rc-btn-search {
+      width: 100%;
+      height: 44px;
+    }
+    .rc-btn-clear {
+      width: 100%;
+      height: 44px;
+    }
+    .rc-desktop-table {
+      display: none !important;
+    }
+    .rc-mobile-cards {
+      display: flex !important;
+      flex-direction: column;
+      gap: 12px;
+    }
+  }
+
+  @media (min-width: 769px) {
+    .rc-mobile-cards {
+      display: none !important;
+    }
   }
 
   /* ── Empty State ── */
@@ -414,107 +481,183 @@
     </form>
   </div>
 
-  <!-- Creators Rate Cards Table -->
-  <div class="rc-table-card">
-    <table class="rc-table">
-      <thead>
-        <tr>
-          <th>Creator</th>
-          <th>Country</th>
-          <th>Niches</th>
-          <th>Packages</th>
-          <th>Price Range</th>
-          <th>Platforms</th>
-          <th style="text-align: right;">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in creators %}
-        <tr>
-          <td>
-            <div class="rc-user-cell">
-              {% if c.avatar_url %}
-                <img src="{{ c.avatar_url }}" alt="{{ c.username }}" class="rc-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="rc-avatar-placeholder" style="display: none;">{{ c.username|slice:":1"|upper }}</div>
-              {% else %}
-                <div class="rc-avatar-placeholder">{{ c.username|slice:":1"|upper }}</div>
-              {% endif %}
-              <div>
-                <div class="rc-user-name">{{ c.full_name }}</div>
-                <div class="rc-user-username">@{{ c.username }}</div>
-              </div>
-            </div>
-          </td>
+  <!-- Mobile Cards View (< 769px) -->
+  <div class="rc-mobile-cards">
+    {% for c in creators %}
+    <div class="rc-mobile-card">
+      <div class="rc-user-cell">
+        {% if c.avatar_url %}
+          <img src="{{ c.avatar_url }}" alt="{{ c.username }}" class="rc-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="rc-avatar-placeholder" style="display: none;">{{ c.username|slice:":1"|upper }}</div>
+        {% else %}
+          <div class="rc-avatar-placeholder">{{ c.username|slice:":1"|upper }}</div>
+        {% endif %}
+        <div style="min-width: 0; flex: 1;">
+          <div class="rc-user-name truncate">{{ c.full_name }}</div>
+          <div class="rc-user-username truncate">@{{ c.username }}</div>
+        </div>
+        <span style="font-size: 0.8rem; color: #334155; font-weight: 600; flex-shrink: 0;">
+          🌍 {{ c.country_name }}
+        </span>
+      </div>
 
-          <td>
-            <span style="font-size: 0.85rem; color: #334155; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
-              🌍 {{ c.country_name }}
-            </span>
-          </td>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <span class="rc-stat-pill packages">
+          📦 {{ c.packages_count }} {{ c.packages_count|pluralize:"pkg,pkgs" }}
+        </span>
+        <span class="rc-stat-pill price">
+          💰 {{ c.price_range }}
+        </span>
+      </div>
 
-          <td>
-            <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 200px;">
-              {% for n in c.niches|slice:":3" %}
-                <span class="rc-badge rc-badge-niche">{{ n }}</span>
-              {% empty %}
-                <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
-              {% endfor %}
-              {% if c.niches|length > 3 %}
-                <span class="rc-badge rc-badge-niche">+{{ c.niches|length|add:"-3" }}</span>
-              {% endif %}
-            </div>
-          </td>
-
-          <td>
-            <span class="rc-stat-pill packages">
-              📦 {{ c.packages_count }} {{ c.packages_count|pluralize:"package,packages" }}
-            </span>
-          </td>
-
-          <td>
-            <span class="rc-stat-pill price">
-              💰 {{ c.price_range }}
-            </span>
-          </td>
-
-          <td>
-            <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 220px;">
-              {% for p in c.platforms %}
-                <span class="rc-badge rc-badge-platform">{{ p }}</span>
-              {% empty %}
-                <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
-              {% endfor %}
-            </div>
-          </td>
-
-          <td style="text-align: right;">
-            <a href="/admin/rate-cards/{{ c.id }}/" class="rc-btn-view">
-              View Rate Card →
-            </a>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="7">
-            <div class="rc-empty-state">
-              <div class="rc-empty-icon">🔍</div>
-              <h3 class="rc-empty-title">No creators found</h3>
-              <p class="rc-empty-desc">
-                {% if search_query %}
-                  No creator matching "{{ search_query }}". Try adjusting your search keywords.
-                {% else %}
-                  No creator profiles registered in the system yet.
-                {% endif %}
-              </p>
-              {% if search_query %}
-                <a href="?" class="rc-btn-search" style="text-decoration: none;">View All Creators</a>
-              {% endif %}
-            </div>
-          </td>
-        </tr>
+      {% if c.platforms %}
+      <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+        {% for p in c.platforms %}
+          <span class="rc-badge rc-badge-platform">{{ p }}</span>
         {% endfor %}
-      </tbody>
-    </table>
+      </div>
+      {% endif %}
+
+      {% if c.niches %}
+      <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+        {% for n in c.niches|slice:":3" %}
+          <span class="rc-badge rc-badge-niche">{{ n }}</span>
+        {% endfor %}
+        {% if c.niches|length > 3 %}
+          <span class="rc-badge rc-badge-niche">+{{ c.niches|length|add:"-3" }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div style="padding-top: 4px;">
+        <a href="/admin/rate-cards/{{ c.id }}/" class="rc-btn-view" style="width: 100%; min-height: 44px;">
+          View Rate Card →
+        </a>
+      </div>
+    </div>
+    {% empty %}
+    <div class="rc-mobile-card">
+      <div class="rc-empty-state" style="padding: 40px 16px;">
+        <div class="rc-empty-icon">🔍</div>
+        <h3 class="rc-empty-title">No creators found</h3>
+        <p class="rc-empty-desc">
+          {% if search_query %}
+            No creator matching "{{ search_query }}".
+          {% else %}
+            No creator profiles registered yet.
+          {% endif %}
+        </p>
+        {% if search_query %}
+          <a href="?" class="rc-btn-search" style="text-decoration: none; display: inline-flex;">View All Creators</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Creators Rate Cards Table (Desktop >= 769px) -->
+  <div class="rc-table-card rc-desktop-table">
+    <div style="overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch;">
+      <table class="rc-table" style="min-width: 820px;">
+        <thead>
+          <tr>
+            <th>Creator</th>
+            <th>Country</th>
+            <th>Niches</th>
+            <th>Packages</th>
+            <th>Price Range</th>
+            <th>Platforms</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in creators %}
+          <tr>
+            <td>
+              <div class="rc-user-cell">
+                {% if c.avatar_url %}
+                  <img src="{{ c.avatar_url }}" alt="{{ c.username }}" class="rc-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="rc-avatar-placeholder" style="display: none;">{{ c.username|slice:":1"|upper }}</div>
+                {% else %}
+                  <div class="rc-avatar-placeholder">{{ c.username|slice:":1"|upper }}</div>
+                {% endif %}
+                <div>
+                  <div class="rc-user-name">{{ c.full_name }}</div>
+                  <div class="rc-user-username">@{{ c.username }}</div>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <span style="font-size: 0.85rem; color: #334155; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+                🌍 {{ c.country_name }}
+              </span>
+            </td>
+
+            <td>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 200px;">
+                {% for n in c.niches|slice:":3" %}
+                  <span class="rc-badge rc-badge-niche">{{ n }}</span>
+                {% empty %}
+                  <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
+                {% endfor %}
+                {% if c.niches|length > 3 %}
+                  <span class="rc-badge rc-badge-niche">+{{ c.niches|length|add:"-3" }}</span>
+                {% endif %}
+              </div>
+            </td>
+
+            <td>
+              <span class="rc-stat-pill packages">
+                📦 {{ c.packages_count }} {{ c.packages_count|pluralize:"package,packages" }}
+              </span>
+            </td>
+
+            <td>
+              <span class="rc-stat-pill price">
+                💰 {{ c.price_range }}
+              </span>
+            </td>
+
+            <td>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 220px;">
+                {% for p in c.platforms %}
+                  <span class="rc-badge rc-badge-platform">{{ p }}</span>
+                {% empty %}
+                  <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
+                {% endfor %}
+              </div>
+            </td>
+
+            <td style="text-align: right;">
+              <a href="/admin/rate-cards/{{ c.id }}/" class="rc-btn-view">
+                View Rate Card →
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7">
+              <div class="rc-empty-state">
+                <div class="rc-empty-icon">🔍</div>
+                <h3 class="rc-empty-title">No creators found</h3>
+                <p class="rc-empty-desc">
+                  {% if search_query %}
+                    No creator matching "{{ search_query }}". Try adjusting your search keywords.
+                  {% else %}
+                    No creator profiles registered in the system yet.
+                  {% endif %}
+                </p>
+                {% if search_query %}
+                  <a href="?" class="rc-btn-search" style="text-decoration: none;">View All Creators</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
 </div>

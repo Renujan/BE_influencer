@@ -523,9 +523,10 @@
     align-items: center;
     justify-content: center;
     gap: 5px;
-    padding: 8px 12px;
+    padding: 10px 14px;
+    min-height: 44px;
     border-radius: 8px;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 600;
     background: #1e293b;
     color: #ffffff !important;
@@ -550,9 +551,10 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 8px 12px;
+    padding: 10px 14px;
+    min-height: 44px;
     border-radius: 8px;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 600;
     background: #eff6ff;
     color: #2563eb !important;
@@ -638,8 +640,8 @@
     background: rgba(255, 255, 255, 0.1);
     border: none;
     color: #ffffff;
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     border-radius: 8px;
     font-size: 20px;
     cursor: pointer;
@@ -695,6 +697,65 @@
     padding: 60px 20px;
     text-align: center;
     grid-column: 1 / -1;
+  }
+
+  /* ── Mobile Media Queries (< 768px) ── */
+  @media (max-width: 768px) {
+    .pf-detail-container {
+      padding: 16px 12px 48px 12px;
+    }
+    .pf-dark-header {
+      padding: 20px 16px;
+      border-radius: 14px;
+      gap: 14px;
+    }
+    .pf-dark-header h1 {
+      font-size: 1.35rem;
+    }
+    .pf-header-actions {
+      flex-direction: column;
+      width: 100%;
+      gap: 8px;
+    }
+    .pf-btn-back {
+      width: 100%;
+      min-height: 44px;
+      justify-content: center;
+    }
+    .pf-profile-card {
+      padding: 18px 16px;
+      gap: 16px;
+    }
+    .pf-profile-stats {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 12px;
+    }
+    .pf-stat-item:not(:last-child) {
+      border-right: none;
+    }
+    .pf-stat-item {
+      padding: 6px;
+      background: #ffffff;
+      border: 1px solid var(--pf-slate-200);
+      border-radius: 8px;
+    }
+    .pf-posts-grid {
+      grid-template-columns: 1fr !important;
+      gap: 16px;
+    }
+    .pf-card-cover {
+      height: 240px;
+    }
+    .pf-modal-backdrop {
+      padding: 12px;
+    }
+    .pf-modal-dialog {
+      max-height: 95vh;
+      border-radius: 14px;
+    }
   }
 </style>
 {% endblock %}

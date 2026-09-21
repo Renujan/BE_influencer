@@ -11,9 +11,16 @@
     /* Global Inter Font Family Override */
     * {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif !important;
+        box-sizing: border-box;
     }
     body, h1, h2, h3, h4, h5, h6, input, textarea, select, button, table, th, td {
         font-family: 'Inter', sans-serif !important;
+    }
+
+    /* Prevent horizontal page blowout on mobile viewports */
+    html, body {
+        max-width: 100vw !important;
+        overflow-x: clip !important;
     }
     
     /* Elegant styling for Ampli logo in Wagtail sidebar */
@@ -81,9 +88,395 @@
         margin: 0 !important;
         opacity: 0 !important;
     }
+
+    /* ══════════════════════════════════════════════════════════════
+       MOBILE-FIRST UX TRANSFORMATION FOR SUPER ADMIN BACKEND
+       ══════════════════════════════════════════════════════════════ */
+
+    /* 1. Universal Touch Target Ergonomics (Minimum 44x44px) */
+    @media (max-width: 768px) {
+        .button,
+        .w-button,
+        button:not([class*="text-"]):not([class*="link"]):not(.close-btn),
+        input[type="submit"],
+        input[type="button"],
+        input[type="reset"],
+        .action-button,
+        .btn-header-primary,
+        .btn-header-secondary,
+        .rc-btn-view,
+        .pf-btn,
+        .btn-cd-primary,
+        .cd-edit-btn,
+        .btn-action,
+        .btn-action-emerald {
+            min-height: 44px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+            font-size: 14px !important;
+            touch-action: manipulation;
+        }
+
+        /* Form input minimum touch heights */
+        input[type="text"],
+        input[type="search"],
+        input[type="email"],
+        input[type="password"],
+        input[type="number"],
+        input[type="tel"],
+        input[type="url"],
+        select,
+        .w-field__input {
+            min-height: 44px !important;
+            font-size: 14px !important; /* Prevents iOS auto-zoom on focus */
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+        }
+
+        /* Checkboxes and radio buttons tap targets */
+        input[type="checkbox"],
+        input[type="radio"] {
+            min-width: 22px !important;
+            min-height: 22px !important;
+            cursor: pointer;
+        }
+
+        /* Wagtail listing table checkboxes */
+        .listing td:first-child input[type="checkbox"],
+        .w-table td:first-child input[type="checkbox"] {
+            transform: scale(1.3);
+            margin: 10px auto !important;
+        }
+
+        /* Sidebar toggle button minimum touch target */
+        .w-sidebar__toggle,
+        .sidebar-toggle,
+        [data-wagtail-sidebar-toggle] {
+            min-width: 44px !important;
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+    }
+
+    /* 2. Global Data Table Horizontal Scrolling & Sticky Actions */
+    .w-table-wrapper,
+    .listing-wrapper,
+    .table-wrapper,
+    .table-scroll-wrapper,
+    .sa-table-wrapper,
+    .rc-table-card,
+    .pf-table-card,
+    .cd-card,
+    div:has(> table.listing),
+    div:has(> table.w-table) {
+        overflow-x: auto !important;
+        max-width: 100% !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: thin !important;
+        overscroll-behavior-x: contain;
+    }
+
+    .w-table-wrapper::-webkit-scrollbar,
+    .listing-wrapper::-webkit-scrollbar,
+    .table-wrapper::-webkit-scrollbar,
+    .table-scroll-wrapper::-webkit-scrollbar,
+    .sa-table-wrapper::-webkit-scrollbar {
+        height: 6px;
+    }
+    .w-table-wrapper::-webkit-scrollbar-thumb,
+    .listing-wrapper::-webkit-scrollbar-thumb,
+    .table-wrapper::-webkit-scrollbar-thumb,
+    .table-scroll-wrapper::-webkit-scrollbar-thumb,
+    .sa-table-wrapper::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 9999px;
+    }
+
+    /* Sticky columns in standard Wagtail listing tables on mobile */
+    @media (max-width: 768px) {
+        table.listing th:first-child,
+        table.listing td:first-child,
+        .w-table th:first-child,
+        .w-table td:first-child {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 10 !important;
+            background: #ffffff !important;
+            box-shadow: 2px 0 8px -2px rgba(0, 0, 0, 0.1) !important;
+        }
+    }
+
+    /* 3. Universal Mobile Layouts for All Custom Inspect Templates */
+    @media (max-width: 768px) {
+        .custom-inspect-wrapper,
+        .chat-wrapper,
+        .sa-container,
+        .rc-container,
+        .pf-container,
+        .cd-container {
+            padding: 12px 12px 32px 12px !important;
+            max-width: 100% !important;
+        }
+
+        .custom-header-bar,
+        .sa-header,
+        .rc-header,
+        .pf-header,
+        .cd-header,
+        .chat-header-bar,
+        .sa-dark-header,
+        .rc-dark-header {
+            padding: 18px 16px !important;
+            border-radius: 12px !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 14px !important;
+        }
+
+        .custom-header-title h1,
+        .sa-header h1,
+        .rc-header h1,
+        .pf-header h1,
+        .cd-header h1,
+        .chat-header-bar h1,
+        .sa-dark-header h1,
+        .rc-dark-header h1 {
+            font-size: 1.25rem !important;
+            line-height: 1.3 !important;
+        }
+
+        .custom-header-actions,
+        .sa-header-badges,
+        .rc-header-actions,
+        .sa-header-actions {
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            gap: 8px !important;
+        }
+
+        .custom-header-actions a,
+        .custom-header-actions button,
+        .sa-header-actions a,
+        .sa-header-actions button,
+        .rc-header-actions a,
+        .rc-header-actions button {
+            width: 100% !important;
+            text-align: center !important;
+        }
+
+        .custom-body-card,
+        .chat-body-card {
+            padding: 16px !important;
+            border-radius: 12px !important;
+            gap: 20px !important;
+        }
+
+        .custom-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+        }
+
+        /* Dense tables in inspect views */
+        .table-custom {
+            font-size: 11px !important;
+        }
+        .table-custom th,
+        .table-custom td {
+            padding: 8px 10px !important;
+        }
+        /* ── Mobile Navigation Toggle & Drawer System ── */
+        .sidebar-nav-toggle,
+        .sidebar-nav-toggle--mobile {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            position: fixed !important;
+            top: 12px !important;
+            left: 12px !important;
+            width: 46px !important;
+            height: 46px !important;
+            min-width: 46px !important;
+            min-height: 46px !important;
+            background-color: #1e293b !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 12px !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.3) !important;
+            z-index: 100005 !important;
+            cursor: pointer !important;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            padding: 0 !important;
+        }
+
+        .sidebar-nav-toggle:active,
+        .sidebar-nav-toggle--mobile:active {
+            transform: scale(0.92) !important;
+            background-color: #0f172a !important;
+        }
+
+        .sidebar-nav-toggle:hover,
+        .sidebar-nav-toggle--mobile:hover {
+            background-color: #334155 !important;
+        }
+
+        .sidebar-nav-toggle svg,
+        .sidebar-nav-toggle--mobile svg {
+            width: 22px !important;
+            height: 22px !important;
+            fill: #ffffff !important;
+            stroke: #ffffff !important;
+            color: #ffffff !important;
+        }
+
+        /* Fixed close state position when drawer is open */
+        .sidebar-nav-toggle--open,
+        body.mobile-menu-open .sidebar-nav-toggle {
+            background-color: #334155 !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+            left: calc(min(300px, 84vw) - 52px) !important;
+            top: 12px !important;
+        }
+
+        /* Slide-out mobile drawer */
+        .sidebar,
+        .w-sidebar,
+        #wagtail-sidebar .sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            height: 100vh !important;
+            width: min(300px, 84vw) !important;
+            max-width: 320px !important;
+            min-width: 0 !important;
+            background: #111827 !important;
+            z-index: 100002 !important;
+            transform: translateX(-105%) !important;
+            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            box-shadow: none !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            display: block !important;
+        }
+
+        /* Active drawer open state */
+        body.mobile-menu-open .sidebar,
+        body.mobile-menu-open .w-sidebar,
+        body.mobile-menu-open #wagtail-sidebar .sidebar,
+        .sidebar--mobile:not(.sidebar--hidden):not(.sidebar--closed),
+        :has(.sidebar-nav-toggle--open) .sidebar,
+        :has(.sidebar-nav-toggle[aria-expanded="true"]) .sidebar {
+            transform: translateX(0) !important;
+            box-shadow: 12px 0 36px 0 rgba(0, 0, 0, 0.5) !important;
+        }
+
+        /* Backdrop overlay */
+        .wagtail-sidebar-backdrop {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(15, 23, 42, 0.65) !important;
+            backdrop-filter: blur(4px) !important;
+            -webkit-backdrop-filter: blur(4px) !important;
+            z-index: 100000 !important;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        body.mobile-menu-open .wagtail-sidebar-backdrop {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+
+        body.mobile-menu-open {
+            overflow: hidden !important;
+        }
+
+        /* Top clearance for page content so fixed toggle never overlaps header info */
+        #main.content-wrapper,
+        main.content-wrapper,
+        .dashboard-container,
+        .custom-inspect-wrapper {
+            padding-top: 56px !important;
+            box-sizing: border-box !important;
+            max-width: 100vw !important;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block branding_logo %}
 <img src="{% static 'img/logo_ampli.png' %}?v=2" alt="ampli.io" />
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let backdrop = document.getElementById('wagtailSidebarBackdrop');
+    if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.id = 'wagtailSidebarBackdrop';
+        backdrop.className = 'wagtail-sidebar-backdrop';
+        document.body.appendChild(backdrop);
+    }
+    
+    function closeSidebar() {
+        const toggleBtn = document.querySelector('.sidebar-nav-toggle--open') || 
+                          document.querySelector('.sidebar-nav-toggle[aria-expanded="true"]');
+        if (toggleBtn) {
+            toggleBtn.click();
+        }
+        document.body.classList.remove('mobile-menu-open');
+    }
+    
+    backdrop.addEventListener('click', closeSidebar);
+    backdrop.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        closeSidebar();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.body.classList.contains('mobile-menu-open')) {
+            closeSidebar();
+        }
+    });
+
+    const sidebar = document.getElementById('wagtail-sidebar');
+    if (sidebar) {
+        sidebar.addEventListener('click', function(e) {
+            const link = e.target.closest('a[href]');
+            if (link && window.innerWidth <= 768) {
+                if (!link.classList.contains('sidebar-sub-menu-item') && !link.classList.contains('sidebar__collapse-toggle')) {
+                    setTimeout(closeSidebar, 150);
+                }
+            }
+        });
+    }
+
+    const observer = new MutationObserver(function() {
+        const toggleBtn = document.querySelector('.sidebar-nav-toggle');
+        const isOpen = toggleBtn && (
+            toggleBtn.classList.contains('sidebar-nav-toggle--open') || 
+            toggleBtn.getAttribute('aria-expanded') === 'true'
+        );
+        if (isOpen) {
+            document.body.classList.add('mobile-menu-open');
+        } else {
+            document.body.classList.remove('mobile-menu-open');
+        }
+    });
+
+    const targetNode = document.getElementById('wagtail-sidebar') || document.body;
+    observer.observe(targetNode, { attributes: true, subtree: true, attributeFilter: ['class', 'aria-expanded'] });
+});
+</script>
 {% endblock %}

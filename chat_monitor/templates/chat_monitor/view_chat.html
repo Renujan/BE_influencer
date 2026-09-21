@@ -149,6 +149,76 @@
         padding: 40px;
         color: #9ca3af;
     }
+
+    /* ── Mobile Media Queries (< 768px) ── */
+    @media (max-width: 768px) {
+        .chat-view-container {
+            padding: 16px 12px 48px 12px;
+            margin: 0;
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+        }
+        .chat-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 14px;
+            padding-bottom: 16px;
+        }
+        .campaign-info h2 {
+            font-size: 1.25rem;
+        }
+        .chat-header-actions {
+            flex-direction: column;
+            width: 100%;
+            gap: 8px;
+        }
+        .chat-header-actions .button {
+            width: 100%;
+            min-height: 44px;
+            justify-content: center;
+            display: inline-flex;
+            align-items: center;
+        }
+        .msg-group {
+            max-width: 90%;
+        }
+        .admin-tab-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+        .admin-tab-btn {
+            padding: 12px 14px !important;
+            font-size: 13px !important;
+            flex-shrink: 0;
+            min-height: 44px;
+        }
+        #admin-chat-input-area > div {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        #admin-chat-input {
+            width: 100% !important;
+            min-height: 44px !important;
+            flex: none;
+        }
+        #admin-chat-file-btn {
+            min-height: 44px !important;
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #admin-chat-send {
+            min-height: 44px !important;
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -162,7 +232,7 @@
                 <span><strong>Creator (Talent):</strong> {% if campaign.creator %}{{ campaign.creator.username }}{% else %}Unassigned{% endif %}</span>
             </div>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div class="chat-header-actions" style="display: flex; gap: 8px;">
             <a href="{% url 'wagtailsnippets_campegin_campaign:inspect' campaign.id %}" class="button button-secondary" style="background-color: #06b6d4; color: white !important;">View Campaign</a>
             <a href="{% url 'download_campaign_pdf' campaign.id %}" class="button button-secondary" style="background-color: #2f54eb; color: white !important;">Download PDF</a>
             <a href="{% url 'chat_monitor_campaigns:index' %}" class="button button-secondary">Back to Chat Monitor</a>
@@ -173,7 +243,7 @@
 <div style="margin-top: 16px; margin-bottom: 24px;">
     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;">
         
-        <div style="display: flex; background: #e2e8f0; border-bottom: 1px solid #cbd5e1;">
+        <div class="admin-tab-container" style="display: flex; background: #e2e8f0; border-bottom: 1px solid #cbd5e1;">
             <button type="button" class="admin-tab-btn active" data-tab="main" style="padding: 12px 20px; font-weight: 600; border: none; background: #fff; cursor: pointer;">Main Chat (Read-Only)</button>
             <button type="button" class="admin-tab-btn" data-tab="admin_note" style="padding: 12px 20px; font-weight: 600; border: none; background: transparent; cursor: pointer;">Private Notes</button>
             <button type="button" class="admin-tab-btn" data-tab="admin_business" style="padding: 12px 20px; font-weight: 600; border: none; background: transparent; cursor: pointer;">Chat w/ Business</button>

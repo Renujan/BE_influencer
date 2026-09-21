@@ -384,12 +384,14 @@
   .pf-btn-view {
     background: #1e293b;
     color: #ffffff !important;
-    padding: 7px 14px;
+    padding: 9px 16px;
+    min-height: 40px;
     border-radius: 8px;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 600;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 5px;
     text-decoration: none;
     transition: all 0.2s ease;
@@ -399,6 +401,86 @@
     background: #4f46e5;
     transform: translateY(-1px);
     box-shadow: 0 3px 8px rgba(79, 70, 229, 0.3);
+  }
+
+  /* ── Mobile Creator Cards (< 768px) ── */
+  .pf-mobile-card {
+    background: #ffffff;
+    border: 1px solid var(--pf-slate-200);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── Mobile Media Queries ── */
+  @media (max-width: 768px) {
+    .pf-container {
+      padding: 16px 12px 48px 12px;
+    }
+    .pf-header {
+      padding: 20px 16px;
+      border-radius: 14px;
+      gap: 14px;
+    }
+    .pf-header h1 {
+      font-size: 1.35rem;
+    }
+    .pf-stats-row {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .pf-stat-card {
+      padding: 12px 14px;
+      gap: 10px;
+      border-radius: 12px;
+    }
+    .pf-stat-card:nth-child(3) {
+      grid-column: span 2;
+    }
+    .pf-stat-value {
+      font-size: 1.25rem;
+    }
+    .pf-stat-label {
+      font-size: 0.7rem;
+    }
+    .pf-toolbar {
+      padding: 14px;
+      border-radius: 14px;
+    }
+    .pf-search-form {
+      flex-direction: column;
+      width: 100%;
+      max-width: none;
+      gap: 8px;
+    }
+    .pf-search-wrapper {
+      width: 100%;
+    }
+    .pf-search-input {
+      height: 44px !important;
+    }
+    .pf-search-form .pf-btn {
+      width: 100%;
+      height: 44px;
+      justify-content: center;
+    }
+    .pf-desktop-table {
+      display: none !important;
+    }
+    .pf-mobile-cards {
+      display: flex !important;
+      flex-direction: column;
+      gap: 12px;
+    }
+  }
+
+  @media (min-width: 769px) {
+    .pf-mobile-cards {
+      display: none !important;
+    }
   }
 
   /* ── Empty State ── */
@@ -482,124 +564,207 @@
           autocomplete="off"
         >
       </div>
-      <button type="submit" class="pf-btn pf-btn-primary" style="height: 42px; display: inline-flex; align-items: center; gap: 6px;">
+      <button type="submit" class="pf-btn pf-btn-primary" style="height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
         <span>🔍</span> Search
       </button>
       {% if search_query %}
-        <a href="?" class="pf-btn pf-btn-outline" style="height: 42px; display: inline-flex; align-items: center;">Clear</a>
+        <a href="?" class="pf-btn pf-btn-outline" style="height: 44px; display: inline-flex; align-items: center; justify-content: center;">Clear</a>
       {% endif %}
     </form>
   </div>
 
-  <!-- Creators Table Card -->
-  <div class="pf-table-card">
-    <table class="pf-table">
-      <thead>
-        <tr>
-          <th>Creator</th>
-          <th>Country</th>
-          <th>Niches</th>
-          <th>Posts</th>
-          <th>Avg Engagement</th>
-          <th>Total Reach</th>
-          <th>Status</th>
-          <th style="text-align: right;">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in creators %}
-        <tr>
-          <td>
-            <div class="pf-user-cell">
-              {% if c.avatar_url %}
-                <img src="{{ c.avatar_url }}" alt="{{ c.username }}" class="pf-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="pf-avatar-placeholder" style="display: none;">{{ c.username|slice:":1"|upper }}</div>
-              {% else %}
-                <div class="pf-avatar-placeholder">{{ c.username|slice:":1"|upper }}</div>
-              {% endif %}
-              <div>
-                <div class="pf-user-name">{{ c.full_name }}</div>
-                <div class="pf-user-username">@{{ c.username }}</div>
-              </div>
-            </div>
-          </td>
+  <!-- Mobile Cards View (< 769px) -->
+  <div class="pf-mobile-cards">
+    {% for c in creators %}
+    <div class="pf-mobile-card">
+      <div class="pf-user-cell">
+        {% if c.avatar_url %}
+          <img src="{{ c.avatar_url }}" alt="{{ c.username }}" class="pf-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="pf-avatar-placeholder" style="display: none;">{{ c.username|slice:":1"|upper }}</div>
+        {% else %}
+          <div class="pf-avatar-placeholder">{{ c.username|slice:":1"|upper }}</div>
+        {% endif %}
+        <div style="min-width: 0; flex: 1;">
+          <div class="pf-user-name truncate">{{ c.full_name }}</div>
+          <div class="pf-user-username truncate">@{{ c.username }}</div>
+        </div>
+        <div style="flex-shrink: 0;">
+          {% if c.status == "approved" %}
+            <span class="pf-badge pf-badge-approved">● Approved</span>
+          {% elif c.status == "restricted" %}
+            <span class="pf-badge pf-badge-restricted">● Restricted</span>
+          {% else %}
+            <span class="pf-badge pf-badge-pending">● Pending</span>
+          {% endif %}
+        </div>
+      </div>
 
-          <td>
-            <span style="font-size: 0.85rem; color: #475569; font-weight: 500;">
-              🌍 {{ c.country }}
-            </span>
-          </td>
+      <div style="font-size: 0.8rem; color: #475569;">
+        🌍 {{ c.country }}
+      </div>
 
-          <td>
-            <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 220px;">
-              {% for n in c.niches|slice:":3" %}
-                <span class="pf-badge pf-badge-niche">{{ n }}</span>
-              {% empty %}
-                <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
-              {% endfor %}
-              {% if c.niches|length > 3 %}
-                <span class="pf-badge pf-badge-niche">+{{ c.niches|length|add:"-3" }}</span>
-              {% endif %}
-            </div>
-          </td>
+      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <span class="pf-stat-pill count">
+          📁 {{ c.post_count }} posts
+        </span>
+        <span class="pf-stat-pill er">
+          📈 {{ c.avg_engagement }} ER
+        </span>
+        <span class="pf-stat-pill reach">
+          👁️ {{ c.total_reach }}
+        </span>
+      </div>
 
-          <td>
-            <span class="pf-stat-pill count">
-              📁 {{ c.post_count }}
-            </span>
-          </td>
-
-          <td>
-            <span class="pf-stat-pill er">
-              📈 {{ c.avg_engagement }}
-            </span>
-          </td>
-
-          <td>
-            <span class="pf-stat-pill reach">
-              👁️ {{ c.total_reach }}
-            </span>
-          </td>
-
-          <td>
-            {% if c.status == "approved" %}
-              <span class="pf-badge pf-badge-approved">● Approved</span>
-            {% elif c.status == "restricted" %}
-              <span class="pf-badge pf-badge-restricted">● Restricted</span>
-            {% else %}
-              <span class="pf-badge pf-badge-pending">● Pending</span>
-            {% endif %}
-          </td>
-
-          <td style="text-align: right;">
-            <a href="/admin/portfolios/{{ c.id }}/" class="pf-btn-view">
-              View Portfolio →
-            </a>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="8">
-            <div class="pf-empty-state">
-              <div class="pf-empty-icon">🔍</div>
-              <h3 class="pf-empty-title">No creators found</h3>
-              <p class="pf-empty-desc">
-                {% if search_query %}
-                  No creator matching "{{ search_query }}". Try adjusting your search keywords.
-                {% else %}
-                  No creator profiles registered in the system yet.
-                {% endif %}
-              </p>
-              {% if search_query %}
-                <a href="?" class="pf-btn pf-btn-primary">View All Creators</a>
-              {% endif %}
-            </div>
-          </td>
-        </tr>
+      {% if c.niches %}
+      <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+        {% for n in c.niches|slice:":3" %}
+          <span class="pf-badge pf-badge-niche">{{ n }}</span>
         {% endfor %}
-      </tbody>
-    </table>
+        {% if c.niches|length > 3 %}
+          <span class="pf-badge pf-badge-niche">+{{ c.niches|length|add:"-3" }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div style="padding-top: 4px;">
+        <a href="/admin/portfolios/{{ c.id }}/" class="pf-btn-view" style="width: 100%; min-height: 44px;">
+          View Portfolio →
+        </a>
+      </div>
+    </div>
+    {% empty %}
+    <div class="pf-mobile-card">
+      <div class="pf-empty-state" style="padding: 40px 16px;">
+        <div class="pf-empty-icon">🔍</div>
+        <h3 class="pf-empty-title">No creators found</h3>
+        <p class="pf-empty-desc">
+          {% if search_query %}
+            No creator matching "{{ search_query }}".
+          {% else %}
+            No creator profiles registered yet.
+          {% endif %}
+        </p>
+        {% if search_query %}
+          <a href="?" class="pf-btn pf-btn-primary" style="display: inline-flex;">View All Creators</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
   </div>
+
+  <!-- Creators Table Card (Desktop >= 769px) -->
+  <div class="pf-table-card pf-desktop-table">
+    <div style="overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch;">
+      <table class="pf-table" style="min-width: 880px;">
+        <thead>
+          <tr>
+            <th>Creator</th>
+            <th>Country</th>
+            <th>Niches</th>
+            <th>Posts</th>
+            <th>Avg Engagement</th>
+            <th>Total Reach</th>
+            <th>Status</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in creators %}
+          <tr>
+            <td>
+              <div class="pf-user-cell">
+                {% if c.avatar_url %}
+                  <img src="{{ c.avatar_url }}" alt="{{ c.username }}" class="pf-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="pf-avatar-placeholder" style="display: none;">{{ c.username|slice:":1"|upper }}</div>
+                {% else %}
+                  <div class="pf-avatar-placeholder">{{ c.username|slice:":1"|upper }}</div>
+                {% endif %}
+                <div>
+                  <div class="pf-user-name">{{ c.full_name }}</div>
+                  <div class="pf-user-username">@{{ c.username }}</div>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <span style="font-size: 0.85rem; color: #475569; font-weight: 500;">
+                🌍 {{ c.country }}
+              </span>
+            </td>
+
+            <td>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 220px;">
+                {% for n in c.niches|slice:":3" %}
+                  <span class="pf-badge pf-badge-niche">{{ n }}</span>
+                {% empty %}
+                  <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
+                {% endfor %}
+                {% if c.niches|length > 3 %}
+                  <span class="pf-badge pf-badge-niche">+{{ c.niches|length|add:"-3" }}</span>
+                {% endif %}
+              </div>
+            </td>
+
+            <td>
+              <span class="pf-stat-pill count">
+                📁 {{ c.post_count }}
+              </span>
+            </td>
+
+            <td>
+              <span class="pf-stat-pill er">
+                📈 {{ c.avg_engagement }}
+              </span>
+            </td>
+
+            <td>
+              <span class="pf-stat-pill reach">
+                👁️ {{ c.total_reach }}
+              </span>
+            </td>
+
+            <td>
+              {% if c.status == "approved" %}
+                <span class="pf-badge pf-badge-approved">● Approved</span>
+              {% elif c.status == "restricted" %}
+                <span class="pf-badge pf-badge-restricted">● Restricted</span>
+              {% else %}
+                <span class="pf-badge pf-badge-pending">● Pending</span>
+              {% endif %}
+            </td>
+
+            <td style="text-align: right;">
+              <a href="/admin/portfolios/{{ c.id }}/" class="pf-btn-view">
+                View Portfolio →
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="pf-empty-state">
+                <div class="pf-empty-icon">🔍</div>
+                <h3 class="pf-empty-title">No creators found</h3>
+                <p class="pf-empty-desc">
+                  {% if search_query %}
+                    No creator matching "{{ search_query }}". Try adjusting your search keywords.
+                  {% else %}
+                    No creator profiles registered in the system yet.
+                  {% endif %}
+                </p>
+                {% if search_query %}
+                  <a href="?" class="pf-btn pf-btn-primary">View All Creators</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
 
 </div>
 {% endblock %}

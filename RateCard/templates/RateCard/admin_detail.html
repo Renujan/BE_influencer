@@ -461,6 +461,61 @@
     text-align: center;
     grid-column: 1 / -1;
   }
+
+  /* ── Mobile Media Queries (< 768px) ── */
+  @media (max-width: 768px) {
+    .rc-detail-container {
+      padding: 16px 12px 48px 12px;
+    }
+    .rc-dark-header {
+      padding: 20px 16px;
+      border-radius: 14px;
+      gap: 14px;
+    }
+    .rc-dark-header h1 {
+      font-size: 1.35rem;
+    }
+    .rc-header-actions {
+      flex-direction: column;
+      width: 100%;
+      gap: 8px;
+    }
+    .rc-btn-back {
+      width: 100%;
+      min-height: 44px;
+      justify-content: center;
+    }
+    .rc-profile-card {
+      padding: 18px 16px;
+      gap: 16px;
+    }
+    .rc-profile-stats {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 12px;
+    }
+    .rc-stat-item:not(:last-child) {
+      border-right: none;
+    }
+    .rc-stat-item {
+      padding: 6px;
+      background: #ffffff;
+      border: 1px solid var(--rc-slate-200);
+      border-radius: 8px;
+    }
+    .rc-rates-grid {
+      grid-template-columns: 1fr !important;
+      gap: 14px;
+    }
+    .rc-card-top {
+      padding: 14px 16px;
+    }
+    .rc-card-body {
+      padding: 14px 16px;
+    }
+  }
 </style>
 {% endblock %}
 

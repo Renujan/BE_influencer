@@ -400,16 +400,18 @@
   }
 
   .sa-expand-btn {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    border-radius: 8px;
     background: #f1f5f9;
     border: 1px solid var(--sa-slate-200);
     color: #64748b;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: 13px;
     cursor: pointer;
     transition: all 0.2s ease;
     flex-shrink: 0;
@@ -576,7 +578,8 @@
   }
 
   .sa-btn-manage-accounts {
-    padding: 7px 14px;
+    min-height: 40px;
+    padding: 8px 14px;
     border-radius: 8px;
     font-size: 0.78rem;
     font-weight: 700;
@@ -598,7 +601,8 @@
   }
 
   .sa-btn-expand-channels {
-    padding: 6px 10px;
+    min-height: 40px;
+    padding: 8px 12px;
     border-radius: 8px;
     font-size: 0.75rem;
     font-weight: 700;
@@ -616,6 +620,28 @@
   .sa-btn-expand-channels:hover {
     background: #e2e8f0;
     color: #0f172a !important;
+  }
+
+  /* Sticky First Column for Master Table */
+  .sa-table thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background: #f8fafc;
+    box-shadow: 4px 0 10px -2px rgba(0,0,0,0.06);
+  }
+  .sa-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 15;
+    background: #ffffff;
+    box-shadow: 4px 0 10px -2px rgba(0,0,0,0.06);
+  }
+  .sa-creator-row:hover td:first-child {
+    background-color: #f8fafc;
+  }
+  .sa-creator-row.expanded td:first-child {
+    background-color: #f1f5f9;
   }
 
   /* ── Expanded Drawer Row (Revealed on Click) ── */
@@ -704,7 +730,8 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 6px;
+    padding: 4px 8px;
+    min-height: 32px;
     border-radius: 4px;
     background: #eff6ff;
     border: 1px solid #dbeafe;
@@ -717,8 +744,9 @@
   }
 
   .sa-btn-proof-table {
-    padding: 3px 8px;
-    border-radius: 5px;
+    padding: 6px 10px;
+    min-height: 34px;
+    border-radius: 6px;
     font-size: 0.72rem;
     font-weight: 600;
     background: #f8fafc;
@@ -767,13 +795,14 @@
   .sa-btn-inline-verify {
     border: none;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 5px;
-    font-size: 0.7rem;
+    padding: 6px 12px;
+    min-height: 36px;
+    border-radius: 6px;
+    font-size: 0.72rem;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     transition: all 0.15s ease;
   }
 
@@ -807,6 +836,177 @@
     padding: 48px 24px;
     text-align: center;
     color: #64748b;
+  }
+
+  /* ── Responsive Mobile Media Queries (< 768px) ── */
+  @media (max-width: 768px) {
+    .sa-container {
+      padding: 16px 12px 48px 12px;
+    }
+    .sa-header {
+      padding: 20px 16px;
+      border-radius: 14px;
+      gap: 16px;
+    }
+    .sa-header h1 {
+      font-size: 1.3rem;
+    }
+    .sa-header-badges {
+      width: 100%;
+      justify-content: flex-start;
+      gap: 8px;
+    }
+    .sa-stats-row {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .sa-stat-card {
+      padding: 12px 14px;
+      gap: 10px;
+      border-radius: 12px;
+    }
+    .sa-stat-icon {
+      width: 38px;
+      height: 38px;
+      font-size: 16px;
+      border-radius: 10px;
+    }
+    .sa-stat-val {
+      font-size: 1.25rem;
+    }
+    .sa-stat-lbl {
+      font-size: 0.68rem;
+    }
+    .sa-toolbar {
+      padding: 14px;
+      border-radius: 14px;
+    }
+    .sa-search-form {
+      flex-direction: column;
+      width: 100%;
+      max-width: none;
+      gap: 8px;
+    }
+    .sa-search-wrapper {
+      width: 100%;
+    }
+    .sa-search-input {
+      height: 44px !important;
+    }
+    .sa-btn-search {
+      width: 100%;
+      height: 44px;
+      justify-content: center;
+    }
+    .sa-filters-bar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .sa-filter-chips {
+      width: 100%;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 6px;
+      scrollbar-width: thin;
+    }
+    .sa-chip {
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-height: 38px;
+      padding: 6px 12px;
+    }
+    .sa-drawer-cell {
+      padding: 0 10px 14px 10px !important;
+    }
+    .sa-drawer-container {
+      padding: 12px 14px;
+      border-radius: 10px;
+    }
+    .sa-drawer-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .sa-mobile-cards {
+      display: flex !important;
+      flex-direction: column;
+      gap: 14px;
+      padding: 14px;
+    }
+    .sa-desktop-table {
+      display: none !important;
+    }
+    .sa-mcard {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    .sa-mcard-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .sa-mcard-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .sa-mcard-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sa-mcard-handle {
+      font-size: 0.78rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+    .sa-mcard-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid #f1f5f9;
+      font-size: 0.78rem;
+    }
+    .sa-mcard-channels-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sa-mcard-channel-item {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sa-mcard-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #f1f5f9;
+    }
   }
 </style>
 {% endblock %}
@@ -968,8 +1168,133 @@
       </div>
     </div>
 
-    <div class="sa-table-wrapper">
-      <table class="sa-table">
+    <!-- Dedicated Mobile Cards (< md viewports) -->
+    <div class="sa-mobile-cards block md:hidden">
+      {% for creator in creators %}
+      <div class="sa-mcard">
+        <div class="sa-mcard-top">
+          <div class="sa-mcard-user">
+            {% if creator.avatar_url %}
+            <img src="{{ creator.avatar_url }}" alt="{{ creator.full_name }}" class="sa-tbl-avatar" style="width: 42px; height: 42px;">
+            {% else %}
+            <div class="sa-tbl-avatar-placeholder" style="width: 42px; height: 42px; font-size: 16px;">
+              {{ creator.username|slice:":1"|upper }}
+            </div>
+            {% endif %}
+            <div style="min-width: 0;">
+              <div class="sa-mcard-name">{{ creator.full_name }}</div>
+              <div class="sa-mcard-handle">@{{ creator.username }}</div>
+            </div>
+          </div>
+          <div>
+            {% if creator.accounts_count > 0 %}
+              {% if creator.is_fully_verified %}
+              <span class="sa-verified-summary-pill full" title="All connected channels are verified">
+                <i class="fa-solid fa-circle-check"></i> {{ creator.verified_count }}/{{ creator.accounts_count }} Verified
+              </span>
+              {% elif creator.verified_count > 0 %}
+              <span class="sa-verified-summary-pill partial" title="Some channels pending verification">
+                <i class="fa-solid fa-clock"></i> {{ creator.verified_count }}/{{ creator.accounts_count }} Verified
+              </span>
+              {% else %}
+              <span class="sa-verified-summary-pill none" title="Pending verification">
+                <i class="fa-solid fa-clock"></i> 0/{{ creator.accounts_count }} Verified
+              </span>
+              {% endif %}
+            {% else %}
+              <span class="text-xs text-slate-400 italic">No accounts</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="sa-mcard-meta">
+          <span class="sa-location-tag">
+            <i class="fa-solid fa-earth-americas text-indigo-500"></i> {{ creator.country_name|default:"—" }}
+          </span>
+          <button type="button" class="sa-btn-expand-channels min-h-[40px]" id="mobile-expand-btn-{{ creator.id }}" onclick="toggleMobileCreatorChannels('{{ creator.id }}')">
+            <i class="fa-solid fa-share-nodes"></i> Channels ({{ creator.accounts_count }}) <i class="fa-solid fa-chevron-down text-[10px] ml-1"></i>
+          </button>
+        </div>
+
+        <!-- Channels Detail Breakdown -->
+        <div id="mobile-channels-drawer-{{ creator.id }}" class="sa-mcard-channels-box {% if platform_filter == 'all' and status_filter == 'all' and not search_query %}hidden{% endif %}" {% if platform_filter == 'all' and status_filter == 'all' and not search_query %}style="display: none;"{% else %}style="display: flex;"{% endif %}>
+          <div class="text-xs font-bold text-slate-700 flex items-center justify-between pb-1 border-b border-slate-200/60">
+            <span>Connected Channels ({{ creator.accounts_count }})</span>
+            <span class="text-[10px] text-slate-400 font-normal">Audit & Verification</span>
+          </div>
+
+          {% for acc in creator.accounts %}
+          <div class="sa-mcard-channel-item">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="sa-tbl-plat-badge shrink-0" style="background: {{ acc.platform_info.gradient }}; width: 28px; height: 28px; font-size: 12px;">
+                  <i class="{{ acc.platform_info.icon }}"></i>
+                </div>
+                <div class="truncate">
+                  <span class="font-bold text-slate-800 text-xs block truncate">{{ acc.platform_info.name }}</span>
+                  <span class="text-[11px] text-slate-500 font-mono block truncate">@{{ acc.username }}</span>
+                </div>
+              </div>
+              <div class="shrink-0">
+                {% if acc.is_verified %}
+                <span class="sa-status-badge verified" title="Verified by Super Admin">
+                  <i class="fa-solid fa-circle-check"></i> Verified
+                </span>
+                {% elif acc.is_connected %}
+                <span class="sa-status-badge pending" title="Connected, awaiting audit">
+                  <i class="fa-solid fa-clock"></i> In Verify
+                </span>
+                {% else %}
+                <span class="sa-status-badge disconnected" title="Disconnected channel">
+                  <i class="fa-solid fa-circle-xmark"></i> Disconnected
+                </span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100 text-xs">
+              <span class="sa-followers-tag" style="font-size: 0.76rem; padding: 2px 7px;">
+                <i class="fa-solid fa-users text-indigo-500"></i> {{ acc.followers_formatted }}
+              </span>
+              {% if acc.proof_link %}
+              <a href="{{ acc.proof_link }}" target="_blank" rel="noopener noreferrer" class="sa-btn-proof-table min-h-[38px] inline-flex items-center" title="{{ acc.proof_link }}">
+                <i class="fa-solid fa-link"></i> Proof Link <i class="fa-solid fa-arrow-up-right-from-square text-[9px] ml-1"></i>
+              </a>
+              {% endif %}
+            </div>
+
+            <div class="pt-1">
+              <form method="POST" action="{% url 'admin_social_accounts_toggle_verify' acc.id %}" style="display: block; margin: 0; width: 100%;">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="sa-btn-inline-verify {% if acc.is_verified %}revoke{% else %}verify{% endif %} w-full min-h-[44px] justify-center flex items-center gap-1.5" title="{% if acc.is_verified %}Revoke Verification{% else %}Verify Channel{% endif %}">
+                  {% if acc.is_verified %}
+                  <i class="fa-solid fa-shield-xmark"></i> Revoke Verification
+                  {% else %}
+                  <i class="fa-solid fa-shield-check"></i> Verify Channel
+                  {% endif %}
+                </button>
+              </form>
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-xs text-slate-400 py-2 text-center italic">No connected channels found.</div>
+          {% endfor %}
+        </div>
+
+        <div class="sa-mcard-actions">
+          <a href="{% url 'admin_social_accounts_detail' creator.id %}" class="sa-btn-manage-accounts w-full min-h-[44px] justify-center flex items-center gap-2" title="Manage Accounts & Audit">
+            <i class="fa-solid fa-users-gear"></i> Manage Accounts & Audit <i class="fa-solid fa-arrow-right text-xs"></i>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Desktop Table View (>= md viewports) -->
+    <div class="sa-desktop-table hidden md:block">
+      <div class="sa-table-wrapper">
+        <table class="sa-table">
         <thead>
           <tr>
             <th style="width: 320px;">Creator Profile</th>
@@ -1062,94 +1387,96 @@
                 </div>
 
                 {% if creator.accounts %}
-                <table class="sa-sub-table">
-                  <thead>
-                    <tr>
-                      <th style="width: 160px;">Platform</th>
-                      <th style="width: 180px;">Handle / Username</th>
-                      <th style="width: 140px;">Followers</th>
-                      <th style="width: 140px;">Proof Link</th>
-                      <th style="width: 140px;">Verification</th>
-                      <th style="width: 150px; text-align: right;">Audit Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for acc in creator.accounts %}
-                    <tr>
-                      <!-- Platform -->
-                      <td>
-                        <div style="display: inline-flex; align-items: center; gap: 8px;">
-                          <div class="sa-tbl-plat-badge" style="background: {{ acc.platform_info.gradient }};">
-                            <i class="{{ acc.platform_info.icon }}"></i>
+                <div style="overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch;">
+                  <table class="sa-sub-table" style="min-width: 680px;">
+                    <thead>
+                      <tr>
+                        <th style="width: 160px;">Platform</th>
+                        <th style="width: 180px;">Handle / Username</th>
+                        <th style="width: 140px;">Followers</th>
+                        <th style="width: 140px;">Proof Link</th>
+                        <th style="width: 140px;">Verification</th>
+                        <th style="width: 150px; text-align: right;">Audit Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for acc in creator.accounts %}
+                      <tr>
+                        <!-- Platform -->
+                        <td>
+                          <div style="display: inline-flex; align-items: center; gap: 8px;">
+                            <div class="sa-tbl-plat-badge" style="background: {{ acc.platform_info.gradient }};">
+                              <i class="{{ acc.platform_info.icon }}"></i>
+                            </div>
+                            <span style="font-weight: 700; color: #1e293b;">{{ acc.platform_info.name }}</span>
                           </div>
-                          <span style="font-weight: 700; color: #1e293b;">{{ acc.platform_info.name }}</span>
-                        </div>
-                      </td>
+                        </td>
 
-                      <!-- Handle -->
-                      <td>
-                        {% if acc.proof_link %}
-                        <a href="{{ acc.proof_link }}" target="_blank" rel="noopener noreferrer" class="sa-handle-link" title="Open profile link">
-                          @{{ acc.username }} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-60"></i>
-                        </a>
-                        {% else %}
-                        <span class="font-mono text-slate-800 text-xs font-semibold">@{{ acc.username }}</span>
-                        {% endif %}
-                      </td>
+                        <!-- Handle -->
+                        <td>
+                          {% if acc.proof_link %}
+                          <a href="{{ acc.proof_link }}" target="_blank" rel="noopener noreferrer" class="sa-handle-link" title="Open profile link">
+                            @{{ acc.username }} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-60"></i>
+                          </a>
+                          {% else %}
+                          <span class="font-mono text-slate-800 text-xs font-semibold">@{{ acc.username }}</span>
+                          {% endif %}
+                        </td>
 
-                      <!-- Followers -->
-                      <td>
-                        <span class="sa-followers-tag" style="font-size: 0.76rem; padding: 2px 7px;">
-                          <i class="fa-solid fa-users text-indigo-500"></i> {{ acc.followers_formatted }}
-                        </span>
-                      </td>
+                        <!-- Followers -->
+                        <td>
+                          <span class="sa-followers-tag" style="font-size: 0.76rem; padding: 2px 7px;">
+                            <i class="fa-solid fa-users text-indigo-500"></i> {{ acc.followers_formatted }}
+                          </span>
+                        </td>
 
-                      <!-- Proof Link -->
-                      <td>
-                        {% if acc.proof_link %}
-                        <a href="{{ acc.proof_link }}" target="_blank" rel="noopener noreferrer" class="sa-btn-proof-table" title="{{ acc.proof_link }}">
-                          <i class="fa-solid fa-link"></i> View Proof
-                        </a>
-                        {% else %}
-                        <span class="text-xs text-slate-400 italic">No link</span>
-                        {% endif %}
-                      </td>
+                        <!-- Proof Link -->
+                        <td>
+                          {% if acc.proof_link %}
+                          <a href="{{ acc.proof_link }}" target="_blank" rel="noopener noreferrer" class="sa-btn-proof-table" title="{{ acc.proof_link }}">
+                            <i class="fa-solid fa-link"></i> View Proof
+                          </a>
+                          {% else %}
+                          <span class="text-xs text-slate-400 italic">No link</span>
+                          {% endif %}
+                        </td>
 
-                      <!-- Verification Status -->
-                      <td>
-                        {% if acc.is_verified %}
-                        <span class="sa-status-badge verified" title="Verified by Super Admin">
-                          <i class="fa-solid fa-circle-check"></i> Verified
-                        </span>
-                        {% elif acc.is_connected %}
-                        <span class="sa-status-badge pending" title="Connected, awaiting audit">
-                          <i class="fa-solid fa-clock"></i> In Verify
-                        </span>
-                        {% else %}
-                        <span class="sa-status-badge disconnected" title="Disconnected channel">
-                          <i class="fa-solid fa-circle-xmark"></i> Disconnected
-                        </span>
-                        {% endif %}
-                      </td>
+                        <!-- Verification Status -->
+                        <td>
+                          {% if acc.is_verified %}
+                          <span class="sa-status-badge verified" title="Verified by Super Admin">
+                            <i class="fa-solid fa-circle-check"></i> Verified
+                          </span>
+                          {% elif acc.is_connected %}
+                          <span class="sa-status-badge pending" title="Connected, awaiting audit">
+                            <i class="fa-solid fa-clock"></i> In Verify
+                          </span>
+                          {% else %}
+                          <span class="sa-status-badge disconnected" title="Disconnected channel">
+                            <i class="fa-solid fa-circle-xmark"></i> Disconnected
+                          </span>
+                          {% endif %}
+                        </td>
 
-                      <!-- Audit Action -->
-                      <td style="text-align: right;">
-                        <form method="POST" action="{% url 'admin_social_accounts_toggle_verify' acc.id %}" style="display: inline; margin: 0;">
-                          {% csrf_token %}
-                          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                          <button type="submit" class="sa-btn-inline-verify {% if acc.is_verified %}revoke{% else %}verify{% endif %}" title="{% if acc.is_verified %}Revoke Verification{% else %}Verify Channel{% endif %}">
-                            {% if acc.is_verified %}
-                            <i class="fa-solid fa-shield-xmark"></i> Revoke
-                            {% else %}
-                            <i class="fa-solid fa-shield-check"></i> Verify
-                            {% endif %}
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
+                        <!-- Audit Action -->
+                        <td style="text-align: right;">
+                          <form method="POST" action="{% url 'admin_social_accounts_toggle_verify' acc.id %}" style="display: inline; margin: 0;">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" class="sa-btn-inline-verify {% if acc.is_verified %}revoke{% else %}verify{% endif %}" title="{% if acc.is_verified %}Revoke Verification{% else %}Verify Channel{% endif %}">
+                              {% if acc.is_verified %}
+                              <i class="fa-solid fa-shield-xmark"></i> Revoke
+                              {% else %}
+                              <i class="fa-solid fa-shield-check"></i> Verify
+                              {% endif %}
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
                 {% else %}
                 <div class="text-xs text-slate-400 py-3 text-center">No connected social accounts for this creator.</div>
                 {% endif %}
@@ -1159,6 +1486,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     </div>
   </div>
   {% else %}
@@ -1187,6 +1515,21 @@
       drawer.style.display = 'none';
       if (btn) btn.classList.remove('rotated');
       if (masterRow) masterRow.classList.remove('expanded');
+    }
+  }
+
+  function toggleMobileCreatorChannels(id) {
+    const drawer = document.getElementById('mobile-channels-drawer-' + id);
+    const btn = document.getElementById('mobile-expand-btn-' + id);
+    if (!drawer) return;
+    if (drawer.style.display === 'none' || drawer.classList.contains('hidden')) {
+      drawer.style.display = 'flex';
+      drawer.classList.remove('hidden');
+      if (btn) btn.classList.add('rotated');
+    } else {
+      drawer.style.display = 'none';
+      drawer.classList.add('hidden');
+      if (btn) btn.classList.remove('rotated');
     }
   }
 </script>

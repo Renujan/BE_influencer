@@ -284,6 +284,151 @@
         border-color: var(--cd-primary);
         background: rgba(6, 182, 212, 0.06);
     }
+
+    /* ── Mobile Media Queries (< 768px) ── */
+    @media (max-width: 768px) {
+        .cd-container {
+            padding: 16px 12px 48px 12px;
+        }
+        .cd-header {
+            padding: 20px 16px;
+            border-radius: 14px;
+            gap: 14px;
+        }
+        .cd-header h1 {
+            font-size: 1.35rem;
+        }
+        .btn-cd-primary {
+            width: 100%;
+            min-height: 44px;
+            justify-content: center;
+        }
+        .cd-toolbar {
+            padding: 14px;
+            border-radius: 14px;
+            gap: 12px;
+        }
+        .cd-search-form {
+            flex-direction: column;
+            width: 100%;
+            max-width: none;
+            gap: 8px;
+        }
+        .cd-search-input {
+            height: 44px !important;
+            padding: 10px 14px !important;
+        }
+        .cd-search-form .btn-cd-primary {
+            width: 100%;
+            height: 44px;
+            justify-content: center;
+        }
+        .cd-platform-pills {
+            width: 100%;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 6px;
+            scrollbar-width: thin;
+        }
+        .cd-pill {
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-height: 38px;
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+        }
+        .cd-table thead th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 15;
+            background: #f8fafc;
+        }
+        .cd-table tbody td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background: #ffffff;
+        }
+        .cd-category-row:hover td:first-child {
+            background: #f1f5f9;
+        }
+    }
+
+    .cd-desktop-table {
+        display: block;
+    }
+    .cd-mobile-cards {
+        display: none;
+    }
+
+    @media (max-width: 768px) {
+        .cd-desktop-table {
+            display: none !important;
+        }
+        .cd-mobile-cards {
+            display: flex !important;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+        .cd-mcard {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            cursor: pointer;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+        .cd-mcard:hover, .cd-mcard:active {
+            border-color: var(--cd-primary);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.12);
+        }
+        .cd-mcard-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .cd-mcard-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.35;
+        }
+        .cd-mcard-sub {
+            font-size: 12px;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 6px;
+            width: fit-content;
+        }
+        .cd-mcard-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 44px;
+            width: 100%;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-top: 4px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -301,7 +446,7 @@
             </div>
         </div>
         <div>
-            <a href="{{ add_deliverable_url }}" class="btn-cd-primary">
+            <a href="{{ add_deliverable_url }}" class="btn-cd-primary" style="min-height: 44px;">
                 ➕ Add New Deliverable
             </a>
         </div>
@@ -309,14 +454,14 @@
 
     <!-- Search & Filter Toolbar -->
     <div class="cd-toolbar">
-        <form method="GET" action="" class="cd-search-form">
+        <form method="GET" action="{% url 'wagtailsnippets_campegin_campaigndeliverable:list' %}" class="cd-search-form">
             {% if selected_platform %}
                 <input type="hidden" name="platform" value="{{ selected_platform }}">
             {% endif %}
-            <input type="text" name="q" value="{{ search_query }}" placeholder="Search platform or category..." class="cd-search-input">
-            <button type="submit" class="btn-cd-primary" style="padding: 7px 12px; font-size: 12px;">Search</button>
-            {% if search_query or selected_platform %}
-                <a href="{% url 'wagtailsnippets_campegin_campaigndeliverable:list' %}" class="cd-pill" style="font-size: 11px; padding: 4px 8px;">Reset</a>
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Search category or specs..." class="cd-search-input">
+            <button type="submit" class="btn-cd-primary" style="font-size: 13px; min-height: 44px;">Search</button>
+            {% if search_query %}
+                <a href="{% url 'wagtailsnippets_campegin_campaigndeliverable:list' %}" class="cd-pill" style="font-size: 12px; min-height: 38px;">Reset</a>
             {% endif %}
         </form>
 
@@ -332,9 +477,10 @@
         </div>
     </div>
 
-    <!-- Single-Level Clean Grouped Table (No Action buttons) -->
-    <div class="cd-card">
-        <table class="cd-table">
+    <!-- Single-Level Clean Grouped Table (Desktop Only >= 769px) -->
+    <div class="cd-card cd-desktop-table">
+        <div style="overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch;">
+        <table class="cd-table" style="min-width: 600px;">
             <thead>
                 <tr>
                     <th style="width: 180px;">Platform</th>
@@ -372,6 +518,33 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View (< 768px, Zero Horizontal Scroll, >=44px Touch Targets) -->
+    <div class="cd-mobile-cards">
+        {% for cat in categories_list %}
+            <a href="{{ cat.edit_url }}" class="cd-mcard">
+                <div class="cd-mcard-top">
+                    <span class="cd-platform-tag">{{ cat.platform }}</span>
+                    <span class="cd-badge-count {% if cat.deliverables_count == 0 %}empty{% endif %}">
+                        📦 {{ cat.deliverables_count }} Deliverable{{ cat.deliverables_count|pluralize }}
+                    </span>
+                </div>
+                <div class="cd-mcard-title">{{ cat.name }}</div>
+                {% if cat.duration %}
+                    <div class="cd-mcard-sub">Duration / Specs: {{ cat.duration }}</div>
+                {% endif %}
+                <div class="cd-mcard-btn">
+                    <span>Manage Deliverables &amp; Category</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+            </a>
+        {% empty %}
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 36px 16px; text-align: center; color: #64748b;">
+                No categories or deliverables found matching your search.
+            </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}

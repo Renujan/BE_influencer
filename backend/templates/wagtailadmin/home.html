@@ -64,185 +64,184 @@
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
 
-  <div class="dashboard-container p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-6">
+  <div class="dashboard-container p-3 sm:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
     
     <!-- Top Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-300">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-300">
       <div>
         <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Welcome, {{ user.first_name|default:user.username }}!</h1>
-        <p class="text-xs sm:text-sm text-slate-500 mt-1">Real-time Campaign Collaboration & Influencer Escrow Hub</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">Real-time Campaign Collaboration & Influencer Escrow Hub</p>
       </div>
-      <div class="flex items-center gap-4 shrink-0">
-        <div class="hidden md:flex flex-col text-right">
+      <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0">
+        <div class="flex flex-col text-left sm:text-right">
           <span class="text-xs sm:text-sm font-semibold text-slate-700">Administrator: {{ user.username }}</span>
         </div>
         
-        <!-- Notifications Bell -->
-        <div class="relative z-20">
-          <button id="notifButton" class="relative inline-flex items-center justify-center h-10 w-10 rounded-xl hover:bg-slate-100 border border-slate-200/80 text-slate-600 focus:outline-none transition-all duration-200" aria-haspopup="true" aria-expanded="false">
-            <img src="{% static 'img/notification_bell.png' %}" alt="Notifications" class="w-5 h-5 object-contain">
-            {% if unread_notifications_count > 0 %}
-            <span id="notifBadge" class="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-500 rounded-full border-2 border-white shadow-sm">
-              {{ unread_notifications_count }}
-            </span>
-            {% endif %}
-          </button>
+        <div class="flex items-center gap-2.5">
+          <!-- Notifications Bell -->
+          <div class="relative z-20">
+            <button id="notifButton" class="relative inline-flex items-center justify-center min-h-[44px] min-w-[44px] h-11 w-11 rounded-xl hover:bg-slate-100 border border-slate-200/80 text-slate-600 focus:outline-none transition-all duration-200" aria-haspopup="true" aria-expanded="false" aria-label="Toggle notifications">
+              <img src="{% static 'img/notification_bell.png' %}" alt="Notifications" class="w-5 h-5 object-contain">
+              {% if unread_notifications_count > 0 %}
+              <span id="notifBadge" class="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-500 rounded-full border-2 border-white shadow-sm">
+                {{ unread_notifications_count }}
+              </span>
+              {% endif %}
+            </button>
 
-          <!-- Dropdown panel -->
-          <div id="notifPanel" class="hidden absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
-            <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="font-bold text-slate-800 text-sm">Notifications</span>
-                <span class="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">Recent</span>
-              </div>
-              <button id="clearNotificationsBtn" class="text-xs text-brand-blue hover:text-blue-700 hover:underline font-bold focus:outline-none" title="Clear all notifications">
-                Clear All
-              </button>
-            </div>
-
-            <!-- Notifications content -->
-            <div id="notificationsContent" class="max-h-80 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
-              {% for notification in recent_notifications %}
-                <a href="{% url 'notifications:read_and_redirect' notification.id %}" class="flex items-start gap-3 p-4 hover:bg-slate-50 transition-all duration-150 {% if not notification.is_read %}bg-slate-50/50{% endif %} block text-inherit hover:no-underline">
-                  <div class="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 {% if notification.category == 'signup' %}bg-indigo-50 text-indigo-600{% elif notification.category == 'campaign' %}bg-blue-50 text-brand-blue{% elif notification.category == 'compliance' %}bg-rose-50 text-rose-500{% else %}bg-amber-50 text-amber-500{% endif %}">
-                    <i class="{{ notification.icon|default:'fas fa-bell' }} text-xs"></i>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-xs font-bold text-slate-800 truncate">{{ notification.title }}</span>
-                      <span class="text-[9px] text-slate-400 font-medium whitespace-nowrap">{{ notification.created_at|date:"g:i A" }}</span>
-                    </div>
-                    <p class="text-xs text-slate-500 mt-0.5 break-words">{{ notification.message }}</p>
-                    <div class="flex items-center justify-between mt-2">
-                      <span class="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">
-                        {% if notification.category == 'signup' %}Registration{% elif notification.category == 'campaign' %}Campaign{% elif notification.category == 'compliance' %}Compliance{% else %}Escrow & Payment{% endif %}
-                      </span>
-                      <span class="text-[9px] text-slate-400 font-semibold">{{ notification.created_at|date:"M d" }}</span>
-                    </div>
-                  </div>
-                </a>
-              {% empty %}
-                <div class="p-8 text-center text-slate-400 text-xs italic">
-                  <i class="fas fa-bell-slash text-3xl mb-2 block"></i> No notifications yet.
+            <!-- Dropdown panel -->
+            <div id="notifPanel" class="hidden absolute right-0 mt-3 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+              <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-slate-800 text-sm">Notifications</span>
+                  <span class="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">Recent</span>
                 </div>
-              {% endfor %}
-            </div>
+                <button id="clearNotificationsBtn" class="text-xs text-brand-blue hover:text-blue-700 hover:underline font-bold focus:outline-none min-h-[44px] inline-flex items-center px-2" title="Clear all notifications">
+                  Clear All
+                </button>
+              </div>
 
+              <!-- Notifications content -->
+              <div id="notificationsContent" class="max-h-80 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
+                {% for notification in recent_notifications %}
+                  <a href="{% url 'notifications:read_and_redirect' notification.id %}" class="flex items-start gap-3 p-3.5 sm:p-4 hover:bg-slate-50 transition-all duration-150 {% if not notification.is_read %}bg-slate-50/50{% endif %} block text-inherit hover:no-underline min-h-[44px]">
+                    <div class="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 {% if notification.category == 'signup' %}bg-indigo-50 text-indigo-600{% elif notification.category == 'campaign' %}bg-blue-50 text-brand-blue{% elif notification.category == 'compliance' %}bg-rose-50 text-rose-500{% else %}bg-amber-50 text-amber-500{% endif %}">
+                      <i class="{{ notification.icon|default:'fas fa-bell' }} text-xs"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-bold text-slate-800 truncate">{{ notification.title }}</span>
+                        <span class="text-[9px] text-slate-400 font-medium whitespace-nowrap">{{ notification.created_at|date:"g:i A" }}</span>
+                      </div>
+                      <p class="text-xs text-slate-500 mt-0.5 break-words">{{ notification.message }}</p>
+                      <div class="flex items-center justify-between mt-2">
+                        <span class="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">
+                          {% if notification.category == 'signup' %}Registration{% elif notification.category == 'campaign' %}Campaign{% elif notification.category == 'compliance' %}Compliance{% else %}Escrow & Payment{% endif %}
+                        </span>
+                        <span class="text-[9px] text-slate-400 font-semibold">{{ notification.created_at|date:"M d" }}</span>
+                      </div>
+                    </div>
+                  </a>
+                {% empty %}
+                  <div class="p-8 text-center text-slate-400 text-xs italic">
+                    <i class="fas fa-bell-slash text-3xl mb-2 block"></i> No notifications yet.
+                  </div>
+                {% endfor %}
+              </div>
 
-            <!-- Empty State (hidden by default) -->
-            <div id="emptyNotificationsState" class="hidden p-8 text-center">
-              <i class="fas fa-bell-slash text-slate-300 text-4xl mb-3 block"></i>
-              <p class="text-sm text-slate-500 font-bold">No notifications</p>
-              <p class="text-xs text-slate-400 mt-1">All notifications have been cleared.</p>
+              <!-- Empty State (hidden by default) -->
+              <div id="emptyNotificationsState" class="hidden p-8 text-center">
+                <i class="fas fa-bell-slash text-slate-300 text-4xl mb-3 block"></i>
+                <p class="text-sm text-slate-500 font-bold">No notifications</p>
+                <p class="text-xs text-slate-400 mt-1">All notifications have been cleared.</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="h-10 w-10 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue font-bold text-sm shadow-inner shrink-0">
-          {{ user.username|make_list|first|upper }}
+          <div class="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue font-bold text-sm shadow-inner shrink-0">
+            {{ user.username|make_list|first|upper }}
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Quick Statistics Metrics Row -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
+    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-5">
       <!-- Total Campaigns -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-        <div class="absolute -right-3 -bottom-3 text-slate-100 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+      <div class="bg-white p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-slate-100 text-6xl sm:text-7xl font-bold transition-all duration-300 group-hover:scale-110 pointer-events-none">
           <i class="fas fa-layer-group"></i>
         </div>
         <div class="relative z-10 flex flex-col justify-between h-full">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Campaigns</span>
-            <span class="h-8 w-8 rounded-xl bg-indigo-50 text-brand-blue flex items-center justify-center text-sm shadow-sm"><i class="fas fa-tasks"></i></span>
+            <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Total Campaigns</span>
+            <span class="h-7 w-7 sm:h-8 sm:w-8 rounded-lg sm:rounded-xl bg-indigo-50 text-brand-blue flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0"><i class="fas fa-tasks"></i></span>
           </div>
-          <div class="mt-4">
-            <span class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_campaigns }}</span>
-            <span class="text-xs font-semibold text-brand-blue bg-indigo-50 px-2 py-0.5 rounded-full ml-2">Workspaces</span>
+          <div class="mt-2.5 sm:mt-4">
+            <span class="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_campaigns }}</span>
+            <span class="text-[10px] sm:text-xs font-semibold text-brand-blue bg-indigo-50 px-1.5 sm:px-2 py-0.5 rounded-full ml-1 sm:ml-2">Workspaces</span>
           </div>
-          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
+          <div class="flex items-center gap-3 sm:gap-4 mt-2.5 sm:mt-3 pt-2.5 sm:pt-3 border-t border-slate-100 text-[10px] sm:text-[11px] text-slate-400 font-medium">
             <span>Live: <b class="text-emerald-500 font-semibold">{{ live_campaigns }}</b></span>
-            <span>Completed: <b class="text-slate-600 font-semibold">{{ completed_campaigns }}</b></span>
+            <span>Done: <b class="text-slate-600 font-semibold">{{ completed_campaigns }}</b></span>
           </div>
         </div>
       </div>
 
       <!-- Enrolled Brands (Businesses) -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-        <div class="absolute -right-3 -bottom-3 text-slate-100 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+      <div class="bg-white p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-slate-100 text-6xl sm:text-7xl font-bold transition-all duration-300 group-hover:scale-110 pointer-events-none">
           <i class="fas fa-building"></i>
         </div>
         <div class="relative z-10 flex flex-col justify-between h-full">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enrolled Brands</span>
-            <span class="h-8 w-8 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center text-sm shadow-sm"><i class="fas fa-store"></i></span>
+            <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Enrolled Brands</span>
+            <span class="h-7 w-7 sm:h-8 sm:w-8 rounded-lg sm:rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0"><i class="fas fa-store"></i></span>
           </div>
-          <div class="mt-4">
-            <span class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_brands }}</span>
-            <span class="text-xs font-semibold text-brand-blue bg-blue-50 px-2 py-0.5 rounded-full ml-2">Businesses</span>
+          <div class="mt-2.5 sm:mt-4">
+            <span class="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_brands }}</span>
+            <span class="text-[10px] sm:text-xs font-semibold text-brand-blue bg-blue-50 px-1.5 sm:px-2 py-0.5 rounded-full ml-1 sm:ml-2">Brands</span>
           </div>
-          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
-            <span>Role: <b class="text-brand-blue font-semibold">Business Client</b></span>
+          <div class="flex items-center gap-3 sm:gap-4 mt-2.5 sm:mt-3 pt-2.5 sm:pt-3 border-t border-slate-100 text-[10px] sm:text-[11px] text-slate-400 font-medium">
+            <span>Role: <b class="text-brand-blue font-semibold">Business</b></span>
           </div>
         </div>
       </div>
 
       <!-- Enrolled Creators (Influencers) -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-        <div class="absolute -right-3 -bottom-3 text-slate-100 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+      <div class="bg-white p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-slate-100 text-6xl sm:text-7xl font-bold transition-all duration-300 group-hover:scale-110 pointer-events-none">
           <i class="fas fa-video"></i>
         </div>
         <div class="relative z-10 flex flex-col justify-between h-full">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enrolled Creators</span>
-            <span class="h-8 w-8 rounded-xl bg-orange-50 text-brand-orange flex items-center justify-center text-sm shadow-sm"><i class="fas fa-user-circle"></i></span>
+            <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Creators</span>
+            <span class="h-7 w-7 sm:h-8 sm:w-8 rounded-lg sm:rounded-xl bg-orange-50 text-brand-orange flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0"><i class="fas fa-user-circle"></i></span>
           </div>
-          <div class="mt-4">
-            <span class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_influencers }}</span>
-            <span class="text-xs font-semibold text-brand-orange bg-orange-50 px-2 py-0.5 rounded-full ml-2">Influencers</span>
+          <div class="mt-2.5 sm:mt-4">
+            <span class="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_influencers }}</span>
+            <span class="text-[10px] sm:text-xs font-semibold text-brand-orange bg-orange-50 px-1.5 sm:px-2 py-0.5 rounded-full ml-1 sm:ml-2">Talent</span>
           </div>
-          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
-            <span>Role: <b class="text-brand-orange font-semibold">Creator Talent</b></span>
+          <div class="flex items-center gap-3 sm:gap-4 mt-2.5 sm:mt-3 pt-2.5 sm:pt-3 border-t border-slate-100 text-[10px] sm:text-[11px] text-slate-400 font-medium">
+            <span>Role: <b class="text-brand-orange font-semibold">Creator</b></span>
           </div>
         </div>
       </div>
 
       <!-- Escrow Balance Protection -->
-      <div class="stats-card-gradient-1 p-5 rounded-2xl text-white shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-        <div class="absolute -right-3 -bottom-3 text-white/10 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+      <div class="stats-card-gradient-1 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl text-white shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-white/10 text-6xl sm:text-7xl font-bold transition-all duration-300 group-hover:scale-110 pointer-events-none">
           <i class="fas fa-shield-alt"></i>
         </div>
         <div class="relative z-10 flex flex-col justify-between h-full">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-white/80 uppercase tracking-wider">Escrow Protection</span>
-            <span class="h-8 w-8 rounded-xl bg-white/20 text-white flex items-center justify-center text-sm shadow-sm"><i class="fas fa-lock"></i></span>
+            <span class="text-[10px] sm:text-xs font-bold text-white/80 uppercase tracking-wider truncate">Escrow Vault</span>
+            <span class="h-7 w-7 sm:h-8 sm:w-8 rounded-lg sm:rounded-xl bg-white/20 text-white flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0"><i class="fas fa-lock"></i></span>
           </div>
-          <div class="mt-4">
-            <span class="text-3xl font-extrabold tracking-tight">{{ user_currency_symbol }}{{ total_escrow_balance|floatformat:2 }}</span>
-            <span class="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full ml-2">Protected</span>
+          <div class="mt-2.5 sm:mt-4">
+            <span class="text-lg sm:text-2xl lg:text-3xl font-extrabold tracking-tight">{{ user_currency_symbol }}{{ total_escrow_balance|floatformat:2 }}</span>
           </div>
-          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-white/15 text-[11px] text-white/80 font-medium">
+          <div class="flex items-center gap-3 sm:gap-4 mt-2.5 sm:mt-3 pt-2.5 sm:pt-3 border-t border-white/15 text-[10px] sm:text-[11px] text-white/80 font-medium">
             <span>Released: <b class="text-emerald-300 font-semibold">{{ user_currency_symbol }}{{ released_payments|floatformat:0 }}</b></span>
-            <span>In Escrow: <b class="text-white font-semibold">{{ user_currency_symbol }}{{ escrow_payments|floatformat:0 }}</b></span>
           </div>
         </div>
       </div>
 
-      <!-- Compliance Audits -->
-      <div class="stats-card-gradient-2 p-5 rounded-2xl text-white shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-        <div class="absolute -right-3 -bottom-3 text-white/10 text-7xl font-bold transition-all duration-300 group-hover:scale-110">
+      <!-- Compliance Audits (full width on 2-col mobile) -->
+      <div class="col-span-2 sm:col-span-1 stats-card-gradient-2 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl text-white shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -right-3 -bottom-3 text-white/10 text-6xl sm:text-7xl font-bold transition-all duration-300 group-hover:scale-110 pointer-events-none">
           <i class="fas fa-exclamation-triangle"></i>
         </div>
         <div class="relative z-10 flex flex-col justify-between h-full">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-white/80 uppercase tracking-wider">Compliance Review</span>
-            <span class="h-8 w-8 rounded-xl bg-white/20 text-white flex items-center justify-center text-sm shadow-sm"><i class="fas fa-gavel"></i></span>
+            <span class="text-[10px] sm:text-xs font-bold text-white/80 uppercase tracking-wider truncate">Compliance Audits</span>
+            <span class="h-7 w-7 sm:h-8 sm:w-8 rounded-lg sm:rounded-xl bg-white/20 text-white flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0"><i class="fas fa-gavel"></i></span>
           </div>
-          <div class="mt-4">
-            <span class="text-3xl font-extrabold tracking-tight">{{ pending_tickets }} / {{ total_tickets }}</span>
-            <span class="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full ml-2">Pending disputes</span>
+          <div class="mt-2.5 sm:mt-4 flex items-baseline gap-2">
+            <span class="text-xl sm:text-3xl font-extrabold tracking-tight">{{ pending_tickets }} / {{ total_tickets }}</span>
+            <span class="text-[10px] sm:text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">Pending</span>
           </div>
-          <div class="flex items-center gap-4 mt-3 pt-3 border-t border-white/15 text-[11px] text-white/80 font-medium">
+          <div class="flex items-center gap-3 sm:gap-4 mt-2.5 sm:mt-3 pt-2.5 sm:pt-3 border-t border-white/15 text-[10px] sm:text-[11px] text-white/80 font-medium">
             <span>Resolved: <b class="text-white font-semibold">{{ resolved_tickets }}</b></span>
             <span>Approved: <b class="text-white font-semibold">{{ approved_tickets }}</b></span>
           </div>
@@ -251,46 +250,106 @@
     </div>
 
     <!-- Main Grid Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
       
       <!-- Left Main Column (Campaigns & Charts) - 8 Cols -->
-      <div class="lg:col-span-8 space-y-6">
+      <div class="lg:col-span-8 space-y-5 sm:space-y-6">
         
         <!-- Weekly Budget Breakdown Chart -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div class="flex items-center justify-between mb-4">
+        <div class="bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-3 sm:mb-4">
             <div>
-              <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <h3 class="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <span class="h-2 w-2 rounded-full bg-brand-blue animate-pulse"></span>
                 Active Campaigns Budget Allocation
               </h3>
-              <p class="text-xs text-slate-400 mt-0.5">Top performing campaign budgets in USD</p>
+              <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5">Top performing campaign budgets</p>
             </div>
             <div class="flex items-center gap-2">
               <span class="text-[10px] text-emerald-500 font-semibold bg-emerald-50 px-2 py-1 rounded-md">Real Data</span>
             </div>
           </div>
-          <div class="h-[280px]">
+          <div class="h-[220px] sm:h-[280px]">
             <canvas id="budgetChart"></canvas>
           </div>
         </div>
 
-        <!-- Active Campaigns Table -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-          <div class="flex items-center justify-between mb-4">
+        <!-- Active Campaigns Table & Mobile Cards -->
+        <div class="bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <div class="flex items-center justify-between mb-3 sm:mb-4">
             <div>
-              <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <h3 class="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <i class="fas fa-folder-open text-brand-blue"></i>
                 Campaign Workspaces
               </h3>
-              <p class="text-xs text-slate-400 mt-0.5">Active collaboration workflows and budgets</p>
+              <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5">Active collaboration workflows and budgets</p>
             </div>
-            <a href="/admin/snippets/campegin/campaign/" class="text-xs text-brand-blue hover:text-blue-700 font-bold transition-all flex items-center gap-1">
-              Manage Workspaces <i class="fas fa-arrow-right text-[10px]"></i>
+            <a href="/admin/snippets/campegin/campaign/" class="text-xs text-brand-blue hover:text-blue-700 font-bold transition-all flex items-center gap-1 min-h-[44px] inline-flex items-center px-2">
+              Manage <span class="hidden xs:inline">Workspaces</span> <i class="fas fa-arrow-right text-[10px] ml-0.5"></i>
             </a>
           </div>
+
+          <!-- Mobile Cards Layout (< sm viewports) -->
+          <div class="block sm:hidden space-y-3">
+            {% for camp in top_campaigns %}
+            <div class="p-3.5 bg-slate-50/80 border border-slate-200/80 rounded-xl space-y-2.5">
+              <div class="flex items-start justify-between gap-2">
+                <div class="font-bold text-slate-800 text-sm leading-snug">{{ camp.name }}</div>
+                {% if camp.status == 'Live' %}
+                  <span class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">Live</span>
+                {% elif camp.status == 'Completed' %}
+                  <span class="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">Completed</span>
+                {% else %}
+                  <span class="bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">Pending</span>
+                {% endif %}
+              </div>
+
+              <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-200/50">
+                <div class="truncate max-w-[140px]">
+                  <span class="text-[10px] text-slate-400 font-semibold block uppercase">Brand</span>
+                  <span class="font-medium text-slate-700 truncate">
+                    {% if camp.brand.business_profile.company_name %}
+                      {{ camp.brand.business_profile.company_name }}
+                    {% else %}
+                      {{ camp.brand.username }}
+                    {% endif %}
+                  </span>
+                </div>
+                <div class="text-right">
+                  <span class="text-[10px] text-slate-400 font-semibold block uppercase">Budget</span>
+                  <span class="font-bold text-slate-900 font-mono">{{ user_currency_symbol }}{{ camp.budget|floatformat:2 }}</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-200/50">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  {% if camp.creator %}
+                    <div class="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-brand-orange border border-slate-200 shrink-0">
+                      {{ camp.creator.username|make_list|first|upper }}
+                    </div>
+                    <span class="text-slate-600 text-xs font-medium truncate">@{{ camp.creator.username }}</span>
+                  {% else %}
+                    <span class="text-slate-400 text-xs italic">Unassigned</span>
+                  {% endif %}
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                  <div class="w-14 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-brand-blue h-1.5 rounded-full progress-bar" data-progress="{{ camp.progress }}"></div>
+                  </div>
+                  <span class="font-mono text-[10px] font-bold text-slate-500">{{ camp.progress }}%</span>
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="p-6 text-center text-slate-400 text-xs italic">
+              <i class="fas fa-folder-open text-2xl mb-2 block"></i> No campaigns found in database.
+            </div>
+            {% endfor %}
+          </div>
           
-          <div class="overflow-x-auto custom-scrollbar">
+          <!-- Desktop Table Layout (>= sm viewports) -->
+          <div class="hidden sm:block overflow-x-auto custom-scrollbar">
             <table class="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr class="bg-slate-50 text-[10px] text-slate-400 font-bold uppercase border-b border-slate-100">
@@ -358,26 +417,26 @@
       </div>
 
       <!-- Right Column (Socials & Tickets) - 4 Cols -->
-      <div class="lg:col-span-4 space-y-6">
+      <div class="lg:col-span-4 space-y-5 sm:space-y-6">
         
         <!-- Social Channels (Creator Count by Platform) -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div class="flex items-center justify-between mb-4">
+        <div class="bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-3 sm:mb-4">
             <div>
-              <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <h3 class="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <i class="fas fa-bullhorn text-brand-orange"></i>
                 Creator Channels
               </h3>
-              <p class="text-xs text-slate-400 mt-0.5">Creators count per platform</p>
+              <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5">Creators count per platform</p>
             </div>
-            <a href="{% url 'admin_social_accounts_list' %}" class="text-xs text-brand-orange hover:text-orange-700 font-bold transition-all flex items-center gap-1">
-              Connected Accounts <i class="fas fa-arrow-right text-[10px]"></i>
+            <a href="{% url 'admin_social_accounts_list' %}" class="text-xs text-brand-orange hover:text-orange-700 font-bold transition-all flex items-center gap-1 min-h-[44px] inline-flex items-center px-2">
+              Connected Accounts <i class="fas fa-arrow-right text-[10px] ml-0.5"></i>
             </a>
           </div>
 
           <div class="space-y-2.5">
             {% for plat in platform_creator_counts %}
-            <a href="{% url 'admin_social_accounts_list' %}?platform={{ plat.key }}" class="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-100 hover:border-slate-200 rounded-xl transition-all duration-200 block text-inherit hover:no-underline group">
+            <a href="{% url 'admin_social_accounts_list' %}?platform={{ plat.key }}" class="flex items-center justify-between p-3.5 min-h-[48px] bg-slate-50 hover:bg-slate-100/80 border border-slate-100 hover:border-slate-200 rounded-xl transition-all duration-200 block text-inherit hover:no-underline group">
               <div class="flex items-center gap-3 min-w-0">
                 <div class="h-8 w-8 rounded-lg flex items-center justify-center text-white text-sm shadow-sm shrink-0" style="background: {{ plat.bg_color }};">
                   <i class="{{ plat.icon }}"></i>
@@ -403,23 +462,23 @@
         </div>
 
         <!-- Compliance & Complaints Tickets -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div class="flex items-center justify-between mb-4">
+        <div class="bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-3 sm:mb-4">
             <div>
-              <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <h3 class="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <i class="fas fa-shield-alt text-rose-500"></i>
                 Compliance Tickets
               </h3>
-              <p class="text-xs text-slate-400 mt-0.5">Complaints &amp; dispute tickets</p>
+              <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5">Complaints &amp; dispute tickets</p>
             </div>
-            <a href="{% url 'complaint_admin:index' %}" class="text-xs text-rose-500 hover:text-rose-700 font-bold transition-all flex items-center gap-1">
-              Tickets <i class="fas fa-arrow-right text-[10px]"></i>
+            <a href="{% url 'complaint_admin:index' %}" class="text-xs text-rose-500 hover:text-rose-700 font-bold transition-all flex items-center gap-1 min-h-[44px] inline-flex items-center px-2">
+              Tickets <i class="fas fa-arrow-right text-[10px] ml-0.5"></i>
             </a>
           </div>
 
           <div class="space-y-3">
             {% for ticket in recent_tickets %}
-            <a href="{% url 'complaint_admin:inspect' ticket.id %}" class="p-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-100 rounded-xl transition-all duration-200 space-y-2 block text-inherit hover:no-underline group">
+            <a href="{% url 'complaint_admin:inspect' ticket.id %}" class="p-3.5 min-h-[48px] bg-slate-50 hover:bg-slate-100/80 border border-slate-100 rounded-xl transition-all duration-200 space-y-2 block text-inherit hover:no-underline group">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-1.5">
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ ticket.get_category_display }}</span>

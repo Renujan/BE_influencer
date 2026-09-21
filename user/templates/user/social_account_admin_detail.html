@@ -352,7 +352,8 @@
   }
 
   .sa-btn-verify-action {
-    padding: 8px 16px;
+    min-height: 44px;
+    padding: 10px 18px;
     border-radius: 9px;
     font-size: 0.82rem;
     font-weight: 700;
@@ -381,7 +382,8 @@
   }
 
   .sa-btn-link-out {
-    padding: 8px 14px;
+    min-height: 44px;
+    padding: 10px 16px;
     border-radius: 9px;
     font-size: 0.82rem;
     font-weight: 600;
@@ -421,7 +423,8 @@
   }
 
   .sa-btn-shortcut {
-    padding: 8px 16px;
+    min-height: 44px;
+    padding: 10px 18px;
     border-radius: 9px;
     font-size: 0.82rem;
     font-weight: 600;
@@ -438,6 +441,84 @@
   .sa-btn-shortcut:hover {
     background: #e2e8f0;
     color: #0f172a !important;
+  }
+
+  /* ── Mobile Media Queries (< 768px) ── */
+  @media (max-width: 768px) {
+    .sa-detail-container {
+      padding: 16px 12px 48px 12px;
+    }
+    .sa-dark-header {
+      padding: 20px 16px;
+      border-radius: 14px;
+      gap: 16px;
+    }
+    .sa-dark-header h1 {
+      font-size: 1.35rem;
+    }
+    .sa-header-actions {
+      width: 100%;
+    }
+    .sa-btn-back {
+      width: 100%;
+      min-height: 44px;
+      justify-content: center;
+    }
+    .sa-profile-card {
+      padding: 18px 16px;
+      gap: 16px;
+    }
+    .sa-stat-pill-group {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .sa-stat-pill {
+      min-width: 0;
+      padding: 10px 6px;
+    }
+    .sa-stat-pill-val {
+      font-size: 1.15rem;
+    }
+    .sa-channel-header {
+      padding: 16px 18px;
+    }
+    .sa-channel-body {
+      padding: 16px 18px;
+    }
+    .sa-channel-footer {
+      padding: 14px 18px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+    .sa-channel-footer form {
+      width: 100%;
+    }
+    .sa-btn-verify-action {
+      width: 100%;
+      justify-content: center;
+    }
+    .sa-btn-link-out {
+      width: 100%;
+      justify-content: center;
+    }
+    .sa-shortcuts-bar {
+      padding: 16px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+    .sa-shortcuts-links {
+      flex-direction: column;
+      width: 100%;
+      gap: 8px;
+    }
+    .sa-btn-shortcut {
+      width: 100%;
+      justify-content: center;
+    }
   }
 </style>
 {% endblock %}

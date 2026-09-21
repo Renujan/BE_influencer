@@ -66,13 +66,15 @@
         background-color: rgba(255, 255, 255, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.2);
         color: #ffffff !important;
-        padding: 8px 16px;
-        border-radius: 6px;
+        padding: 10px 18px;
+        min-height: 44px;
+        border-radius: 8px;
         font-weight: 600;
         font-size: 13px;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 6px;
         transition: background-color 0.2s;
     }
@@ -85,12 +87,14 @@
         background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
         color: #ffffff !important;
         padding: 10px 22px;
-        border-radius: 6px;
+        min-height: 44px;
+        border-radius: 8px;
         font-weight: 700;
         font-size: 14px;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 6px;
         border: none;
         cursor: pointer;
@@ -312,6 +316,54 @@
     @keyframes cdFadeIn {
         from { opacity: 0; transform: scale(0.95); }
         to { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Mobile Media Queries (< 768px) ── */
+    @media (max-width: 768px) {
+        .custom-inspect-wrapper {
+            padding: 16px 12px 48px 12px;
+        }
+        .custom-header-bar {
+            padding: 20px 16px;
+            border-radius: 14px;
+            gap: 14px;
+        }
+        .custom-header-bar > div:last-child {
+            width: 100%;
+        }
+        .btn-header-secondary {
+            width: 100%;
+            justify-content: center;
+        }
+        .custom-body-card {
+            padding: 18px 16px;
+            border-radius: 14px;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 12px;
+        }
+        .cd-add-row {
+            flex-direction: column;
+            gap: 8px;
+        }
+        .cd-add-input {
+            height: 44px;
+        }
+        .btn-add-tag {
+            height: 44px;
+            width: 100%;
+            justify-content: center;
+        }
+        .custom-footer-actions {
+            flex-direction: column;
+            width: 100%;
+            gap: 10px;
+        }
+        .custom-footer-actions button,
+        .custom-footer-actions a {
+            width: 100%;
+            justify-content: center;
+            min-height: 44px;
+        }
     }
 </style>
 {% endblock %}
