@@ -781,6 +781,21 @@ class LoginView(APIView):
         business_prof = getattr(user, "business_profile", None)
         creator_prof = getattr(user, "creator_profile", None)
 
+        # Resolve ghost stub collision if both exist
+        if business_prof and creator_prof:
+            has_real_business = bool(business_prof.company_name or business_prof.website or business_prof.phone or business_prof.business_types.exists() or business_prof.bio)
+            has_real_creator = bool(creator_prof.phone or creator_prof.location or creator_prof.bio or creator_prof.niches.exists() or creator_prof.social_accounts.exists())
+            if has_real_business and not has_real_creator:
+                creator_prof.delete()
+                creator_prof = None
+            elif has_real_creator and not has_real_business:
+                business_prof.delete()
+                business_prof = None
+            elif requested_role == "influencer" and has_real_creator:
+                business_prof = None
+            elif requested_role == "business" and has_real_business:
+                creator_prof = None
+
         if business_prof:
             actual_role = "business"
             profile_data = BusinessProfileSerializer(business_prof).data
@@ -790,13 +805,6 @@ class LoginView(APIView):
         else:
             actual_role = requested_role or "business"
             profile_data = None
-
-        # If the frontend sent a role, enforce it when a profile exists — reject cross-role logins
-        if requested_role and (business_prof or creator_prof) and requested_role != actual_role:
-            return Response(
-                {"error": f"This account is registered as a {'Creator' if actual_role == 'influencer' else 'Business'}. Please log in with the correct role selection."},
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         token, _ = Token.objects.get_or_create(user=user)
 
@@ -1248,13 +1256,45 @@ class MeView(APIView):
 
     def get(self, request):
         user = request.user
-        role = "business" if hasattr(user, "business_profile") else "influencer"
-        if role == "business":
-            profile = user.business_profile
+        business_prof = getattr(user, "business_profile", None)
+        creator_prof = getattr(user, "creator_profile", None)
+
+        # Resolve ghost stub collision if both exist
+        if business_prof and creator_prof:
+            has_real_business = bool(business_prof.company_name or business_prof.website or business_prof.phone or business_prof.business_types.exists() or business_prof.bio)
+            has_real_creator = bool(creator_prof.phone or creator_prof.location or creator_prof.bio or creator_prof.niches.exists() or creator_prof.social_accounts.exists())
+            if has_real_business and not has_real_creator:
+                creator_prof.delete()
+                creator_prof = None
+            elif has_real_creator and not has_real_business:
+                business_prof.delete()
+                business_prof = None
+
+        if business_prof:
+            role = "business"
+            profile = business_prof
             profile_data = BusinessProfileSerializer(profile).data
-        else:
-            profile, _ = CreatorProfile.objects.get_or_create(user=user)
+        elif creator_prof:
+            role = "influencer"
+            profile = creator_prof
             profile_data = CreatorProfileSerializer(profile).data
+        else:
+            if not user.is_staff and not user.is_superuser:
+                profile, _ = CreatorProfile.objects.get_or_create(user=user)
+                role = "influencer"
+                profile_data = CreatorProfileSerializer(profile).data
+            else:
+                role = "admin"
+                profile_data = {
+                    "id": user.id,
+                    "user": {
+                        "id": user.id,
+                        "username": user.username,
+                        "email": user.email,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name,
+                    }
+                }
 
         # Always include role so the frontend can stay authoritative
         return Response({

@@ -13,12 +13,15 @@ class CreatorSettingsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        # Safely get or create creator profile
+        if hasattr(request.user, "business_profile") and not hasattr(request.user, "creator_profile"):
+            return Response({"error": "Business accounts do not have creator settings."}, status=status.HTTP_400_BAD_REQUEST)
         creator_profile, _ = CreatorProfile.objects.get_or_create(user=request.user)
         serializer = CreatorFullSettingsSerializer(creator_profile)
         return Response(serializer.data)
 
     def put(self, request):
+        if hasattr(request.user, "business_profile") and not hasattr(request.user, "creator_profile"):
+            return Response({"error": "Business accounts do not have creator settings."}, status=status.HTTP_400_BAD_REQUEST)
         creator_profile, _ = CreatorProfile.objects.get_or_create(user=request.user)
         serializer = CreatorFullSettingsSerializer(creator_profile, data=request.data, partial=True)
         if serializer.is_valid():
@@ -30,12 +33,15 @@ class BusinessSettingsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        # Safely get or create business profile
+        if hasattr(request.user, "creator_profile") and not hasattr(request.user, "business_profile"):
+            return Response({"error": "Creator accounts do not have business settings."}, status=status.HTTP_400_BAD_REQUEST)
         business_profile, _ = BusinessProfile.objects.get_or_create(user=request.user)
         serializer = BusinessFullSettingsSerializer(business_profile)
         return Response(serializer.data)
 
     def put(self, request):
+        if hasattr(request.user, "creator_profile") and not hasattr(request.user, "business_profile"):
+            return Response({"error": "Creator accounts do not have business settings."}, status=status.HTTP_400_BAD_REQUEST)
         business_profile, _ = BusinessProfile.objects.get_or_create(user=request.user)
         serializer = BusinessFullSettingsSerializer(business_profile, data=request.data, partial=True)
         if serializer.is_valid():

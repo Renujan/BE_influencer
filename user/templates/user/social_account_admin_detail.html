@@ -8,9 +8,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
 
 <style>
+  /* Ensure FontAwesome icons always render with their icon font */
+  i[class*="fa-"], .fa, .fas, .fa-solid, .far, .fa-regular, .fab, .fa-brands {
+    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "FontAwesome" !important;
+    font-style: normal !important;
+    font-variant: normal !important;
+    text-rendering: auto !important;
+    line-height: 1 !important;
+  }
+  .fa-solid, .fas {
+    font-weight: 900 !important;
+  }
+  .fa-brands, .fab {
+    font-family: "Font Awesome 6 Brands" !important;
+    font-weight: 400 !important;
+  }
+
   :root {
     --sa-dark-header: #1e293b;
     --sa-dark-bg: #0f172a;
@@ -543,6 +561,12 @@
       <a href="{% url 'admin_social_accounts_list' %}" class="sa-btn-back">
         <i class="fa-solid fa-arrow-left"></i> Back to Accounts List
       </a>
+      <a href="/admin/creatorprofile/inspect/{{ creator.id }}/" class="sa-btn-back" style="background: rgba(99, 102, 241, 0.25); border-color: rgba(129, 140, 248, 0.4); color: #c7d2fe !important;">
+        <i class="fa-solid fa-user-gear"></i> Inspect
+      </a>
+      <a href="/admin/creatorprofile/edit/{{ creator.id }}/" class="sa-btn-back" style="background: rgba(16, 185, 129, 0.25); border-color: rgba(52, 211, 153, 0.4); color: #a7f3d0 !important;">
+        <i class="fa-solid fa-user-pen"></i> Edit Profile
+      </a>
     </div>
   </div>
 
@@ -686,6 +710,9 @@
   <div class="sa-shortcuts-bar">
     <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Related Creator Pages</span>
     <div class="sa-shortcuts-links">
+      <a href="/admin/creatorprofile/edit/{{ creator.id }}/" class="sa-btn-shortcut">
+        <i class="fa-solid fa-user-pen text-emerald-600"></i> Edit Profile
+      </a>
       <a href="{% url 'admin_ratecard_detail' creator.id %}" class="sa-btn-shortcut">
         <i class="fa-solid fa-file-invoice-dollar text-indigo-600"></i> View Rate Cards
       </a>

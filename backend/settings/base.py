@@ -239,8 +239,8 @@ EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() in ("true", "1", "yes")
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "amplinow2026@gmail.com")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "rtqpgnqxjpahlbpt")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "amplinow26@gmail.com")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "qmnekjjrerdfhnpu")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", f"Ampli Platform <{EMAIL_HOST_USER}>")
 
 # Google OAuth settings
