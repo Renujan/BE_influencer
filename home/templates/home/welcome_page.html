@@ -1,16 +1,18 @@
 {% load static i18n wagtailcore_tags %}
 
-    <!-- Glowing Background Elements -->
-    <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-brand/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
-    <div class="absolute top-[60vh] right-1/4 w-[400px] h-[400px] bg-coral/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
-    <div class="absolute bottom-0 left-10 w-[600px] h-[600px] bg-teal/5 rounded-full blur-[140px] pointer-events-none -z-10"></div>
+    <!-- Glowing Background Elements (Fixed and strictly overflow-contained) -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10" aria-hidden="true">
+        <div class="absolute top-0 left-1/4 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-brand/10 rounded-full blur-[80px] sm:blur-[120px] pointer-events-none"></div>
+        <div class="absolute top-[60vh] right-0 sm:right-1/4 w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-coral/5 rounded-full blur-[70px] sm:blur-[100px] pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 sm:left-10 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-teal/5 rounded-full blur-[80px] sm:blur-[140px] pointer-events-none"></div>
+    </div>
 
     <!-- Navigation Bar -->
-    <nav class="sticky top-0 z-50 border-b border-darkBorder/60 bg-darkBg/80 backdrop-blur-md">
+    <nav class="sticky top-0 z-50 border-b border-darkBorder/60 bg-darkBg/80 backdrop-blur-md w-full">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-20">
                 <!-- Logo -->
-                <a href="/" class="flex items-center">
+                <a href="/" class="flex items-center shrink-0">
                     <img src="{% static 'img/logo_ampli.png' %}?v=2" alt="ampli" class="h-10 w-auto object-contain">
                 </a>
 
@@ -43,7 +45,7 @@
         </div>
 
         <!-- Mobile Menu (Dropdown Panel) -->
-        <div id="mobile-menu" class="hidden md:hidden border-t border-darkBorder/60 bg-darkBg/95 backdrop-blur-md px-4 py-6 space-y-4">
+        <div id="mobile-menu" class="hidden md:hidden border-t border-darkBorder/60 bg-darkBg/95 backdrop-blur-md px-4 py-6 space-y-4 w-full">
             <div class="flex flex-col space-y-3">
                 <a href="#features" class="text-base font-medium text-gray-300 hover:text-white py-2 transition-colors">Features</a>
                 <a href="#workspace" class="text-base font-medium text-gray-300 hover:text-white py-2 transition-colors">Workspace</a>
@@ -60,27 +62,27 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="relative pt-12 pb-20 px-4 sm:px-6 lg:px-8 text-center max-w-7xl mx-auto">
+    <section class="relative pt-10 sm:pt-12 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 text-center max-w-7xl mx-auto w-full">
         <div class="max-w-4xl mx-auto space-y-6">
-            <div class="inline-flex items-center gap-2 rounded-full border border-darkBorder bg-darkCard/60 px-4 py-1.5 text-xs text-brand-light font-semibold shadow-inner">
-                <span class="h-2 w-2 rounded-full bg-teal animate-pulse"></span>
-                Influencer Marketing Engine 2.6 Active
+            <div class="inline-flex items-center gap-2 rounded-full border border-darkBorder bg-darkCard/60 px-3.5 sm:px-4 py-1.5 text-xs text-brand-light font-semibold shadow-inner max-w-full">
+                <span class="h-2 w-2 rounded-full bg-teal animate-pulse shrink-0"></span>
+                <span class="truncate">Influencer Marketing Engine 2.6 Active</span>
             </div>
             
-            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight">
+            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight break-words">
                 Amplify Campaign Collaboration & <br class="hidden sm:inline" />
                 <span class="gradient-text">Milestone Escrows</span>
             </h1>
             
-            <p class="text-base sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
+            <p class="text-sm sm:text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
                 Connect brands and creators in high-performance workspaces. Automate milestone compliance, safety checks, and protected payouts.
             </p>
 
-            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
-                <a href="/admin/" class="w-full sm:w-auto rounded-full gradient-primary px-8 py-4 text-base font-bold shadow-glow hover:scale-[1.02] active:scale-[0.98] transition">
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4 w-full">
+                <a href="/admin/" class="w-full sm:w-auto rounded-full gradient-primary px-8 py-4 text-base font-bold shadow-glow hover:scale-[1.02] active:scale-[0.98] transition text-center">
                     Launch Platform Admin
                 </a>
-                <a href="{{ FRONTEND_URL }}/dashboard/campaigns" target="_blank" class="w-full sm:w-auto rounded-full border border-darkBorder bg-darkCard/80 hover:bg-darkCard text-white hover:border-gray-600 px-8 py-4 text-base font-semibold transition">
+                <a href="{{ FRONTEND_URL }}/dashboard/campaigns" target="_blank" class="w-full sm:w-auto rounded-full border border-darkBorder bg-darkCard/80 hover:bg-darkCard text-white hover:border-gray-600 px-8 py-4 text-base font-semibold transition text-center">
                     Open Brand Client
                 </a>
             </div>
@@ -88,14 +90,14 @@
     </section>
 
     <!-- Metrics Stats Section -->
-    <section id="metrics" class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <section id="metrics" class="py-8 sm:py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             
             <!-- Campaigns Metric -->
             <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:border-brand/30 transition-colors duration-300 relative overflow-hidden group">
-                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-brand/5 blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-brand/5 blur-xl group-hover:scale-125 transition-transform duration-500 pointer-events-none"></div>
                 <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Campaigns Loaded</div>
-                <div class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">
+                <div class="mt-2 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white truncate">
                     {% if total_campaigns %}{{ total_campaigns }}{% else %}128{% endif %}
                 </div>
                 <div class="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
@@ -105,9 +107,9 @@
 
             <!-- Active Creators Metric -->
             <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:border-brand/30 transition-colors duration-300 relative overflow-hidden group">
-                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-coral/5 blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-coral/5 blur-xl group-hover:scale-125 transition-transform duration-500 pointer-events-none"></div>
                 <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Registered Creators</div>
-                <div class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">
+                <div class="mt-2 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white truncate">
                     {% if total_influencers %}{{ total_influencers }}{% else %}420{% endif %}
                 </div>
                 <div class="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
@@ -117,9 +119,9 @@
 
             <!-- Budget Allocation Metric -->
             <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:border-brand/30 transition-colors duration-300 relative overflow-hidden group">
-                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-teal/5 blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-teal/5 blur-xl group-hover:scale-125 transition-transform duration-500 pointer-events-none"></div>
                 <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Total Campaign Value</div>
-                <div class="mt-2 text-3xl sm:text-4xl font-extrabold text-white font-mono">
+                <div class="mt-2 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white font-mono truncate">
                     {% if total_budget %}${{ total_budget|floatformat:0 }}{% else %}$24,500{% endif %}
                 </div>
                 <div class="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
@@ -129,9 +131,9 @@
 
             <!-- Escrow Protections Metric -->
             <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:border-brand/30 transition-colors duration-300 relative overflow-hidden group">
-                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-brand/5 blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-brand/5 blur-xl group-hover:scale-125 transition-transform duration-500 pointer-events-none"></div>
                 <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Protected Escrow</div>
-                <div class="mt-2 text-3xl sm:text-4xl font-extrabold text-white font-mono">
+                <div class="mt-2 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white font-mono truncate">
                     {% if total_escrow_balance %}${{ total_escrow_balance|floatformat:0 }}{% else %}$8,200{% endif %}
                 </div>
                 <div class="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
@@ -143,39 +145,39 @@
     </section>
 
     <!-- Workspace Preview Demonstration -->
-    <section id="workspace" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div class="text-center mb-12 space-y-3">
-            <h2 class="text-3xl font-extrabold text-white">Interactive Workspace Preview</h2>
-            <p class="text-sm text-gray-400 max-w-xl mx-auto">Experience the secure communication and step-by-step deliverable pipeline shared between brands and creators.</p>
+    <section id="workspace" class="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div class="text-center mb-10 sm:mb-12 space-y-3">
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Interactive Workspace Preview</h2>
+            <p class="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto">Experience the secure communication and step-by-step deliverable pipeline shared between brands and creators.</p>
         </div>
 
         <!-- Glassmorphic Mockup Container -->
-        <div class="rounded-3xl border border-darkBorder bg-darkCard/30 p-4 sm:p-6 shadow-lift grid grid-cols-1 lg:grid-cols-12 gap-6 relative overflow-hidden">
+        <div class="rounded-3xl border border-darkBorder bg-darkCard/30 p-3 sm:p-6 shadow-lift grid grid-cols-1 lg:grid-cols-12 gap-6 relative overflow-hidden w-full">
             <!-- Background mesh -->
             <div class="absolute top-0 right-0 w-[300px] h-[300px] bg-brand/5 blur-3xl rounded-full pointer-events-none"></div>
 
-            <!-- Workspace Chat Panel (8 columns) -->
-            <div class="lg:col-span-7 rounded-2xl border border-darkBorder bg-[#0f111b] flex flex-col h-[400px]">
+            <!-- Workspace Chat Panel (7 columns) -->
+            <div class="lg:col-span-7 rounded-2xl border border-darkBorder bg-[#0f111b] flex flex-col h-[400px] overflow-hidden min-w-0">
                 <!-- Chat Header -->
-                <div class="flex items-center justify-between px-5 py-4 border-b border-darkBorder bg-darkCard/30">
-                    <div class="flex items-center gap-3">
-                        <div class="h-9 w-9 rounded-full bg-gradient-primary flex items-center justify-center font-bold text-xs text-white">MC</div>
-                        <div>
-                            <div class="font-bold text-xs text-white">Maya Chen</div>
-                            <div class="text-[9px] text-teal flex items-center gap-1">
-                                <span class="h-1.5 w-1.5 rounded-full bg-teal animate-ping"></span> Chat Active · Workspace #1002
+                <div class="flex items-center justify-between px-3 sm:px-5 py-4 border-b border-darkBorder bg-darkCard/30 gap-2">
+                    <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <div class="h-9 w-9 rounded-full bg-gradient-primary flex items-center justify-center font-bold text-xs text-white shrink-0">MC</div>
+                        <div class="min-w-0">
+                            <div class="font-bold text-xs text-white truncate">Maya Chen</div>
+                            <div class="text-[9px] text-teal flex items-center gap-1 truncate">
+                                <span class="h-1.5 w-1.5 rounded-full bg-teal animate-ping shrink-0"></span> <span class="truncate">Chat Active · Workspace #1002</span>
                             </div>
                         </div>
                     </div>
-                    <span class="rounded-full bg-accent border border-brand/20 text-[9px] font-bold text-brand-light px-2.5 py-0.5">Summer Drop 2026</span>
+                    <span class="rounded-full bg-accent border border-brand/20 text-[9px] font-bold text-brand-light px-2.5 py-0.5 shrink-0 whitespace-nowrap">Summer Drop 2026</span>
                 </div>
 
                 <!-- Chat Feed Messages -->
-                <div class="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+                <div class="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 text-xs">
                     <!-- Message 1 -->
                     <div class="flex items-start gap-2.5">
                         <div class="h-7 w-7 rounded-full bg-indigo-700 text-white font-bold grid place-items-center text-[10px] shrink-0">B</div>
-                        <div class="rounded-2xl rounded-tl-none bg-darkCard/75 border border-darkBorder px-4 py-3 text-gray-300 max-w-[80%]">
+                        <div class="rounded-2xl rounded-tl-none bg-darkCard/75 border border-darkBorder px-3 sm:px-4 py-3 text-gray-300 max-w-[85%] sm:max-w-[80%] break-words">
                             Hey Maya! Just uploaded the moodboard and the signature logo asset pack. Let me know your ideas for the sunset shoot! ✨
                         </div>
                     </div>
@@ -183,7 +185,7 @@
                     <!-- Message 2 -->
                     <div class="flex items-start gap-2.5 flex-row-reverse">
                         <div class="h-7 w-7 rounded-full bg-pink-700 text-white font-bold grid place-items-center text-[10px] shrink-0">MC</div>
-                        <div class="rounded-2xl rounded-tr-none bg-brand/10 border border-brand/20 px-4 py-3 text-gray-200 max-w-[80%]">
+                        <div class="rounded-2xl rounded-tr-none bg-brand/10 border border-brand/20 px-3 sm:px-4 py-3 text-gray-200 max-w-[85%] sm:max-w-[80%] break-words">
                             Love the style vector directions! Thinking we record the Reel unboxing with seamless transitions. I'll share drafts by Friday morning. 🙌
                         </div>
                     </div>
@@ -191,13 +193,13 @@
                     <!-- Message 3 (Attachment) -->
                     <div class="flex items-start gap-2.5">
                         <div class="h-7 w-7 rounded-full bg-indigo-700 text-white font-bold grid place-items-center text-[10px] shrink-0">B</div>
-                        <div class="rounded-2xl rounded-tl-none bg-darkCard/75 border border-darkBorder px-4 py-3 text-gray-300 max-w-[80%] space-y-2">
-                            <div>Perfect. Uploading the updated brief details. Check the file attached:</div>
-                            <div class="rounded-xl border border-darkBorder bg-darkBg/60 p-2.5 flex items-center gap-2">
+                        <div class="rounded-2xl rounded-tl-none bg-darkCard/75 border border-darkBorder px-3 sm:px-4 py-3 text-gray-300 max-w-[85%] sm:max-w-[80%] space-y-2 min-w-0">
+                            <div class="break-words">Perfect. Uploading the updated brief details. Check the file attached:</div>
+                            <div class="rounded-xl border border-darkBorder bg-darkBg/60 p-2.5 flex items-center gap-2 min-w-0">
                                 <svg class="h-5 w-5 text-coral shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                <div class="truncate">
+                                <div class="min-w-0 flex-1">
                                     <div class="font-semibold text-[10px] truncate text-white">Summer-Drop-Brief.pdf</div>
-                                    <div class="text-[9px] text-gray-500">2.4 MB · Escrow protected</div>
+                                    <div class="text-[9px] text-gray-500 truncate">2.4 MB · Escrow protected</div>
                                 </div>
                             </div>
                         </div>
@@ -206,52 +208,52 @@
             </div>
 
             <!-- Deliverables & Escrow status (5 columns) -->
-            <div class="lg:col-span-5 rounded-2xl border border-darkBorder bg-[#0f111b] p-5 flex flex-col justify-between h-[400px]">
+            <div class="lg:col-span-5 rounded-2xl border border-darkBorder bg-[#0f111b] p-4 sm:p-5 flex flex-col justify-between min-h-[350px] sm:h-[400px] gap-4 overflow-hidden min-w-0">
                 <div class="space-y-4">
                     <div class="text-xs font-bold text-white flex items-center gap-1.5">
-                        <svg class="h-4 w-4 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-                        Campaign Pipeline Checklist
+                        <svg class="h-4 w-4 text-brand shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        <span>Campaign Pipeline Checklist</span>
                     </div>
 
                     <!-- Checklist -->
                     <div class="space-y-2.5">
                         <!-- Step 1 -->
-                        <div class="rounded-xl border border-darkBorder bg-darkCard/35 p-3 flex items-center justify-between">
+                        <div class="rounded-xl border border-darkBorder bg-darkCard/35 p-3 flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2.5 min-w-0">
-                                <span class="h-5 w-5 rounded-full bg-teal/15 text-teal grid place-items-center text-[10px] font-bold">✓</span>
+                                <span class="h-5 w-5 rounded-full bg-teal/15 text-teal grid place-items-center text-[10px] font-bold shrink-0">✓</span>
                                 <span class="text-xs text-gray-300 font-medium truncate">1. Moodboard approval</span>
                             </div>
-                            <span class="rounded bg-teal/15 text-teal text-[9px] font-bold px-1.5 py-0.5">Approved</span>
+                            <span class="rounded bg-teal/15 text-teal text-[9px] font-bold px-1.5 py-0.5 shrink-0">Approved</span>
                         </div>
 
                         <!-- Step 2 -->
-                        <div class="rounded-xl border border-darkBorder bg-darkCard/35 p-3 flex items-center justify-between">
+                        <div class="rounded-xl border border-darkBorder bg-darkCard/35 p-3 flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2.5 min-w-0">
-                                <span class="h-5 w-5 rounded-full bg-brand/20 text-brand-light grid place-items-center text-[10px] font-bold">2</span>
+                                <span class="h-5 w-5 rounded-full bg-brand/20 text-brand-light grid place-items-center text-[10px] font-bold shrink-0">2</span>
                                 <span class="text-xs text-gray-300 font-medium truncate">2. Reel #1 draft delivery</span>
                             </div>
-                            <span class="rounded bg-brand/15 text-brand-light text-[9px] font-bold px-1.5 py-0.5">In Review</span>
+                            <span class="rounded bg-brand/15 text-brand-light text-[9px] font-bold px-1.5 py-0.5 shrink-0">In Review</span>
                         </div>
 
                         <!-- Step 3 -->
-                        <div class="rounded-xl border border-darkBorder bg-darkCard/35 p-3 flex items-center justify-between">
+                        <div class="rounded-xl border border-darkBorder bg-darkCard/35 p-3 flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2.5 min-w-0">
-                                <span class="h-5 w-5 rounded-full bg-darkBorder text-gray-500 grid place-items-center text-[10px] font-bold">3</span>
+                                <span class="h-5 w-5 rounded-full bg-darkBorder text-gray-500 grid place-items-center text-[10px] font-bold shrink-0">3</span>
                                 <span class="text-xs text-gray-500 font-medium truncate">3. Post #2 photo campaign</span>
                             </div>
-                            <span class="rounded bg-darkBorder text-gray-500 text-[9px] font-semibold px-1.5 py-0.5">Locked</span>
+                            <span class="rounded bg-darkBorder text-gray-500 text-[9px] font-semibold px-1.5 py-0.5 shrink-0">Locked</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Escrow Payout Box -->
                 <div class="rounded-xl border border-teal/20 bg-teal/5 p-4 space-y-2.5">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[10px] text-teal font-bold uppercase tracking-wider flex items-center gap-1">
-                            <svg class="h-3.5 w-3.5 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[10px] text-teal font-bold uppercase tracking-wider flex items-center gap-1 shrink-0">
+                            <svg class="h-3.5 w-3.5 text-teal shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                             Escrow Protection
                         </span>
-                        <span class="text-xs font-mono font-extrabold text-white">$4,200.00</span>
+                        <span class="text-xs font-mono font-extrabold text-white shrink-0">$4,200.00</span>
                     </div>
                     <div class="text-[10px] text-gray-400 leading-relaxed">
                         Funds are fully secure in smart escrow wallets. Payout allocations auto-release as milestone draft validations complete.
@@ -262,16 +264,16 @@
     </section>
 
     <!-- Key Product Features -->
-    <section id="features" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
+    <section id="features" class="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-10 sm:space-y-12 w-full">
         <div class="text-center space-y-3">
-            <h2 class="text-3xl font-extrabold text-white">High-Performance Workflow Engine</h2>
-            <p class="text-sm text-gray-400 max-w-xl mx-auto">Built from the ground up to solve collaboration frictions, currency gaps, and compliance audits.</p>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">High-Performance Workflow Engine</h2>
+            <p class="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto">Built from the ground up to solve collaboration frictions, currency gaps, and compliance audits.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             
             <!-- Feature 1 -->
-            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-8 hover:-translate-y-1 transition duration-300">
+            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:-translate-y-1 transition duration-300">
                 <div class="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                 </div>
@@ -280,7 +282,7 @@
             </div>
 
             <!-- Feature 2 -->
-            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-8 hover:-translate-y-1 transition duration-300">
+            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:-translate-y-1 transition duration-300">
                 <div class="h-12 w-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                 </div>
@@ -289,7 +291,7 @@
             </div>
 
             <!-- Feature 3 -->
-            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-8 hover:-translate-y-1 transition duration-300">
+            <div class="rounded-3xl border border-darkBorder bg-darkCard/40 p-6 sm:p-8 hover:-translate-y-1 transition duration-300">
                 <div class="h-12 w-12 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
                 </div>
@@ -301,12 +303,12 @@
     </section>
 
     <!-- Call to action: Launch Admin -->
-    <section class="py-16 px-4 sm:px-6 lg:px-8 border-t border-darkBorder bg-darkCard/10 text-center">
+    <section class="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 border-t border-darkBorder bg-darkCard/10 text-center w-full">
         <div class="max-w-3xl mx-auto space-y-6">
-            <h2 class="text-3xl font-extrabold text-white">Ready to Coordinate Your Network?</h2>
-            <p class="text-sm text-gray-400 max-w-xl mx-auto">Access the super admin dashboard workspace to approve campaigns, resolve compliance audits, and configure settings.</p>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Ready to Coordinate Your Network?</h2>
+            <p class="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto">Access the super admin dashboard workspace to approve campaigns, resolve compliance audits, and configure settings.</p>
             <div class="flex justify-center pt-2">
-                <a href="/admin/" class="rounded-full gradient-primary px-8 py-4 text-base font-bold shadow-glow hover:scale-[1.02] active:scale-[0.98] transition">
+                <a href="/admin/" class="w-full sm:w-auto rounded-full gradient-primary px-8 py-4 text-base font-bold shadow-glow hover:scale-[1.02] active:scale-[0.98] transition">
                     Launch Admin Console
                 </a>
             </div>
@@ -314,19 +316,19 @@
     </section>
 
     <!-- Footer Component -->
-    <footer class="border-t border-darkBorder bg-[#08090d] py-12 px-4 sm:px-6 lg:px-8 text-xs text-gray-500">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-            <a href="/" class="flex items-center">
+    <footer class="border-t border-darkBorder bg-[#08090d] py-12 px-4 sm:px-6 lg:px-8 text-xs text-gray-500 w-full">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
+            <a href="/" class="flex items-center shrink-0">
                 <img src="{% static 'img/logo_ampli.png' %}?v=2" alt="ampli" class="h-8 w-auto object-contain">
             </a>
             
-            <div class="flex flex-wrap justify-center gap-8 text-gray-400">
+            <div class="flex flex-wrap justify-center gap-4 sm:gap-8 text-gray-400">
                 <a href="#features" class="hover:text-white transition-colors">Features</a>
                 <a href="#workspace" class="hover:text-white transition-colors">Workspace Preview</a>
                 <a href="/admin/" class="hover:text-white transition-colors">Admin Portal</a>
             </div>
 
-            <div>
+            <div class="text-gray-500">
                 © 2026 ampli platform. All protections active.
             </div>
         </div>

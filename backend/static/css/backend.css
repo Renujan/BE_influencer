@@ -1,0 +1,6 @@
+/* Global reset to prevent horizontal scroll/overflow on mobile devices */
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+    position: relative;
+}
