@@ -1,6 +1,9 @@
+import os
+import urllib.parse
 from django.conf import settings
-from django.urls import include, path
+from django.urls import include, path, re_path
 from django.contrib import admin
+from django.views.static import serve as static_serve
 
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail import urls as wagtail_urls
@@ -8,7 +11,23 @@ from wagtail.documents import urls as wagtaildocs_urls
 
 from search import views as search_views
 
+def serve_media_with_decoding(request, path, document_root=None, show_indexes=False):
+    """
+    Serves media files while properly decoding percent-encoded characters
+    (such as spaces and parentheses) so files stored with real spaces match correctly.
+    """
+    unquoted = path
+    while "%" in unquoted:
+        decoded = urllib.parse.unquote(unquoted)
+        if decoded == unquoted:
+            break
+        unquoted = decoded
+    if unquoted.startswith("media/"):
+        unquoted = unquoted[len("media/"):]
+    return static_serve(request, unquoted, document_root=document_root or settings.MEDIA_ROOT, show_indexes=show_indexes)
+
 urlpatterns = [
+    re_path(r"^media/(?P<path>.*)$", serve_media_with_decoding, {"document_root": settings.MEDIA_ROOT}),
     path("django-admin/", admin.site.urls),
     path("admin/notifications/", include("notifications.urls")),
     path("admin/", include(wagtailadmin_urls)),
@@ -34,15 +53,11 @@ urlpatterns = [
     path("api/guides/", include("guide.urls")),
 ]
 
-
-
 if settings.DEBUG:
-    from django.conf.urls.static import static
     from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
-    # Serve static and media files from development server
+    # Serve static files from development server
     urlpatterns += staticfiles_urlpatterns()
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns = urlpatterns + [
     # For anything not caught by a more specific rule above, hand over to

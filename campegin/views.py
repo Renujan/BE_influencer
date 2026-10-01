@@ -150,12 +150,19 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if user.is_staff or user.is_superuser:
             qs = Campaign.objects.all()
         else:
+            # Detail actions (retrieve, send_message, etc.) should allow access if user is either brand or creator
+            is_detail = getattr(self, "detail", False) or getattr(self, "action", None) in [
+                "retrieve", "send_message", "edit_message", "delete_message", "upload_file", "delete_file"
+            ] or (hasattr(self, "kwargs") and "pk" in self.kwargs)
+
             profile = getattr(user, "profile", None)
             role = str(getattr(profile, "role", "") or "").lower().strip()
             params = getattr(self.request, "query_params", getattr(self.request, "GET", {}))
             role_param = str(params.get("role", "")).lower().strip()
 
-            if role_param in ["business", "brand"]:
+            if is_detail:
+                qs = Campaign.objects.filter(models.Q(brand=user) | models.Q(creator=user))
+            elif role_param in ["business", "brand"]:
                 qs = Campaign.objects.filter(models.Q(brand=user) | models.Q(creator=user))
             elif role_param in ["creator", "influencer"]:
                 qs = Campaign.objects.filter(models.Q(creator=user) | models.Q(brand=user)).exclude(status="Under_Review")
@@ -178,6 +185,21 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if status_param:
             qs = qs.filter(status=status_param)
         return qs.distinct()
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+        except Exception:
+            user = request.user
+            if user.is_staff or user.is_superuser:
+                instance = get_object_or_404(Campaign, pk=kwargs.get("pk"))
+            else:
+                instance = get_object_or_404(
+                    Campaign.objects.filter(models.Q(brand=user) | models.Q(creator=user)),
+                    pk=kwargs.get("pk")
+                )
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="check-name")
     def check_name(self, request):
@@ -667,7 +689,17 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def send_message(self, request, pk=None):
-        campaign = self.get_object()
+        try:
+            campaign = self.get_object()
+        except Exception:
+            user = request.user
+            if user.is_staff or user.is_superuser:
+                campaign = get_object_or_404(Campaign, pk=pk)
+            else:
+                campaign = get_object_or_404(
+                    Campaign.objects.filter(models.Q(brand=user) | models.Q(creator=user)),
+                    pk=pk
+                )
         text = request.data.get("text", "")
         file_attachment = request.data.get("file_attachment", "") or request.data.get("file", "")
         message_type = request.data.get("message_type", "main")
