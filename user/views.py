@@ -1,3 +1,4 @@
+import os
 import random
 from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
@@ -23,12 +24,30 @@ def send_status_update_email(user, status_type, role):
     role_label = "Business" if role == "business" else "Creator"
     
     if status_type == "approved":
+        is_production = (
+            os.environ.get("NODE_ENV") == "production"
+            or os.environ.get("ENVIRONMENT") == "production"
+            or not getattr(settings, "DEBUG", True)
+            or "production" in os.environ.get("DJANGO_SETTINGS_MODULE", "").lower()
+        )
+
+        frontend_url = os.environ.get("FRONTEND_URL") or os.environ.get("NEXT_PUBLIC_APP_URL")
+        if is_production:
+            if not frontend_url or "localhost" in frontend_url or "127.0.0.1" in frontend_url:
+                frontend_url = "https://connect-spark-871.vercel.app"
+        else:
+            if not frontend_url:
+                frontend_url = "http://localhost:5173"
+
+        frontend_url = frontend_url.rstrip("/")
+        login_url = f"{frontend_url}/auth?mode=signin"
+
         subject = f"Your Ampli Account has been Approved!"
         message = (
             f"Dear {user.first_name or user.username},\n\n"
             f"We are excited to inform you that your Ampli {role_label} account has been reviewed and approved by our team!\n\n"
             f"You can now access your dashboard, connect with campaigns/creators, and explore the platform's features.\n\n"
-            f"Log in to get started: {settings.FRONTEND_URL}/auth?mode=signin\n\n"
+            f"Log in to get started: {login_url}\n\n"
             f"Best regards,\nThe Ampli Team"
         )
     else: # restricted
