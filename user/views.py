@@ -21,6 +21,7 @@ from notifications.models import Notification
 
 def send_status_update_email(user, status_type, role):
     role_label = "Business" if role == "business" else "Creator"
+    frontend_url = (getattr(settings, "FRONTEND_URL", None) or "https://connect-spark-871.vercel.app").rstrip("/")
     
     if status_type == "approved":
         subject = f"Your Ampli Account has been Approved!"
@@ -28,7 +29,7 @@ def send_status_update_email(user, status_type, role):
             f"Dear {user.first_name or user.username},\n\n"
             f"We are excited to inform you that your Ampli {role_label} account has been reviewed and approved by our team!\n\n"
             f"You can now access your dashboard, connect with campaigns/creators, and explore the platform's features.\n\n"
-            f"Log in to get started: {settings.FRONTEND_URL}/auth?mode=signin\n\n"
+            f"Log in to get started: {frontend_url}/auth?mode=signin\n\n"
             f"Best regards,\nThe Ampli Team"
         )
     else: # restricted

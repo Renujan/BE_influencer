@@ -12,7 +12,8 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 # Proper CORS configuration for only production frontend domain
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
-frontend_url = os.environ.get("FRONTEND_URL", "https://connect-spark-871.vercel.app").rstrip("/")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://connect-spark-871.vercel.app").rstrip("/")
+frontend_url = FRONTEND_URL
 CORS_ALLOWED_ORIGINS = [frontend_url]
 
 # CSRF Trusted Origins

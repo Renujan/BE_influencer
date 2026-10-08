@@ -246,7 +246,7 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", f"Ampli Platform <{EMA
 # Google OAuth settings
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "58882443328-44qvoqt4rbai23n9fpv75c54k72dtk0c.apps.googleusercontent.com")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://connect-spark-871.vercel.app").rstrip("/")
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000")
 
 
