@@ -184,3 +184,140 @@ class NotificationTests(TestCase):
         # Support complaint mapped to /creator/support
         c_item = next(item for item in data if item["id"] == complaint_notif.id)
         self.assertEqual(c_item["targetUrl"], "/creator/support")
+
+    def test_admin_notifications_view_access(self):
+        # Unauthenticated access redirects to login
+        response = self.client.get(reverse("notifications:admin_notifications_list"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("login", response.url)
+
+        # Superuser access renders notifications template successfully
+        self.client.login(username="test_admin", password="password123")
+        response = self.client.get(reverse("notifications:admin_notifications_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "notifications/admin_notifications.html")
+        self.assertIn("notifications", response.context)
+        self.assertIn("total_count", response.context)
+        self.assertIn("unread_count", response.context)
+        self.assertIn("read_count", response.context)
+
+    def test_admin_notifications_filters(self):
+        self.client.login(username="test_admin", password="password123")
+
+        # Status filter unread
+        response = self.client.get(reverse("notifications:admin_notifications_list") + "?status=unread")
+        self.assertEqual(response.status_code, 200)
+        for n in response.context["notifications"]:
+            self.assertFalse(n.is_read)
+
+        # Mark notification_1 as read
+        self.notification_1.is_read = True
+        self.notification_1.save()
+
+        # Status filter read
+        response = self.client.get(reverse("notifications:admin_notifications_list") + "?status=read")
+        self.assertEqual(response.status_code, 200)
+        for n in response.context["notifications"]:
+            self.assertTrue(n.is_read)
+
+        # Category filter
+        response = self.client.get(reverse("notifications:admin_notifications_list") + "?category=signup")
+        self.assertEqual(response.status_code, 200)
+        for n in response.context["notifications"]:
+            self.assertEqual(n.category, "signup")
+
+    def test_toggle_read_notification(self):
+        self.client.login(username="test_admin", password="password123")
+
+        # Initially False
+        self.assertFalse(self.notification_2.is_read)
+
+        # Toggle to True
+        response = self.client.post(
+            reverse("notifications:toggle_read", args=[self.notification_2.id]),
+            {"ajax": "true"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["is_read"])
+        self.notification_2.refresh_from_db()
+        self.assertTrue(self.notification_2.is_read)
+
+        # Toggle back to False
+        response = self.client.post(
+            reverse("notifications:toggle_read", args=[self.notification_2.id]),
+            {"ajax": "true"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["is_read"])
+        self.notification_2.refresh_from_db()
+        self.assertFalse(self.notification_2.is_read)
+
+    def test_manual_delete_notification(self):
+        self.client.login(username="test_admin", password="password123")
+
+        # GET should be disallowed
+        get_res = self.client.get(reverse("notifications:delete_notification", args=[self.notification_1.id]))
+        self.assertEqual(get_res.status_code, 405)
+
+        # POST performs explicit manual deletion
+        post_res = self.client.post(
+            reverse("notifications:delete_notification", args=[self.notification_1.id]),
+            {"ajax": "true"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(post_res.status_code, 200)
+        self.assertEqual(post_res.json()["status"], "success")
+        self.assertFalse(Notification.objects.filter(id=self.notification_1.id).exists())
+
+    def test_bulk_actions(self):
+        self.client.login(username="test_admin", password="password123")
+
+        # Bulk mark read
+        res = self.client.post(
+            reverse("notifications:bulk_action"),
+            {"action": "mark_read", "selected_ids": f"{self.notification_1.id},{self.notification_2.id}", "ajax": "true"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(res.status_code, 200)
+        self.notification_1.refresh_from_db()
+        self.notification_2.refresh_from_db()
+        self.assertTrue(self.notification_1.is_read)
+        self.assertTrue(self.notification_2.is_read)
+
+        # Bulk delete
+        res = self.client.post(
+            reverse("notifications:bulk_action"),
+            {"action": "delete", "selected_ids": f"{self.notification_1.id}", "ajax": "true"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertFalse(Notification.objects.filter(id=self.notification_1.id).exists())
+
+    def test_sidebar_menu_ordering(self):
+        from wagtail.admin.viewsets import viewsets
+        viewsets.populate()
+        from wagtail.admin.menu import admin_menu
+        from django.test import RequestFactory
+
+        rf = RequestFactory()
+        req = rf.get("/admin/")
+        req.user = self.user
+
+        items = admin_menu.menu_items_for_request(req)
+        sorted_items = sorted(items, key=lambda x: x.order)
+
+        complaints_idx = None
+        notif_idx = None
+        for idx, item in enumerate(sorted_items):
+            if getattr(item, "name", "") == "complaints_group" or getattr(item, "label", "") == "Complaints":
+                complaints_idx = idx
+            elif getattr(item, "name", "") == "notifications" or getattr(item, "label", "") == "Notifications":
+                notif_idx = idx
+
+        self.assertIsNotNone(complaints_idx, "Complaints group not found in menu")
+        self.assertIsNotNone(notif_idx, "Notifications item not found in menu")
+        # Notifications must immediately follow Complaints
+        self.assertEqual(notif_idx, complaints_idx + 1)
+

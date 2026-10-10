@@ -1,0 +1,1750 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block titletag %}Notifications — Super Admin{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --notif-primary: #2f54eb;
+    --notif-primary-hover: #1d39c4;
+    --notif-orange: #ff7a45;
+    --notif-dark: #0f172a;
+    --notif-dark-card: #1e293b;
+    --notif-slate-50: #f8fafc;
+    --notif-slate-100: #f1f5f9;
+    --notif-slate-200: #e2e8f0;
+    --notif-slate-300: #cbd5e1;
+    --notif-slate-400: #94a3b8;
+    --notif-slate-500: #64748b;
+    --notif-slate-600: #475569;
+    --notif-slate-700: #334155;
+    --notif-slate-800: #1e293b;
+    --notif-slate-900: #0f172a;
+
+    /* Category Accents */
+    --accent-billing: #10b981;
+    --accent-billing-bg: #ecfdf5;
+    --accent-billing-text: #047857;
+    --accent-billing-border: #a7f3d0;
+
+    --accent-security: #f43f5e;
+    --accent-security-bg: #fff1f2;
+    --accent-security-text: #be123c;
+    --accent-security-border: #fecdd3;
+
+    --accent-user: #f97316;
+    --accent-user-bg: #fff7ed;
+    --accent-user-text: #c2410c;
+    --accent-user-border: #fed7aa;
+
+    --accent-system: #3b82f6;
+    --accent-system-bg: #eff6ff;
+    --accent-system-text: #1d4ed8;
+    --accent-system-border: #bfdbfe;
+  }
+
+  .notif-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 24px 32px 64px 32px;
+    max-width: 1440px;
+    margin: 0 auto;
+    color: #1e293b;
+  }
+
+  /* ── Header Banner ── */
+  .notif-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    border-radius: 16px;
+    padding: 28px 32px;
+    color: #ffffff;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .notif-header::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 350px;
+    height: 350px;
+    background: radial-gradient(circle, rgba(47, 84, 235, 0.25) 0%, rgba(255, 122, 69, 0.1) 60%, transparent 80%);
+    pointer-events: none;
+    border-radius: 50%;
+  }
+
+  .notif-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .notif-header-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .notif-header-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(47, 84, 235, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  .notif-header-title h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin: 0;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .notif-header-title p {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    margin: 4px 0 0 0;
+  }
+
+  .notif-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* ── KPI Overview Cards ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .kpi-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .kpi-info .kpi-label {
+    font-size: 0.725rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin-bottom: 4px;
+  }
+
+  .kpi-info .kpi-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.1;
+  }
+
+  .kpi-icon-pill {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  /* ── Toolbar & Filtering Bar ── */
+  .notif-toolbar {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid var(--notif-slate-200);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    margin-bottom: 20px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .toolbar-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  /* Status Filter Tabs */
+  .status-tabs {
+    display: flex;
+    background: var(--notif-slate-100);
+    padding: 4px;
+    border-radius: 10px;
+    gap: 4px;
+  }
+
+  .status-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--notif-slate-600);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    min-height: 38px;
+  }
+
+  .status-tab:hover {
+    color: var(--notif-slate-900);
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .status-tab.active {
+    background: #ffffff;
+    color: var(--notif-slate-900);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .tab-badge {
+    font-size: 0.725rem;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    background: var(--notif-slate-200);
+    color: var(--notif-slate-700);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .status-tab.active .tab-badge {
+    background: var(--notif-slate-800);
+    color: #ffffff;
+  }
+
+  .status-tab.active.tab-unread .tab-badge {
+    background: var(--notif-orange);
+    color: #ffffff;
+  }
+
+  /* Search & Controls */
+  .toolbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex-grow: 1;
+    justify-content: flex-end;
+  }
+
+  .search-wrapper {
+    position: relative;
+    min-width: 260px;
+    max-width: 380px;
+    flex-grow: 1;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--notif-slate-400);
+    font-size: 13px;
+    pointer-events: none;
+  }
+
+  .search-input {
+    width: 100%;
+    height: 40px;
+    padding: 8px 36px 8px 34px;
+    font-size: 0.85rem;
+    background: #ffffff;
+    border: 1px solid var(--notif-slate-300);
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.15s ease;
+  }
+
+  .search-input:focus {
+    border-color: var(--notif-primary);
+    box-shadow: 0 0 0 3px rgba(47, 84, 235, 0.15);
+  }
+
+  .search-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--notif-slate-400);
+    font-size: 12px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 4px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .search-clear:hover {
+    color: var(--notif-slate-700);
+  }
+
+  /* Category Filter Pills */
+  .category-pills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 10px;
+    border-top: 1px dashed var(--notif-slate-200);
+  }
+
+  .cat-pill-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--notif-slate-400);
+    letter-spacing: 0.05em;
+    margin-right: 4px;
+  }
+
+  .cat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    font-size: 0.775rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid var(--notif-slate-200);
+    background: var(--notif-slate-50);
+    color: var(--notif-slate-600);
+    transition: all 0.15s ease;
+    min-height: 30px;
+  }
+
+  .cat-pill:hover {
+    background: var(--notif-slate-100);
+    color: var(--notif-slate-900);
+    border-color: var(--notif-slate-300);
+  }
+
+  .cat-pill.active {
+    background: var(--notif-slate-900);
+    color: #ffffff;
+    border-color: var(--notif-slate-900);
+  }
+
+  .cat-pill.active .pill-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+  }
+
+  .pill-count {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    background: var(--notif-slate-200);
+    color: var(--notif-slate-700);
+    font-weight: 700;
+  }
+
+  /* ── Bulk Actions Bar ── */
+  .bulk-bar {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 16px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .bulk-bar.visible {
+    display: flex;
+  }
+
+  .bulk-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--notif-slate-700);
+  }
+
+  .bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 8px 14px;
+    font-size: 0.825rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    min-height: 38px;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--notif-primary);
+    color: #ffffff;
+    border-color: var(--notif-primary);
+  }
+  .btn-primary:hover {
+    background: var(--notif-primary-hover);
+    color: #ffffff;
+  }
+
+  .btn-secondary {
+    background: #ffffff;
+    color: var(--notif-slate-700);
+    border-color: var(--notif-slate-300);
+  }
+  .btn-secondary:hover {
+    background: var(--notif-slate-50);
+    color: var(--notif-slate-900);
+    border-color: var(--notif-slate-400);
+  }
+
+  .btn-danger {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+  }
+  .btn-danger:hover {
+    background: #fecaca;
+    color: #991b1b;
+  }
+
+  .btn-header {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    font-size: 0.825rem;
+  }
+  .btn-header:hover {
+    background: rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+  }
+
+  .btn-sm {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    min-height: 30px;
+    border-radius: 6px;
+  }
+
+  /* ── Notification Cards List ── */
+  .notif-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .notif-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid var(--notif-slate-200);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+  }
+
+  .notif-card:hover {
+    box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+    border-color: var(--notif-slate-300);
+  }
+
+  .notif-card.unread {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  }
+
+  /* Distinct Left Border Accent */
+  .notif-card-accent {
+    width: 6px;
+    flex-shrink: 0;
+  }
+
+  .notif-card.cat-payment .notif-card-accent { background: var(--accent-billing); }
+  .notif-card.cat-compliance .notif-card-accent { background: var(--accent-security); }
+  .notif-card.cat-signup .notif-card-accent { background: var(--accent-user); }
+  .notif-card.cat-campaign .notif-card-accent { background: var(--accent-system); }
+  .notif-card.cat-default .notif-card-accent { background: #6366f1; }
+
+  .notif-card-body {
+    flex-grow: 1;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .notif-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .notif-tags-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .custom-checkbox {
+    width: 17px;
+    height: 17px;
+    border-radius: 4px;
+    cursor: pointer;
+    accent-color: var(--notif-primary);
+  }
+
+  /* Color-Coded Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 0.725rem;
+    font-weight: 700;
+    line-height: 1.2;
+    border: 1px solid transparent;
+  }
+
+  .badge-billing {
+    background: var(--accent-billing-bg);
+    color: var(--accent-billing-text);
+    border-color: var(--accent-billing-border);
+  }
+
+  .badge-security {
+    background: var(--accent-security-bg);
+    color: var(--accent-security-text);
+    border-color: var(--accent-security-border);
+  }
+
+  .badge-user {
+    background: var(--accent-user-bg);
+    color: var(--accent-user-text);
+    border-color: var(--accent-user-border);
+  }
+
+  .badge-system {
+    background: var(--accent-system-bg);
+    color: var(--accent-system-text);
+    border-color: var(--accent-system-border);
+  }
+
+  .badge-default {
+    background: #f5f3ff;
+    color: #4f46e5;
+    border-color: #ddd6fe;
+  }
+
+  .badge-role {
+    background: var(--notif-slate-100);
+    color: var(--notif-slate-600);
+    border-color: var(--notif-slate-200);
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  /* Read/Unread State Badges */
+  .status-pill {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .status-pill-unread {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+  }
+
+  .status-pill-unread .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2563eb;
+    display: inline-block;
+  }
+
+  .status-pill-read {
+    background: var(--notif-slate-100);
+    color: var(--notif-slate-500);
+    border: 1px solid var(--notif-slate-200);
+  }
+
+  .notif-time {
+    font-size: 0.75rem;
+    color: var(--notif-slate-400);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .notif-content-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--notif-slate-900);
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .notif-card.unread .notif-content-title {
+    color: #0f172a;
+  }
+
+  .notif-content-msg {
+    font-size: 0.85rem;
+    color: var(--notif-slate-600);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .notif-card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid var(--notif-slate-100);
+  }
+
+  .notif-meta-items {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+    color: var(--notif-slate-500);
+  }
+
+  .notif-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .notif-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Empty State ── */
+  .empty-notifs {
+    background: #ffffff;
+    border: 2px dashed var(--notif-slate-300);
+    border-radius: 14px;
+    padding: 64px 24px;
+    text-align: center;
+    color: var(--notif-slate-500);
+  }
+
+  .empty-icon {
+    font-size: 42px;
+    color: var(--notif-slate-400);
+    margin-bottom: 16px;
+  }
+
+  .empty-notifs h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--notif-slate-800);
+    margin: 0 0 6px 0;
+  }
+
+  .empty-notifs p {
+    font-size: 0.85rem;
+    color: var(--notif-slate-500);
+    max-width: 420px;
+    margin: 0 auto 16px auto;
+  }
+
+  /* ── Pagination ── */
+  .notif-pagination {
+    margin-top: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: #ffffff;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--notif-slate-200);
+  }
+
+  .pagination-info {
+    font-size: 0.825rem;
+    color: var(--notif-slate-600);
+  }
+
+  .pagination-links {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--notif-slate-700);
+    background: #ffffff;
+    border: 1px solid var(--notif-slate-200);
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+
+  .page-link:hover {
+    background: var(--notif-slate-100);
+    color: var(--notif-slate-900);
+  }
+
+  .page-link.active {
+    background: var(--notif-slate-900);
+    color: #ffffff;
+    border-color: var(--notif-slate-900);
+  }
+
+  .page-link.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  /* ── Toast Notifications ── */
+  .notif-toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 100050;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .notif-toast {
+    background: #0f172a;
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: auto;
+  }
+
+  .notif-toast.toast-success {
+    border-left: 4px solid #10b981;
+  }
+  .notif-toast.toast-error {
+    border-left: 4px solid #ef4444;
+  }
+
+  /* ── Modal Confirmation ── */
+  .notif-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 100060;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .notif-modal-backdrop.open {
+    display: flex;
+  }
+
+  .notif-modal {
+    background: #ffffff;
+    border-radius: 14px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .notif-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--notif-slate-100);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .notif-modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--notif-slate-900);
+  }
+
+  .notif-modal-body {
+    padding: 20px 24px;
+    font-size: 0.875rem;
+    color: var(--notif-slate-600);
+    line-height: 1.5;
+  }
+
+  .notif-modal-footer {
+    padding: 16px 24px;
+    background: var(--notif-slate-50);
+    border-top: 1px solid var(--notif-slate-100);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  @keyframes toastSlideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes modalScale {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Responsive Rules */
+  @media (max-width: 1024px) {
+    .kpi-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .notif-container {
+      padding: 16px 12px 64px 12px;
+    }
+    .notif-header {
+      padding: 20px 18px;
+    }
+    .kpi-grid {
+      grid-template-columns: 1fr;
+    }
+    .toolbar-top {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .status-tabs {
+      width: 100%;
+      overflow-x: auto;
+    }
+    .toolbar-controls {
+      width: 100%;
+      justify-content: stretch;
+    }
+    .search-wrapper {
+      max-width: 100%;
+    }
+    .notif-card-bottom {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .notif-card-actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="notif-container">
+  {% csrf_token %}
+
+  <!-- ── Header Banner ── -->
+  <div class="notif-header">
+    <div class="notif-header-top">
+      <div class="notif-header-title">
+        <div class="notif-header-icon">
+          <i class="fas fa-bell"></i>
+        </div>
+        <div>
+          <h1>Platform Notifications Center</h1>
+          <p>Real-time system events, user alert dispatches, escrow billing, and compliance security logs.</p>
+        </div>
+      </div>
+      <div class="notif-header-actions">
+        {% if unread_count > 0 %}
+          <button type="button" class="btn btn-header" onclick="promptMarkAllRead()">
+            <i class="fas fa-check-double"></i> Mark All as Read
+          </button>
+        {% endif %}
+        <a href="{% url 'notifications:admin_notifications_list' %}" class="btn btn-header" title="Refresh list">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </a>
+      </div>
+    </div>
+
+    <!-- KPI Overview Cards -->
+    <div class="kpi-grid">
+      <!-- Total Notifications -->
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <div class="kpi-label">Total Logged</div>
+          <div class="kpi-value" id="kpi-total">{{ total_count }}</div>
+        </div>
+        <div class="kpi-icon-pill" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">
+          <i class="fas fa-layer-group"></i>
+        </div>
+      </div>
+
+      <!-- Unread Alerts -->
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <div class="kpi-label">Unread Alerts</div>
+          <div class="kpi-value" id="kpi-unread" style="color: {% if unread_count > 0 %}#fba074{% else %}#ffffff{% endif %};">
+            {{ unread_count }}
+          </div>
+        </div>
+        <div class="kpi-icon-pill" style="background: rgba(255, 122, 69, 0.2); color: #ff7a45;">
+          <i class="fas fa-bolt"></i>
+        </div>
+      </div>
+
+      <!-- Billing & Escrow -->
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <div class="kpi-label">Billing & Escrow</div>
+          <div class="kpi-value" id="kpi-billing">{{ billing_count }}</div>
+        </div>
+        <div class="kpi-icon-pill" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">
+          <i class="fas fa-credit-card"></i>
+        </div>
+      </div>
+
+      <!-- Security & Disputes -->
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <div class="kpi-label">Security & Disputes</div>
+          <div class="kpi-value" id="kpi-security">{{ security_count }}</div>
+        </div>
+        <div class="kpi-icon-pill" style="background: rgba(244, 63, 94, 0.2); color: #fb7185;">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Filtering & Navigation Toolbar ── -->
+  <div class="notif-toolbar">
+    <div class="toolbar-top">
+      <!-- Status Tabs: All / Unread / Read -->
+      <div class="status-tabs" role="tablist">
+        <a 
+          href="?status=all{% if category_filter != 'all' %}&category={{ category_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+          class="status-tab {% if status_filter == 'all' %}active{% endif %}"
+          title="View all notifications"
+        >
+          <i class="fas fa-inbox"></i> All
+          <span class="tab-badge" id="tab-badge-all">{{ total_count }}</span>
+        </a>
+        <a 
+          href="?status=unread{% if category_filter != 'all' %}&category={{ category_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+          class="status-tab tab-unread {% if status_filter == 'unread' %}active{% endif %}"
+          title="View unread notifications only"
+        >
+          <i class="fas fa-envelope"></i> Unread
+          <span class="tab-badge" id="tab-badge-unread">{{ unread_count }}</span>
+        </a>
+        <a 
+          href="?status=read{% if category_filter != 'all' %}&category={{ category_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+          class="status-tab {% if status_filter == 'read' %}active{% endif %}"
+          title="View read notifications only"
+        >
+          <i class="fas fa-envelope-open"></i> Read
+          <span class="tab-badge" id="tab-badge-read">{{ read_count }}</span>
+        </a>
+      </div>
+
+      <!-- Search Controls -->
+      <div class="toolbar-controls">
+        <form method="get" action="" class="search-wrapper">
+          {% if status_filter != 'all' %}
+            <input type="hidden" name="status" value="{{ status_filter }}">
+          {% endif %}
+          {% if category_filter != 'all' %}
+            <input type="hidden" name="category" value="{{ category_filter }}">
+          {% endif %}
+          <i class="fas fa-search search-icon"></i>
+          <input 
+            type="text" 
+            name="q" 
+            value="{{ search_query }}" 
+            placeholder="Search by title, message, user..." 
+            class="search-input"
+            autocomplete="off"
+          >
+          {% if search_query %}
+            <a 
+              href="?status={{ status_filter }}{% if category_filter != 'all' %}&category={{ category_filter }}{% endif %}" 
+              class="search-clear" 
+              title="Clear search"
+            >
+              <i class="fas fa-times"></i>
+            </a>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+
+    <!-- Category Filter Pills -->
+    <div class="category-pills">
+      <span class="cat-pill-label">Category:</span>
+      {% for opt in category_options %}
+        <a 
+          href="?status={{ status_filter }}&category={{ opt.key }}{% if search_query %}&q={{ search_query }}{% endif %}"
+          class="cat-pill {% if category_filter == opt.key %}active{% endif %}"
+        >
+          <i class="{{ opt.icon }}"></i>
+          <span>{{ opt.label }}</span>
+          <span class="pill-count">{{ opt.count }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Multi-select Bulk Actions Bar ── -->
+  <div class="bulk-bar" id="bulkBar">
+    <div class="bulk-info">
+      <input type="checkbox" id="selectAllCheckbox" class="custom-checkbox" onchange="toggleSelectAll(this)">
+      <label for="selectAllCheckbox" style="cursor: pointer;">
+        <span id="selectedCountText">0 items selected</span>
+      </label>
+    </div>
+    <div class="bulk-actions">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="bulkAction('mark_read')">
+        <i class="fas fa-check"></i> Mark as Read
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="bulkAction('mark_unread')">
+        <i class="fas fa-envelope"></i> Mark as Unread
+      </button>
+      <button type="button" class="btn btn-danger btn-sm" onclick="promptBulkDelete()">
+        <i class="fas fa-trash-alt"></i> Delete Selected
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAll()" style="color: #64748b;">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Notifications Listing Cards ── -->
+  <div class="notif-list" id="notificationsContainer">
+    {% for notif in notifications %}
+      <div 
+        class="notif-card cat-{{ notif.category|default:'default' }} {% if not notif.is_read %}unread{% endif %}" 
+        id="notif-card-{{ notif.id }}"
+        data-id="{{ notif.id }}"
+        data-read="{% if notif.is_read %}true{% else %}false{% endif %}"
+        data-category="{{ notif.category }}"
+      >
+        <!-- Distinct Left Border Accent -->
+        <div class="notif-card-accent"></div>
+
+        <div class="notif-card-body">
+          <!-- Top Row: Checkbox, Badges & Time -->
+          <div class="notif-card-top">
+            <div class="notif-tags-group">
+              <input 
+                type="checkbox" 
+                class="custom-checkbox notif-item-checkbox" 
+                value="{{ notif.id }}" 
+                onchange="onItemCheckboxChange()"
+                aria-label="Select notification {{ notif.id }}"
+              >
+
+              <!-- Category Badge (Visually Differentiated) -->
+              <span class="badge {{ notif.meta.badge_class }}">
+                <i class="{{ notif.meta.icon }}"></i> {{ notif.meta.label }}
+              </span>
+
+              <!-- Target Role Badge -->
+              <span class="badge badge-role">
+                <i class="fas fa-users-cog"></i> {{ notif.get_target_role_display|default:notif.target_role }}
+              </span>
+
+              <!-- Read / Unread Status Badge -->
+              <span class="status-pill {% if notif.is_read %}status-pill-read{% else %}status-pill-unread{% endif %}" id="status-pill-{{ notif.id }}">
+                {% if notif.is_read %}
+                  <i class="fas fa-check"></i> Read
+                {% else %}
+                  <span class="pulse-dot"></span> Unread
+                {% endif %}
+              </span>
+            </div>
+
+            <!-- Time Stamp -->
+            <div class="notif-time" title="{{ notif.created_at|date:'Y-m-d H:i:s' }}">
+              <i class="far fa-clock"></i> {{ notif.created_at|date:"M d, Y · H:i" }}
+            </div>
+          </div>
+
+          <!-- Middle: Title and Message Content -->
+          <div>
+            <h2 class="notif-content-title">{{ notif.title }}</h2>
+            <p class="notif-content-msg">{{ notif.message }}</p>
+          </div>
+
+          <!-- Bottom: Meta and Quick Actions -->
+          <div class="notif-card-bottom">
+            <div class="notif-meta-items">
+              {% if notif.user %}
+                <span class="notif-meta-item">
+                  <i class="far fa-user"></i>
+                  <strong>User:</strong> {{ notif.user.get_full_name|default:notif.user.username }} (@{{ notif.user.username }})
+                </span>
+              {% endif %}
+              <span class="notif-meta-item">
+                <i class="fas fa-hashtag"></i> ID #{{ notif.id }}
+              </span>
+            </div>
+
+            <div class="notif-card-actions">
+              <!-- Quick Toggle Read/Unread Action -->
+              <button 
+                type="button" 
+                class="btn btn-secondary btn-sm toggle-read-btn" 
+                id="toggle-btn-{{ notif.id }}"
+                onclick="toggleReadNotification({{ notif.id }})"
+                title="Toggle read status"
+              >
+                {% if notif.is_read %}
+                  <i class="fas fa-envelope"></i> Mark as Unread
+                {% else %}
+                  <i class="fas fa-check"></i> Mark as Read
+                {% endif %}
+              </button>
+
+              <!-- Target URL Redirect (if specified) -->
+              {% if notif.target_url %}
+                <a 
+                  href="{% url 'notifications:read_and_redirect' notif.id %}" 
+                  class="btn btn-secondary btn-sm"
+                  title="Open notification destination"
+                  target="_blank"
+                >
+                  <i class="fas fa-external-link-alt"></i> View Target
+                </a>
+              {% endif %}
+
+              <!-- Explicit Manual Delete Button -->
+              <button 
+                type="button" 
+                class="btn btn-danger btn-sm" 
+                onclick="promptDeleteSingle({{ notif.id }}, '{{ notif.title|escapejs }}')"
+                title="Permanently remove notification"
+              >
+                <i class="fas fa-trash-alt"></i> Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="empty-notifs">
+        <div class="empty-icon">
+          <i class="fas fa-bell-slash"></i>
+        </div>
+        <h3>No Notifications Found</h3>
+        <p>
+          {% if search_query %}
+            No notifications match your search query "{{ search_query }}".
+          {% elif status_filter == 'unread' %}
+            You're all caught up! There are no unread notifications right now.
+          {% elif status_filter == 'read' %}
+            No archived read notifications found for this filter.
+          {% else %}
+            No platform notifications have been recorded yet.
+          {% endif %}
+        </p>
+        {% if search_query or status_filter != 'all' or category_filter != 'all' %}
+          <a href="{% url 'notifications:admin_notifications_list' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-undo"></i> Reset Filters
+          </a>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- ── Pagination ── -->
+  {% if page_obj.has_other_pages %}
+    <div class="notif-pagination">
+      <div class="pagination-info">
+        Showing <strong>{{ page_obj.start_index }}</strong> - <strong>{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong> notifications
+      </div>
+      <div class="pagination-links">
+        {% if page_obj.has_previous %}
+          <a 
+            href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&category={{ category_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" 
+            class="page-link" 
+            title="Previous Page"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </a>
+        {% else %}
+          <span class="page-link disabled"><i class="fas fa-chevron-left"></i></span>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <span class="page-link active">{{ num }}</span>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a 
+              href="?page={{ num }}&status={{ status_filter }}&category={{ category_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" 
+              class="page-link"
+            >
+              {{ num }}
+            </a>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+          <a 
+            href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&category={{ category_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" 
+            class="page-link" 
+            title="Next Page"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </a>
+        {% else %}
+          <span class="page-link disabled"><i class="fas fa-chevron-right"></i></span>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- ── Delete Confirmation Modal ── -->
+<div class="notif-modal-backdrop" id="deleteModalBackdrop">
+  <div class="notif-modal">
+    <div class="notif-modal-header">
+      <div style="width: 36px; height: 36px; border-radius: 8px; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <h3 id="deleteModalTitle">Confirm Deletion</h3>
+    </div>
+    <div class="notif-modal-body">
+      <p id="deleteModalMessage">Are you sure you want to delete this notification? This action is permanent and cannot be undone.</p>
+      <p style="font-size: 0.775rem; color: #94a3b8; margin: 8px 0 0 0;">
+        <i class="fas fa-info-circle"></i> Notifications persist indefinitely until manually removed by an administrator.
+      </p>
+    </div>
+    <div class="notif-modal-footer">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeDeleteModal()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="confirmDeleteBtn">Delete Notification</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast Notifications Container ── -->
+<div class="notif-toast-container" id="toastContainer"></div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  // CSRF token retrieval helper
+  function getCsrfToken() {
+    const input = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (input) return input.value;
+    const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : '';
+  }
+
+  // Toast Notification Helper
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `notif-toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
+    toast.innerHTML = `
+      <i class="${type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'}" style="color: ${type === 'success' ? '#10b981' : '#ef4444'};"></i>
+      <span>${message}</span>
+    `;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px)';
+      toast.style.transition = 'all 0.2s ease';
+      setTimeout(() => toast.remove(), 250);
+    }, 3200);
+  }
+
+  // Update KPI counters and tab badges dynamically
+  function updateCounters(data) {
+    if (data.total_count !== undefined) {
+      const el = document.getElementById('kpi-total');
+      if (el) el.innerText = data.total_count;
+      const tabAll = document.getElementById('tab-badge-all');
+      if (tabAll) tabAll.innerText = data.total_count;
+    }
+    if (data.unread_count !== undefined) {
+      const el = document.getElementById('kpi-unread');
+      if (el) {
+        el.innerText = data.unread_count;
+        el.style.color = data.unread_count > 0 ? '#fba074' : '#ffffff';
+      }
+      const tabUnread = document.getElementById('tab-badge-unread');
+      if (tabUnread) tabUnread.innerText = data.unread_count;
+    }
+    if (data.read_count !== undefined) {
+      const tabRead = document.getElementById('tab-badge-read');
+      if (tabRead) tabRead.innerText = data.read_count;
+    }
+  }
+
+  // Quick Action: Toggle Read / Unread
+  function toggleReadNotification(id) {
+    const card = document.getElementById(`notif-card-${id}`);
+    const toggleBtn = document.getElementById(`toggle-btn-${id}`);
+    const statusPill = document.getElementById(`status-pill-${id}`);
+
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', getCsrfToken());
+    formData.append('ajax', 'true');
+
+    fetch(`/admin/notifications/toggle-read/${id}/`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const isRead = data.is_read;
+        card.dataset.read = isRead ? 'true' : 'false';
+
+        if (isRead) {
+          card.classList.remove('unread');
+          statusPill.className = 'status-pill status-pill-read';
+          statusPill.innerHTML = '<i class="fas fa-check"></i> Read';
+          toggleBtn.innerHTML = '<i class="fas fa-envelope"></i> Mark as Unread';
+        } else {
+          card.classList.add('unread');
+          statusPill.className = 'status-pill status-pill-unread';
+          statusPill.innerHTML = '<span class="pulse-dot"></span> Unread';
+          toggleBtn.innerHTML = '<i class="fas fa-check"></i> Mark as Read';
+        }
+
+        updateCounters(data);
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.message || 'Failed to update notification.', 'error');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('Network error while updating notification.', 'error');
+    });
+  }
+
+  // Modal State Management
+  let activeDeleteAction = null;
+
+  function promptDeleteSingle(id, title) {
+    const modal = document.getElementById('deleteModalBackdrop');
+    const titleEl = document.getElementById('deleteModalTitle');
+    const msgEl = document.getElementById('deleteModalMessage');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+    titleEl.innerText = 'Delete Notification';
+    msgEl.innerHTML = `Are you sure you want to permanently delete: <strong>"${title}"</strong>?`;
+    confirmBtn.innerText = 'Delete Notification';
+
+    activeDeleteAction = () => executeDeleteSingle(id);
+    modal.classList.add('open');
+  }
+
+  function promptBulkDelete() {
+    const selectedIds = getSelectedIds();
+    if (selectedIds.length === 0) return;
+
+    const modal = document.getElementById('deleteModalBackdrop');
+    const titleEl = document.getElementById('deleteModalTitle');
+    const msgEl = document.getElementById('deleteModalMessage');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+    titleEl.innerText = `Delete ${selectedIds.length} Notifications`;
+    msgEl.innerHTML = `Are you sure you want to delete the <strong>${selectedIds.length} selected notifications</strong>?`;
+    confirmBtn.innerText = 'Delete Selected';
+
+    activeDeleteAction = () => executeBulkDelete(selectedIds);
+    modal.classList.add('open');
+  }
+
+  function promptMarkAllRead() {
+    const modal = document.getElementById('deleteModalBackdrop');
+    const titleEl = document.getElementById('deleteModalTitle');
+    const msgEl = document.getElementById('deleteModalMessage');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+    titleEl.innerText = 'Mark All as Read';
+    msgEl.innerText = 'Are you sure you want to mark all unread notifications as read?';
+    confirmBtn.className = 'btn btn-primary btn-sm';
+    confirmBtn.innerText = 'Confirm Mark All Read';
+
+    activeDeleteAction = () => executeMarkAllRead();
+    modal.classList.add('open');
+  }
+
+  function closeDeleteModal() {
+    const modal = document.getElementById('deleteModalBackdrop');
+    modal.classList.remove('open');
+    activeDeleteAction = null;
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.className = 'btn btn-danger btn-sm';
+  }
+
+  document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (activeDeleteAction) {
+      activeDeleteAction();
+    }
+    closeDeleteModal();
+  });
+
+  // Execute Single Delete
+  function executeDeleteSingle(id) {
+    const card = document.getElementById(`notif-card-${id}`);
+
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', getCsrfToken());
+    formData.append('ajax', 'true');
+
+    fetch(`/admin/notifications/delete/${id}/`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        if (card) {
+          card.style.opacity = '0';
+          card.style.transform = 'translateY(-10px)';
+          card.style.transition = 'all 0.25s ease';
+          setTimeout(() => {
+            card.remove();
+            checkEmptyList();
+          }, 250);
+        }
+        updateCounters(data);
+        showToast(data.message, 'success');
+        onItemCheckboxChange();
+      } else {
+        showToast(data.message || 'Failed to delete notification.', 'error');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('Network error while deleting notification.', 'error');
+    });
+  }
+
+  // Multi-select helpers
+  function getSelectedIds() {
+    const checkboxes = document.querySelectorAll('.notif-item-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+  }
+
+  function toggleSelectAll(masterCheckbox) {
+    const checkboxes = document.querySelectorAll('.notif-item-checkbox');
+    checkboxes.forEach(cb => {
+      cb.checked = masterCheckbox.checked;
+    });
+    onItemCheckboxChange();
+  }
+
+  function deselectAll() {
+    const checkboxes = document.querySelectorAll('.notif-item-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    const master = document.getElementById('selectAllCheckbox');
+    if (master) master.checked = false;
+    onItemCheckboxChange();
+  }
+
+  function onItemCheckboxChange() {
+    const selectedIds = getSelectedIds();
+    const bulkBar = document.getElementById('bulkBar');
+    const countText = document.getElementById('selectedCountText');
+    const master = document.getElementById('selectAllCheckbox');
+    const totalCheckboxes = document.querySelectorAll('.notif-item-checkbox').length;
+
+    if (selectedIds.length > 0) {
+      bulkBar.classList.add('visible');
+      countText.innerText = `${selectedIds.length} item${selectedIds.length > 1 ? 's' : ''} selected`;
+      if (master) master.checked = selectedIds.length === totalCheckboxes;
+    } else {
+      bulkBar.classList.remove('visible');
+      if (master) master.checked = false;
+    }
+  }
+
+  // Bulk Action Execution
+  function bulkAction(action) {
+    const selectedIds = getSelectedIds();
+    if (selectedIds.length === 0) return;
+
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', getCsrfToken());
+    formData.append('action', action);
+    formData.append('selected_ids', selectedIds.join(','));
+    formData.append('ajax', 'true');
+
+    fetch('/admin/notifications/bulk-action/', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const isRead = action === 'mark_read';
+        selectedIds.forEach(id => {
+          const card = document.getElementById(`notif-card-${id}`);
+          const toggleBtn = document.getElementById(`toggle-btn-${id}`);
+          const statusPill = document.getElementById(`status-pill-${id}`);
+          if (card) {
+            card.dataset.read = isRead ? 'true' : 'false';
+            if (isRead) {
+              card.classList.remove('unread');
+              if (statusPill) {
+                statusPill.className = 'status-pill status-pill-read';
+                statusPill.innerHTML = '<i class="fas fa-check"></i> Read';
+              }
+              if (toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-envelope"></i> Mark as Unread';
+            } else {
+              card.classList.add('unread');
+              if (statusPill) {
+                statusPill.className = 'status-pill status-pill-unread';
+                statusPill.innerHTML = '<span class="pulse-dot"></span> Unread';
+              }
+              if (toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-check"></i> Mark as Read';
+            }
+          }
+        });
+        deselectAll();
+        updateCounters(data);
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.message || 'Bulk operation failed.', 'error');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('Network error while processing bulk action.', 'error');
+    });
+  }
+
+  function executeBulkDelete(selectedIds) {
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', getCsrfToken());
+    formData.append('action', 'delete');
+    formData.append('selected_ids', selectedIds.join(','));
+    formData.append('ajax', 'true');
+
+    fetch('/admin/notifications/bulk-action/', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        selectedIds.forEach(id => {
+          const card = document.getElementById(`notif-card-${id}`);
+          if (card) {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(-10px)';
+            card.style.transition = 'all 0.2s ease';
+            setTimeout(() => card.remove(), 200);
+          }
+        });
+        deselectAll();
+        setTimeout(checkEmptyList, 250);
+        updateCounters(data);
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.message || 'Bulk deletion failed.', 'error');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('Network error while performing bulk delete.', 'error');
+    });
+  }
+
+  function executeMarkAllRead() {
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', getCsrfToken());
+    formData.append('action', 'mark_all_read');
+    formData.append('ajax', 'true');
+
+    fetch('/admin/notifications/bulk-action/', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const cards = document.querySelectorAll('.notif-card');
+        cards.forEach(card => {
+          card.classList.remove('unread');
+          card.dataset.read = 'true';
+          const id = card.dataset.id;
+          const statusPill = document.getElementById(`status-pill-${id}`);
+          const toggleBtn = document.getElementById(`toggle-btn-${id}`);
+          if (statusPill) {
+            statusPill.className = 'status-pill status-pill-read';
+            statusPill.innerHTML = '<i class="fas fa-check"></i> Read';
+          }
+          if (toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-envelope"></i> Mark as Unread';
+        });
+        updateCounters(data);
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.message || 'Failed to mark all as read.', 'error');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('Network error while marking all read.', 'error');
+    });
+  }
+
+  function checkEmptyList() {
+    const container = document.getElementById('notificationsContainer');
+    const remainingCards = container.querySelectorAll('.notif-card');
+    if (remainingCards.length === 0) {
+      container.innerHTML = `
+        <div class="empty-notifs">
+          <div class="empty-icon">
+            <i class="fas fa-bell-slash"></i>
+          </div>
+          <h3>No Notifications Remaining</h3>
+          <p>All notifications for this view have been managed or removed.</p>
+          <a href="/admin/notifications/" class="btn btn-secondary btn-sm">
+            <i class="fas fa-undo"></i> View All Notifications
+          </a>
+        </div>
+      `;
+    }
+  }
+
+  // Keyboard accessibility: ESC closes modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeDeleteModal();
+    }
+  });
+</script>
+{% endblock %}
